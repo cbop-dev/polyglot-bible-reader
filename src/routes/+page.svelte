@@ -99,7 +99,7 @@
     <div class="flex gap-4 bg-white p-4 rounded shadow" onclick={(e) => e.stopPropagation()}>
       <div>
         <label class="block text-sm font-bold mb-1" for="book">Book</label>
-        <select id="book" class="border rounded p-2" bind:value={selectedBook}>
+        <select id="book" class="border rounded p-2" bind:value={selectedBook} onchange={() => selectedChapter = '1'}>
           <optgroup label="Old Testament">
             {#each otBooks as book}
               <option value={book}>{book}</option>
