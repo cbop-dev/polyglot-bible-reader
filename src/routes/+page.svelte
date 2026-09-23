@@ -27,7 +27,7 @@
         const bhsRes = await fetch(`/data/bhs/books/${book}.json`);
         if (bhsRes.ok) {
           const bhsBook = await bhsRes.json();
-          bhsChapterData = bhsBook[chapter] || {};
+          bhsChapterData = bhsBook.chapters[String(chapter)] || {};
         }
 
         // Load LXX
@@ -35,15 +35,15 @@
         if (lxxRes.ok) {
           const lxxBook = await lxxRes.json();
           // Real TVTMS lookup would map BHS -> KJV -> LXX
-          let lookupChapter = chapter;
-          if (book === 'Jer' && chapter === '30') lookupChapter = '37';
-          lxxChapterData = lxxBook[lookupChapter] || {};
+          let lookupChapter = String(chapter);
+          if (book === 'Jer' && String(chapter) === '30') lookupChapter = '37';
+          lxxChapterData = lxxBook.chapters[lookupChapter] || {};
         }
       } else if (ntBooks.includes(book)) {
         const ntRes = await fetch(`/data/sblgnt/books/${book}.json`);
         if (ntRes.ok) {
           const ntBook = await ntRes.json();
-          sblgntChapterData = ntBook[chapter] || {};
+          sblgntChapterData = ntBook.chapters[String(chapter)] || {};
         }
       }
     } catch (e) {
@@ -119,7 +119,7 @@
             <!-- LXX Column -->
             <div class="text-xl leading-loose">
               <!-- Hardcoded demo for Jer 30 -> 37 mapping visualization -->
-              {#if selectedBook === 'Jer' && selectedChapter === '30'}
+              {#if selectedBook === 'Jer' && String(selectedChapter) === '30'}
                  <span class="text-xs text-red-400 font-bold mr-2">{selectedBook} 37:{v}</span>
               {:else}
                  <span class="text-xs text-gray-400 font-bold mr-2">{selectedBook} {selectedChapter}:{v}</span>
