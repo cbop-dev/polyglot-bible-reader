@@ -1,1 +1,10 @@
 @import 'tailwindcss';
+@import url('https://fonts.googleapis.com/css2?family=Charis+SIL:ital,wght@0,400;0,700;1,400;1,700&display=swap');
+
+.font-hebrew {
+  font-family: 'Ezra SIL', 'SBL Hebrew', 'Cardo', 'Frank Ruehl Libre', serif;
+}
+
+.font-greek {
+  font-family: 'Charis SIL', 'Gentium Plus', 'Gentium Book Basic', 'Cardo', serif;
+}

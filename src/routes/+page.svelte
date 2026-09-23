@@ -113,7 +113,7 @@
             <!-- BHS Column -->
             <div class="text-right text-2xl leading-loose" dir="rtl">
               <span class="text-xs text-gray-400 font-bold ml-2 whitespace-nowrap">{selectedBook} {selectedChapter}:{v}</span>
-              <span class="cursor-pointer hover:bg-blue-100">{bhsChapterData[v]?.text || ''}</span>
+              <span class="font-hebrew cursor-pointer hover:bg-blue-100">{bhsChapterData[v]?.text || ''}</span>
             </div>
 
             <!-- LXX Column -->
@@ -125,7 +125,7 @@
                  <span class="text-xs text-gray-400 font-bold mr-2">{selectedBook} {selectedChapter}:{v}</span>
               {/if}
               
-              <span class="cursor-pointer hover:bg-blue-100">{lxxChapterData[v]?.text || ''}</span>
+              <span class="font-greek cursor-pointer hover:bg-blue-100">{lxxChapterData[v]?.text || ''}</span>
             </div>
           </div>
         {/each}
@@ -144,7 +144,7 @@
           <div class="bg-white p-4 rounded shadow-sm border hover:bg-gray-100 transition-colors">
             <div class="text-xl leading-loose">
               <span class="text-xs text-gray-400 font-bold mr-2">{selectedBook} {selectedChapter}:{v}</span>
-              <span class="cursor-pointer hover:bg-blue-100">{sblgntChapterData[v]?.text || ''}</span>
+              <span class="font-greek cursor-pointer hover:bg-blue-100">{sblgntChapterData[v]?.text || ''}</span>
             </div>
           </div>
         {/each}
