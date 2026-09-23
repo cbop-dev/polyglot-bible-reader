@@ -135,13 +135,10 @@
             <!-- BHS Column -->
             <div class="flex flex-col items-end">
               <div class="text-xs text-gray-400 font-bold mb-1">{selectedBook} {selectedChapter}:{v}</div>
-              <div class="text-right text-2xl leading-snug flex flex-wrap justify-end" dir="rtl">
+              <div class="text-right text-2xl leading-snug" dir="rtl">
                 {#if bhsChapterData[v]?.words}
                   {#each bhsChapterData[v].words as w}
-                    <span class="inline-flex items-baseline">
-                      <button type="button" class="font-hebrew cursor-pointer hover:bg-blue-100 rounded focus:outline-none" onclick={(e) => { e.stopPropagation(); showWordInfo(w, bhsLexemes); }}>{w.word}</button>
-                      <span class="whitespace-pre">{w.trailer ?? ' '}</span>
-                    </span>
+                    <button type="button" class="font-hebrew cursor-pointer hover:bg-blue-100 rounded focus:outline-none inline" onclick={(e) => { e.stopPropagation(); showWordInfo(w, bhsLexemes); }}>{w.word}</button>{w.trailer ?? ' '}
                   {/each}
                 {:else}
                   <span class="font-hebrew">{bhsChapterData[v]?.text || ''}</span>
@@ -156,13 +153,10 @@
               {:else}
                  <div class="text-xs text-gray-400 font-bold mb-1">{selectedBook} {selectedChapter}:{v}</div>
               {/if}
-              <div class="text-xl leading-snug flex flex-wrap justify-start">
+              <div class="text-xl leading-snug">
                 {#if lxxChapterData[v]?.words}
                   {#each lxxChapterData[v].words as w}
-                    <span class="inline-flex items-baseline">
-                      <button type="button" class="font-greek cursor-pointer hover:bg-blue-100 rounded focus:outline-none" onclick={(e) => { e.stopPropagation(); showWordInfo(w, lxxLexemes); }}>{w.word}</button>
-                      <span class="whitespace-pre">{w.trailer ?? ' '}</span>
-                    </span>
+                    <button type="button" class="font-greek cursor-pointer hover:bg-blue-100 rounded focus:outline-none inline" onclick={(e) => { e.stopPropagation(); showWordInfo(w, lxxLexemes); }}>{w.word}</button>{w.trailer ?? ' '}
                   {/each}
                 {:else}
                   <span class="font-greek">{lxxChapterData[v]?.text || ''}</span>
@@ -186,13 +180,10 @@
           <div class="bg-white p-4 rounded shadow-sm border hover:bg-gray-100 transition-colors">
             <div class="flex flex-col items-start">
               <div class="text-xs text-gray-400 font-bold mb-1">{selectedBook} {selectedChapter}:{v}</div>
-              <div class="text-xl leading-snug flex flex-wrap justify-start">
+              <div class="text-xl leading-snug">
                 {#if sblgntChapterData[v]?.words}
                   {#each sblgntChapterData[v].words as w}
-                    <span class="inline-flex items-baseline">
-                      <button type="button" class="font-greek cursor-pointer hover:bg-blue-100 rounded focus:outline-none" onclick={(e) => { e.stopPropagation(); showWordInfo(w, sblgntLexemes); }}>{w.word}</button>
-                      <span class="whitespace-pre">{w.trailer ?? ' '}</span>
-                    </span>
+                    <button type="button" class="font-greek cursor-pointer hover:bg-blue-100 rounded focus:outline-none inline" onclick={(e) => { e.stopPropagation(); showWordInfo(w, sblgntLexemes); }}>{w.word}</button>{w.trailer ?? ' '}
                   {/each}
                 {:else}
                   <span class="font-greek">{sblgntChapterData[v]?.text || ''}</span>
