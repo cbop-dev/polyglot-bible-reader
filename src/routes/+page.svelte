@@ -4,9 +4,18 @@
   let selectedBook = $state('Gen');
   let selectedChapter = $state('1');
 
-  let bhsChapterData = $state({});
-  let lxxChapterData = $state({});
-  let sblgntChapterData = $state({});
+  let currentBhsBook = $state(null);
+  let currentLxxBook = $state(null);
+  let currentSblgntBook = $state(null);
+
+  let bhsChapterData = $derived(currentBhsBook?.chapters?.[String(selectedChapter)] || {});
+  let lxxChapterData = $derived.by(() => {
+    if (!currentLxxBook) return {};
+    let lookupChapter = String(selectedChapter);
+    if (selectedBook === 'Jer' && String(selectedChapter) === '30') lookupChapter = '37';
+    return currentLxxBook.chapters?.[lookupChapter] || {};
+  });
+  let sblgntChapterData = $derived(currentSblgntBook?.chapters?.[String(selectedChapter)] || {});
   let alignmentData = $state({});
   
   let bhsLexemes = $state({});
@@ -14,6 +23,7 @@
   let sblgntLexemes = $state({});
 
   let activeWord = $state(null);
+  let chapterDropdownOpen = $state(false);
 
   const otBooks = ['Gen', 'Exod', 'Lev', 'Num', 'Deut', 'Josh', 'Judg', 'Ruth', '1Sam', '2Sam', '1Kgs', '2Kgs', '1Chr', '2Chr', 'Ezra', 'Neh', 'Esth', 'Job', 'Ps', 'Prov', 'Qoh', 'Cant', 'Isa', 'Jer', 'Lam', 'Ezek', 'Dan', 'Hos', 'Joel', 'Amos', 'Obad', 'Jonah', 'Mic', 'Nah', 'Hab', 'Zeph', 'Hag', 'Zech', 'Mal'];
   const ntBooks = ['Matt', 'Mark', 'Luke', 'John', 'Acts', 'Rom', '1_Cor', '2_Cor', 'Gal', 'Eph', 'Phil', 'Col', '1_Thess', '2_Thess', '1_Tim', '2_Tim', 'Titus', 'Phlm', 'Heb', 'Jas', '1_Pet', '2_Pet', '1_John', '2_John', '3_John', 'Jude', 'Rev'];
@@ -21,35 +31,33 @@
   let isOT = $derived(otBooks.includes(selectedBook));
   let isNT = $derived(ntBooks.includes(selectedBook));
 
-  async function loadData(book: string, chapter: string) {
-    bhsChapterData = {};
-    lxxChapterData = {};
-    sblgntChapterData = {};
+  let availableChapters = $derived(
+    isOT && currentBhsBook 
+      ? Object.keys(currentBhsBook.chapters).map(Number).sort((a,b)=>a-b)
+      : isNT && currentSblgntBook 
+        ? Object.keys(currentSblgntBook.chapters).map(Number).sort((a,b)=>a-b)
+        : []
+  );
+
+  async function loadBookData(book: string) {
+    currentBhsBook = null;
+    currentLxxBook = null;
+    currentSblgntBook = null;
 
     try {
       if (otBooks.includes(book)) {
-        const bhsRes = await fetch(`/data/bhs/books/${book}.json`);
-        if (bhsRes.ok) {
-          const bhsBook = await bhsRes.json();
-          bhsChapterData = bhsBook.chapters[String(chapter)] || {};
-        }
-
-        const lxxRes = await fetch(`/data/lxx/books/${book}.json`);
-        if (lxxRes.ok) {
-          const lxxBook = await lxxRes.json();
-          let lookupChapter = String(chapter);
-          if (book === 'Jer' && String(chapter) === '30') lookupChapter = '37';
-          lxxChapterData = lxxBook.chapters[lookupChapter] || {};
-        }
+        const [bhsRes, lxxRes] = await Promise.all([
+          fetch(`/data/bhs/books/${book}.json`),
+          fetch(`/data/lxx/books/${book}.json`)
+        ]);
+        if (bhsRes.ok) currentBhsBook = await bhsRes.json();
+        if (lxxRes.ok) currentLxxBook = await lxxRes.json();
       } else if (ntBooks.includes(book)) {
         const ntRes = await fetch(`/data/sblgnt/books/${book}.json`);
-        if (ntRes.ok) {
-          const ntBook = await ntRes.json();
-          sblgntChapterData = ntBook.chapters[String(chapter)] || {};
-        }
+        if (ntRes.ok) currentSblgntBook = await ntRes.json();
       }
     } catch (e) {
-      console.error("Error loading chapter data", e);
+      console.error("Error loading book data", e);
     }
   }
 
@@ -71,7 +79,7 @@
   });
 
   $effect(() => {
-    loadData(selectedBook, selectedChapter);
+    loadBookData(selectedBook);
   });
 
   let verseKeys = $derived(Object.keys(isOT ? bhsChapterData : sblgntChapterData).sort((a,b) => parseInt(a) - parseInt(b)));
@@ -86,6 +94,7 @@
 
   function closePopup() {
     activeWord = null;
+    chapterDropdownOpen = false;
   }
 </script>
 
@@ -97,24 +106,75 @@
     </div>
     
     <div class="flex gap-4 bg-white p-4 rounded shadow" onclick={(e) => e.stopPropagation()}>
-      <div>
-        <label class="block text-sm font-bold mb-1" for="book">Book</label>
-        <select id="book" class="border rounded p-2" bind:value={selectedBook} onchange={() => selectedChapter = '1'}>
-          <optgroup label="Old Testament">
-            {#each otBooks as book}
-              <option value={book}>{book}</option>
-            {/each}
-          </optgroup>
-          <optgroup label="New Testament">
-            {#each ntBooks as book}
-              <option value={book}>{book}</option>
-            {/each}
-          </optgroup>
-        </select>
+      <div class="relative">
+        <label class="block text-sm font-bold mb-1">Book</label>
+        <button 
+          class="border rounded p-2 w-32 text-left bg-white flex justify-between items-center shadow-sm"
+          onclick={(e) => { e.stopPropagation(); bookDropdownOpen = !bookDropdownOpen; }}
+        >
+          {selectedBook}
+          <span class="text-xs text-gray-500">▼</span>
+        </button>
+        
+        {#if bookDropdownOpen}
+          <div class="fixed inset-0 bg-black/20 z-40 flex items-center justify-center p-4" onclick={() => bookDropdownOpen = false}>
+            <div class="bg-white border rounded-lg shadow-xl p-4 z-50 max-h-[80vh] overflow-y-auto w-full max-w-3xl" onclick={(e) => e.stopPropagation()}>
+              <h3 class="font-bold mb-4 text-lg border-b pb-2">Old Testament</h3>
+              <div class="grid grid-cols-3 md:grid-cols-6 gap-2 mb-6">
+                {#each otBooks as book}
+                  <button 
+                    class="p-2 text-center text-sm rounded hover:bg-blue-100 {book === selectedBook ? 'bg-blue-500 text-white hover:bg-blue-600' : 'bg-gray-50 border'}"
+                    onclick={() => { selectedBook = book; selectedChapter = '1'; bookDropdownOpen = false; }}
+                  >
+                    {book}
+                  </button>
+                {/each}
+              </div>
+              
+              <h3 class="font-bold mb-4 text-lg border-b pb-2">New Testament</h3>
+              <div class="grid grid-cols-3 md:grid-cols-6 gap-2">
+                {#each ntBooks as book}
+                  <button 
+                    class="p-2 text-center text-sm rounded hover:bg-blue-100 {book === selectedBook ? 'bg-blue-500 text-white hover:bg-blue-600' : 'bg-gray-50 border'}"
+                    onclick={() => { selectedBook = book; selectedChapter = '1'; bookDropdownOpen = false; }}
+                  >
+                    {book}
+                  </button>
+                {/each}
+              </div>
+            </div>
+          </div>
+        {/if}
       </div>
-      <div>
+
+      <div class="relative">
         <label class="block text-sm font-bold mb-1" for="chapter">Chapter</label>
-        <input id="chapter" type="number" min="1" class="border rounded p-2 w-20" bind:value={selectedChapter} />
+        <button 
+          id="chapter"
+          class="border rounded p-2 w-20 text-left bg-white flex justify-between items-center shadow-sm"
+          onclick={(e) => { e.stopPropagation(); chapterDropdownOpen = !chapterDropdownOpen; }}
+        >
+          {selectedChapter}
+          <span class="text-xs text-gray-500">▼</span>
+        </button>
+        
+        {#if chapterDropdownOpen}
+          <div class="fixed inset-0 bg-black/20 z-40 flex items-center justify-center p-4" onclick={() => chapterDropdownOpen = false}>
+            <div class="bg-white border rounded-lg shadow-xl p-4 z-50 max-h-[80vh] overflow-y-auto w-full max-w-lg" onclick={(e) => e.stopPropagation()}>
+              <h3 class="font-bold mb-4 text-lg border-b pb-2">{selectedBook} - Select Chapter</h3>
+              <div class="grid grid-cols-5 md:grid-cols-8 gap-2">
+                {#each availableChapters as ch}
+                  <button 
+                    class="p-2 text-center rounded hover:bg-blue-100 {String(ch) === String(selectedChapter) ? 'bg-blue-500 text-white hover:bg-blue-600' : 'bg-gray-50 border'}"
+                    onclick={() => { selectedChapter = String(ch); chapterDropdownOpen = false; }}
+                  >
+                    {ch}
+                  </button>
+                {/each}
+              </div>
+            </div>
+          </div>
+        {/if}
       </div>
     </div>
   </header>
