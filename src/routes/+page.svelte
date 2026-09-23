@@ -8,6 +8,12 @@
   let lxxChapterData = $state({});
   let sblgntChapterData = $state({});
   let alignmentData = $state({});
+  
+  let bhsLexemes = $state({});
+  let lxxLexemes = $state({});
+  let sblgntLexemes = $state({});
+
+  let activeWord = $state(null);
 
   const otBooks = ['Gen', 'Exod', 'Lev', 'Num', 'Deut', 'Josh', 'Judg', 'Ruth', '1Sam', '2Sam', '1Kgs', '2Kgs', '1Chr', '2Chr', 'Ezra', 'Neh', 'Esth', 'Job', 'Ps', 'Prov', 'Qoh', 'Cant', 'Isa', 'Jer', 'Lam', 'Ezek', 'Dan', 'Hos', 'Joel', 'Amos', 'Obad', 'Jonah', 'Mic', 'Nah', 'Hab', 'Zeph', 'Hag', 'Zech', 'Mal'];
   const ntBooks = ['Matt', 'Mark', 'Luke', 'John', 'Acts', 'Rom', '1_Cor', '2_Cor', 'Gal', 'Eph', 'Phil', 'Col', '1_Thess', '2_Thess', '1_Tim', '2_Tim', 'Titus', 'Phlm', 'Heb', 'Jas', '1_Pet', '2_Pet', '1_John', '2_John', '3_John', 'Jude', 'Rev'];
@@ -16,25 +22,21 @@
   let isNT = $derived(ntBooks.includes(selectedBook));
 
   async function loadData(book: string, chapter: string) {
-    // Reset data while loading
     bhsChapterData = {};
     lxxChapterData = {};
     sblgntChapterData = {};
 
     try {
       if (otBooks.includes(book)) {
-        // Load BHS
         const bhsRes = await fetch(`/data/bhs/books/${book}.json`);
         if (bhsRes.ok) {
           const bhsBook = await bhsRes.json();
           bhsChapterData = bhsBook.chapters[String(chapter)] || {};
         }
 
-        // Load LXX
         const lxxRes = await fetch(`/data/lxx/books/${book}.json`);
         if (lxxRes.ok) {
           const lxxBook = await lxxRes.json();
-          // Real TVTMS lookup would map BHS -> KJV -> LXX
           let lookupChapter = String(chapter);
           if (book === 'Jer' && String(chapter) === '30') lookupChapter = '37';
           lxxChapterData = lxxBook.chapters[lookupChapter] || {};
@@ -52,29 +54,49 @@
   }
 
   onMount(async () => {
-    const alignmentRes = await fetch('/data/tvtms_alignment.json');
-    if (alignmentRes.ok) {
-      alignmentData = await alignmentRes.json();
+    try {
+      const [alignRes, bhsLex, lxxLex, sblgntLex] = await Promise.all([
+        fetch('/data/tvtms_alignment.json'),
+        fetch('/data/bhs/lexemes.json'),
+        fetch('/data/lxx/lexemes.json'),
+        fetch('/data/sblgnt/lexemes.json')
+      ]);
+      if (alignRes.ok) alignmentData = await alignRes.json();
+      if (bhsLex.ok) bhsLexemes = await bhsLex.json();
+      if (lxxLex.ok) lxxLexemes = await lxxLex.json();
+      if (sblgntLex.ok) sblgntLexemes = await sblgntLex.json();
+    } catch (e) {
+      console.error("Error loading lexemes or alignment data", e);
     }
   });
 
-  // Watch for changes to selections using runes effect
   $effect(() => {
     loadData(selectedBook, selectedChapter);
   });
 
-  // Get max verse count to align rows
   let verseKeys = $derived(Object.keys(isOT ? bhsChapterData : sblgntChapterData).sort((a,b) => parseInt(a) - parseInt(b)));
+
+  function showWordInfo(wordObj: any, lexemesDict: any) {
+    if (!wordObj || !wordObj.id) return;
+    const lexData = lexemesDict[wordObj.id];
+    if (lexData) {
+      activeWord = { ...wordObj, ...lexData };
+    }
+  }
+
+  function closePopup() {
+    activeWord = null;
+  }
 </script>
 
-<div class="min-h-screen bg-gray-50 text-gray-900 font-sans p-4 md:p-8">
+<div class="min-h-screen bg-gray-50 text-gray-900 font-sans p-4 md:p-8" onclick={closePopup}>
   <header class="mb-8 border-b pb-4 flex flex-col md:flex-row justify-between items-center gap-4">
     <div>
       <h1 class="text-3xl font-bold">Polyglot Ancient Text Reader</h1>
       <p class="text-gray-600 mt-2">BHS | LXX | SBLGNT</p>
     </div>
     
-    <div class="flex gap-4 bg-white p-4 rounded shadow">
+    <div class="flex gap-4 bg-white p-4 rounded shadow" onclick={(e) => e.stopPropagation()}>
       <div>
         <label class="block text-sm font-bold mb-1" for="book">Book</label>
         <select id="book" class="border rounded p-2" bind:value={selectedBook}>
@@ -109,23 +131,38 @@
           <p class="text-center text-gray-500 py-10">Loading or chapter not found.</p>
         {/if}
         {#each verseKeys as v}
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white p-4 rounded shadow-sm border hover:bg-gray-100 transition-colors">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white p-4 rounded shadow-sm border hover:bg-gray-100 transition-colors relative">
             <!-- BHS Column -->
-            <div class="text-right text-2xl leading-loose" dir="rtl">
-              <span class="text-xs text-gray-400 font-bold ml-2 whitespace-nowrap">{selectedBook} {selectedChapter}:{v}</span>
-              <span class="font-hebrew cursor-pointer hover:bg-blue-100">{bhsChapterData[v]?.text || ''}</span>
+            <div class="text-right text-2xl leading-loose flex flex-wrap gap-x-1 gap-y-2" dir="rtl">
+              <span class="text-xs text-gray-400 font-bold ml-2 whitespace-nowrap pt-2">{selectedBook} {selectedChapter}:{v}</span>
+              {#if bhsChapterData[v]?.words}
+                {#each bhsChapterData[v].words as w}
+                  <button type="button" class="font-hebrew cursor-pointer hover:bg-blue-100 px-0.5 rounded focus:outline-none" onclick={(e) => { e.stopPropagation(); showWordInfo(w, bhsLexemes); }}>
+                    {w.word}
+                  </button>
+                {/each}
+              {:else}
+                <span class="font-hebrew">{bhsChapterData[v]?.text || ''}</span>
+              {/if}
             </div>
 
             <!-- LXX Column -->
-            <div class="text-xl leading-loose">
-              <!-- Hardcoded demo for Jer 30 -> 37 mapping visualization -->
+            <div class="text-xl leading-loose flex flex-wrap gap-x-1 gap-y-2">
               {#if selectedBook === 'Jer' && String(selectedChapter) === '30'}
-                 <span class="text-xs text-red-400 font-bold mr-2">{selectedBook} 37:{v}</span>
+                 <span class="text-xs text-red-400 font-bold mr-2 pt-2">{selectedBook} 37:{v}</span>
               {:else}
-                 <span class="text-xs text-gray-400 font-bold mr-2">{selectedBook} {selectedChapter}:{v}</span>
+                 <span class="text-xs text-gray-400 font-bold mr-2 pt-2">{selectedBook} {selectedChapter}:{v}</span>
               {/if}
               
-              <span class="font-greek cursor-pointer hover:bg-blue-100">{lxxChapterData[v]?.text || ''}</span>
+              {#if lxxChapterData[v]?.words}
+                {#each lxxChapterData[v].words as w}
+                  <button type="button" class="font-greek cursor-pointer hover:bg-blue-100 px-0.5 rounded focus:outline-none" onclick={(e) => { e.stopPropagation(); showWordInfo(w, lxxLexemes); }}>
+                    {w.word}
+                  </button>
+                {/each}
+              {:else}
+                <span class="font-greek">{lxxChapterData[v]?.text || ''}</span>
+              {/if}
             </div>
           </div>
         {/each}
@@ -142,9 +179,17 @@
         {/if}
         {#each verseKeys as v}
           <div class="bg-white p-4 rounded shadow-sm border hover:bg-gray-100 transition-colors">
-            <div class="text-xl leading-loose">
-              <span class="text-xs text-gray-400 font-bold mr-2">{selectedBook} {selectedChapter}:{v}</span>
-              <span class="font-greek cursor-pointer hover:bg-blue-100">{sblgntChapterData[v]?.text || ''}</span>
+            <div class="text-xl leading-loose flex flex-wrap gap-x-1 gap-y-2">
+              <span class="text-xs text-gray-400 font-bold mr-2 pt-2">{selectedBook} {selectedChapter}:{v}</span>
+              {#if sblgntChapterData[v]?.words}
+                {#each sblgntChapterData[v].words as w}
+                  <button type="button" class="font-greek cursor-pointer hover:bg-blue-100 px-0.5 rounded focus:outline-none" onclick={(e) => { e.stopPropagation(); showWordInfo(w, sblgntLexemes); }}>
+                    {w.word}
+                  </button>
+                {/each}
+              {:else}
+                <span class="font-greek">{sblgntChapterData[v]?.text || ''}</span>
+              {/if}
             </div>
           </div>
         {/each}
@@ -152,3 +197,22 @@
     {/if}
   </main>
 </div>
+
+{#if activeWord}
+  <div class="fixed bottom-4 right-4 bg-white border-2 border-blue-500 rounded-lg shadow-xl p-4 w-64 z-50 animate-fade-in pointer-events-auto">
+    <div class="flex justify-between items-start mb-2">
+      <h3 class="font-bold text-lg {activeWord.word.match(/[\u0590-\u05FF]/) ? 'font-hebrew text-right w-full' : 'font-greek'}">{activeWord.lemma || activeWord.word}</h3>
+      <button class="text-gray-400 hover:text-black absolute top-2 right-2" onclick={closePopup}>✕</button>
+    </div>
+    
+    <div class="text-sm">
+      <p><strong class="text-gray-600">Gloss:</strong> {activeWord.gloss || 'Unknown'}</p>
+      {#if activeWord.strongs}
+        <p><strong class="text-gray-600">Strongs:</strong> {activeWord.strongs}</p>
+      {/if}
+      {#if activeWord.pos}
+        <p><strong class="text-gray-600">POS code:</strong> {activeWord.pos}</p>
+      {/if}
+    </div>
+  </div>
+{/if}
