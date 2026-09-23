@@ -1,56 +1,49 @@
 <script lang="ts">
   import { onMount } from 'svelte';
 
-  let selectedBook = 'Gen';
-  let selectedChapter = '1';
+  let selectedBook = $state('Gen');
+  let selectedChapter = $state('1');
 
-  let bhsChapterData = {};
-  let lxxChapterData = {};
-  let sblgntChapterData = {};
-  let alignmentData = {};
+  let bhsChapterData = $state({});
+  let lxxChapterData = $state({});
+  let sblgntChapterData = $state({});
+  let alignmentData = $state({});
 
-  let otBooks = ['Gen', 'Exod', 'Lev', 'Num', 'Deut', 'Josh', 'Judg', 'Ruth', '1Sam', '2Sam', '1Kgs', '2Kgs', '1Chr', '2Chr', 'Ezra', 'Neh', 'Esth', 'Job', 'Ps', 'Prov', 'Qoh', 'Cant', 'Isa', 'Jer', 'Lam', 'Ezek', 'Dan', 'Hos', 'Joel', 'Amos', 'Obad', 'Jonah', 'Mic', 'Nah', 'Hab', 'Zeph', 'Hag', 'Zech', 'Mal'];
-  let ntBooks = ['Matt', 'Mark', 'Luke', 'John', 'Acts', 'Rom', '1_Cor', '2_Cor', 'Gal', 'Eph', 'Phil', 'Col', '1_Thess', '2_Thess', '1_Tim', '2_Tim', 'Titus', 'Phlm', 'Heb', 'Jas', '1_Pet', '2_Pet', '1_John', '2_John', '3_John', 'Jude', 'Rev'];
+  const otBooks = ['Gen', 'Exod', 'Lev', 'Num', 'Deut', 'Josh', 'Judg', 'Ruth', '1Sam', '2Sam', '1Kgs', '2Kgs', '1Chr', '2Chr', 'Ezra', 'Neh', 'Esth', 'Job', 'Ps', 'Prov', 'Qoh', 'Cant', 'Isa', 'Jer', 'Lam', 'Ezek', 'Dan', 'Hos', 'Joel', 'Amos', 'Obad', 'Jonah', 'Mic', 'Nah', 'Hab', 'Zeph', 'Hag', 'Zech', 'Mal'];
+  const ntBooks = ['Matt', 'Mark', 'Luke', 'John', 'Acts', 'Rom', '1_Cor', '2_Cor', 'Gal', 'Eph', 'Phil', 'Col', '1_Thess', '2_Thess', '1_Tim', '2_Tim', 'Titus', 'Phlm', 'Heb', 'Jas', '1_Pet', '2_Pet', '1_John', '2_John', '3_John', 'Jude', 'Rev'];
 
-  $: isOT = otBooks.includes(selectedBook);
-  $: isNT = ntBooks.includes(selectedBook);
+  let isOT = $derived(otBooks.includes(selectedBook));
+  let isNT = $derived(ntBooks.includes(selectedBook));
 
-  // Derive chapter count based on loaded data
-  let chapterCount = 50; 
-
-  async function loadData() {
+  async function loadData(book: string, chapter: string) {
+    // Reset data while loading
     bhsChapterData = {};
     lxxChapterData = {};
     sblgntChapterData = {};
 
     try {
-      if (isOT) {
+      if (otBooks.includes(book)) {
         // Load BHS
-        const bhsRes = await fetch(`/data/bhs/books/${selectedBook}.json`);
+        const bhsRes = await fetch(`/data/bhs/books/${book}.json`);
         if (bhsRes.ok) {
           const bhsBook = await bhsRes.json();
-          bhsChapterData = bhsBook[selectedChapter] || {};
+          bhsChapterData = bhsBook[chapter] || {};
         }
 
         // Load LXX
-        // Here we could implement the TVTMS lookup to find the exact LXX chapter.
-        // For MVP, we attempt to load the matching chapter, but provide a visual indicator
-        const lxxRes = await fetch(`/data/lxx/books/${selectedBook}.json`);
+        const lxxRes = await fetch(`/data/lxx/books/${book}.json`);
         if (lxxRes.ok) {
           const lxxBook = await lxxRes.json();
           // Real TVTMS lookup would map BHS -> KJV -> LXX
-          // E.g. if BHS Jer 30 -> KJV Jer 30 -> LXX Jer 37
-          // For now, if it's Jeremiah, just for demonstration of alignment as requested:
-          let lookupChapter = selectedChapter;
-          if (selectedBook === 'Jer' && selectedChapter === '30') lookupChapter = '37';
-          
+          let lookupChapter = chapter;
+          if (book === 'Jer' && chapter === '30') lookupChapter = '37';
           lxxChapterData = lxxBook[lookupChapter] || {};
         }
-      } else if (isNT) {
-        const ntRes = await fetch(`/data/sblgnt/books/${selectedBook}.json`);
+      } else if (ntBooks.includes(book)) {
+        const ntRes = await fetch(`/data/sblgnt/books/${book}.json`);
         if (ntRes.ok) {
           const ntBook = await ntRes.json();
-          sblgntChapterData = ntBook[selectedChapter] || {};
+          sblgntChapterData = ntBook[chapter] || {};
         }
       }
     } catch (e) {
@@ -63,16 +56,15 @@
     if (alignmentRes.ok) {
       alignmentData = await alignmentRes.json();
     }
-    loadData();
   });
 
-  // Watch for changes to selections
-  $: if (selectedBook || selectedChapter) {
-    if (typeof window !== 'undefined') loadData();
-  }
+  // Watch for changes to selections using runes effect
+  $effect(() => {
+    loadData(selectedBook, selectedChapter);
+  });
 
   // Get max verse count to align rows
-  $: verseKeys = Object.keys(isOT ? bhsChapterData : sblgntChapterData).sort((a,b) => parseInt(a) - parseInt(b));
+  let verseKeys = $derived(Object.keys(isOT ? bhsChapterData : sblgntChapterData).sort((a,b) => parseInt(a) - parseInt(b)));
 </script>
 
 <div class="min-h-screen bg-gray-50 text-gray-900 font-sans p-4 md:p-8">
