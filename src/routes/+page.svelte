@@ -1,22 +1,91 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { base } from '$app/paths';
+  import siteLogo from '$lib/assets/logo.png';
+  import VersionButton from '$lib/components/ui/VersionButton.svelte';
+  import { formatHebrew, formatGreek, type HebrewDiacriticMode } from '$lib/utils/diacritics';
 
   let selectedBook = $state('Gen');
   let selectedChapter = $state('1');
+
+  let hebrewMode = $state<HebrewDiacriticMode>('all');
+  let greekDiacritics = $state(true);
+
+  function cycleHebrewMode() {
+    if (hebrewMode === 'all') {
+      hebrewMode = 'vowels';
+    } else if (hebrewMode === 'vowels') {
+      hebrewMode = 'none';
+    } else {
+      hebrewMode = 'all';
+    }
+  }
+
+  function toggleGreekDiacritics() {
+    greekDiacritics = !greekDiacritics;
+  }
 
   let currentBhsBook: any = $state(null);
   let currentLxxBook: any = $state(null);
   let currentSblgntBook: any = $state(null);
 
   let bhsChapterData = $derived(currentBhsBook?.chapters?.[String(selectedChapter)] || {});
-  let lxxChapterData = $derived.by(() => {
-    if (!currentLxxBook) return {};
-    let lookupChapter = String(selectedChapter);
-    if (selectedBook === 'Jer' && String(selectedChapter) === '30') lookupChapter = '37';
-    return currentLxxBook.chapters?.[lookupChapter] || {};
-  });
   let sblgntChapterData = $derived(currentSblgntBook?.chapters?.[String(selectedChapter)] || {});
   let alignmentData: any = $state({});
+
+  let lxxChapterHeader = $derived.by(() => {
+    if (!isOT || !verseKeys.length || !alignmentData) return '';
+    const mappedChapters = new Set<string>();
+    for (const v of verseKeys) {
+      const key = `${selectedBook} ${selectedChapter}:${v}`;
+      if (alignmentData && key in alignmentData) {
+        const target = alignmentData[key];
+        if (target) mappedChapters.add(String(target.chapter));
+      } else {
+        mappedChapters.add(String(selectedChapter));
+      }
+    }
+    const chList = Array.from(mappedChapters).sort((a, b) => Number(a) - Number(b));
+    if (chList.length === 1 && chList[0] !== String(selectedChapter)) {
+      return ` (ch. ${chList[0]})`;
+    } else if (chList.length > 1) {
+      return ` (ch. ${chList.join(', ')})`;
+    }
+    return '';
+  });
+
+  function getLxxVerse(v: string) {
+    if (!currentLxxBook?.chapters) return null;
+    const key = `${selectedBook} ${selectedChapter}:${v}`;
+    let ch = String(selectedChapter);
+    let vs = v;
+    let isDivergent = false;
+
+    if (alignmentData && key in alignmentData) {
+      const target = alignmentData[key];
+      if (target === null) {
+        return {
+          exists: false,
+          omitted: true,
+          label: `${selectedBook} [omitted in LXX]`,
+          isDivergent: true,
+          verseData: null
+        };
+      }
+      ch = String(target.chapter);
+      vs = String(target.verse);
+      isDivergent = ch !== String(selectedChapter) || vs !== v;
+    }
+
+    const verseData = currentLxxBook.chapters?.[ch]?.[vs] || null;
+    return {
+      exists: !!verseData,
+      omitted: false,
+      label: `${selectedBook} ${ch}:${vs}`,
+      isDivergent,
+      verseData
+    };
+  }
   
   let bhsLexemes: any = $state({});
   let lxxLexemes: any = $state({});
@@ -129,22 +198,105 @@
   }
 </script>
 
-<div class="min-h-screen bg-page text-ink font-sans p-4 md:p-8" onclick={closePopup}>
-  <header class="mb-8 border-b border-rule pb-4 flex flex-col md:flex-row justify-between items-center gap-4">
-    <div>
-      <h1 class="text-3xl font-bold">Polyglot Ancient Text Reader</h1>
-      <p class="text-ink-soft mt-2">BHS | LXX | SBLGNT</p>
+<div class="min-h-screen bg-page text-ink font-sans p-3 sm:p-4 md:p-8" onclick={closePopup}>
+  <header class="mb-6 sm:mb-8 border-b border-rule pb-3 sm:pb-4 flex flex-row justify-between items-center gap-2 sm:gap-4">
+    <div class="flex items-center gap-2 sm:gap-3 md:gap-4 min-w-0">
+      <img
+        src={siteLogo}
+        alt="Polyglot Ancient Text Reader logo"
+        class="w-8 h-8 sm:w-11 sm:h-11 md:w-14 md:h-14 lg:w-16 lg:h-16 flex-shrink-0 object-contain rounded-full shadow-xs"
+      />
+      <div class="min-w-0">
+        <h1 class="text-sm min-[360px]:text-base min-[410px]:text-lg sm:text-2xl md:text-3xl lg:text-4xl font-bold tracking-tight inline-flex items-center flex-wrap gap-x-1 sm:gap-x-1.5">
+          <span class="truncate sm:whitespace-normal">
+            <span class="sm:hidden">Polyglot Reader</span>
+            <span class="hidden sm:inline">Polyglot Ancient Text Reader</span>
+          </span>
+          <span class="inline-flex items-center flex-shrink-0">
+            <VersionButton />
+            <a
+              href="{base}/sources-and-licenses"
+              class="btn btn-circle btn-ghost btn-xs text-base-content/80 sm:btn-sm hover:bg-base-200 hover:text-base-content inline-flex items-center justify-center rounded-full p-0.5 sm:p-1 text-ink-soft hover:text-ink hover:bg-rule/50 transition-colors align-super relative -top-0.5 sm:-top-1 ml-0.5 sm:ml-1"
+              title="Sources &amp; Licenses"
+              aria-label="Sources &amp; Licenses"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke-width="1.8"
+                stroke="currentColor"
+                class="w-3.5 h-3.5 sm:w-4.5 sm:h-4.5"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"
+                />
+              </svg>
+            </a>
+          </span>
+        </h1>
+        <p class="hidden sm:block text-ink-soft mt-1 text-sm sm:text-base">BHS | LXX | SBLGNT</p>
+      </div>
     </div>
     
-    <div class="flex gap-4 bg-page p-4 rounded shadow" onclick={(e) => e.stopPropagation()}>
+
+    <div class="flex gap-1 sm:gap-2.5 bg-page p-1 sm:p-2.5 md:p-4 rounded shadow-xs sm:shadow items-center flex-shrink-0" onclick={(e) => e.stopPropagation()}>
+    <!-- Diacritic Controls -->
+    
+
+      {#if isOT}
+        <div class="relative">
+          <label class="hidden sm:block text-xs font-bold mb-1 text-center text-ink-soft" for="hebrew-diacritics">Heb</label>
+          <button
+            id="hebrew-diacritics"
+            type="button"
+            class="font-hebrew h-[26px] min-w-[28px] sm:h-[38px] sm:min-w-[38px] px-1 sm:px-2 rounded border text-sm sm:text-lg flex items-center justify-center cursor-pointer transition-colors duration-150 focus:outline-none focus:ring-1 focus:ring-blue-500 {hebrewMode === 'all'
+              ? 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700 shadow-xs font-bold'
+              : hebrewMode === 'vowels'
+                ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/60 dark:text-blue-200 border-blue-400 dark:border-blue-600 hover:bg-blue-200 dark:hover:bg-blue-900 shadow-xs font-semibold'
+                : 'bg-page text-ink-soft border-rule hover:bg-rule hover:text-ink font-normal'}"
+            onclick={cycleHebrewMode}
+            title={hebrewMode === 'all'
+              ? 'Hebrew: Vowels + Cantillation (click for vowels only)'
+              : hebrewMode === 'vowels'
+                ? 'Hebrew: Vowels only (click for consonants only)'
+                : 'Hebrew: Consonants only (click for all markings)'}
+            aria-label="Toggle Hebrew diacritics"
+          >
+            <span>{hebrewMode === 'all' ? 'אֶ֔' : hebrewMode === 'vowels' ? 'אָ' : 'א'}</span>
+          </button>
+        </div>
+      {/if}
+
       <div class="relative">
-        <label class="block text-sm font-bold mb-1">Book</label>
+        <label class="hidden sm:block text-xs font-bold mb-1 text-center text-ink-soft" for="greek-diacritics">Grk</label>
+        <button
+          id="greek-diacritics"
+          type="button"
+          class="font-greek h-[26px] min-w-[28px] sm:h-[38px] sm:min-w-[38px] px-1 sm:px-2 rounded border text-sm sm:text-lg flex items-center justify-center cursor-pointer transition-colors duration-150 focus:outline-none focus:ring-1 focus:ring-blue-500 {greekDiacritics
+            ? 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700 shadow-xs font-bold'
+            : 'bg-page text-ink-soft border-rule hover:bg-rule hover:text-ink font-normal'}"
+          onclick={toggleGreekDiacritics}
+          title={greekDiacritics
+            ? 'Greek diacritics: On (click to disable)'
+            : 'Greek diacritics: Off (click to enable)'}
+          aria-label="Toggle Greek diacritics"
+        >
+          <span>{greekDiacritics ? 'ἀ' : 'α'}</span>
+        </button>
+      </div>
+        <div class="h-6 sm:h-8 w-px bg-rule mx-0.5 sm:mx-1 self-end mb-1 hidden sm:inline"></div>
+      <div class="relative">
+        <label class="hidden sm:block text-sm font-bold mb-1">Book</label>
         <button 
-          class="border border-rule rounded p-2 w-32 text-left bg-page flex justify-between items-center shadow-sm"
+          aria-label="Select book"
+          class="border border-rule rounded p-1 sm:p-2 w-[4.5rem] sm:w-28 md:w-32 text-xs sm:text-sm text-left bg-page flex justify-between items-center shadow-xs sm:shadow-sm"
           onclick={(e) => { e.stopPropagation(); bookDropdownOpen = !bookDropdownOpen; }}
         >
-          {selectedBook}
-          <span class="text-xs text-ink-soft">▼</span>
+          <span class="truncate">{selectedBook}</span>
+          <span class="text-[10px] sm:text-xs text-ink-soft ml-0.5">▼</span>
         </button>
         
         {#if bookDropdownOpen}
@@ -179,14 +331,15 @@
       </div>
 
       <div class="relative">
-        <label class="block text-sm font-bold mb-1" for="chapter">Chapter</label>
+        <label class="hidden sm:block text-sm font-bold mb-1" for="chapter">Chapter</label>
         <button 
           id="chapter"
-          class="border border-rule rounded p-2 w-20 text-left bg-page flex justify-between items-center shadow-sm"
+          aria-label="Select chapter"
+          class="border border-rule rounded p-1 sm:p-2 w-12 sm:w-16 md:w-20 text-xs sm:text-sm text-left bg-page flex justify-between items-center shadow-xs sm:shadow-sm"
           onclick={(e) => { e.stopPropagation(); chapterDropdownOpen = !chapterDropdownOpen; }}
         >
-          {selectedChapter}
-          <span class="text-xs text-ink-soft">▼</span>
+          <span class="truncate">{selectedChapter}</span>
+          <span class="text-[10px] sm:text-xs text-ink-soft ml-0.5">▼</span>
         </button>
         
         {#if chapterDropdownOpen}
@@ -207,14 +360,16 @@
           </div>
         {/if}
       </div>
+
+      
     </div>
   </header>
 
   <main>
     {#if isOT}
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4 sticky top-0 bg-page pt-2 pb-2 border-b border-rule z-10">
+      <div class="hidden md:grid md:grid-cols-2 gap-6 mb-4 sticky top-0 bg-page pt-2 pb-2 border-b border-rule z-10">
         <h2 class="text-xl font-bold text-center">Hebrew (BHS)</h2>
-        <h2 class="text-xl font-bold text-center">Greek (LXX)</h2>
+        <h2 class="text-xl font-bold text-center">Greek (LXX){lxxChapterHeader}</h2>
       </div>
       
       <div class="flex flex-col gap-4">
@@ -222,44 +377,50 @@
           <p class="text-center text-ink-soft py-10">Loading or chapter not found.</p>
         {/if}
         {#each verseKeys as v}
+          {@const lxxInfo = getLxxVerse(v)}
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6 bg-page p-4 rounded shadow-sm border border-rule hover:bg-rule transition-colors relative">
             <!-- BHS Column -->
             <div class="flex flex-col items-end">
-              <div class="text-xs text-ink-soft font-bold mb-1">{selectedBook} {selectedChapter}:{v}</div>
+              <div class="text-xs text-ink-soft font-bold mb-1 self-center md:self-end text-center md:text-right">{selectedBook} {selectedChapter}:{v} <span class="md:hidden">(BHS)</span></div>
               <div class="text-right text-2xl leading-snug" dir="rtl">
                 {#if bhsChapterData[v]?.words}
                   {#each bhsChapterData[v].words as w}
-                    <button type="button" class="font-hebrew cursor-pointer hover:bg-rule rounded focus:outline-none inline" onclick={(e) => { e.stopPropagation(); showWordInfo(w, bhsLexemes, 'bhs'); }}>{w.word}</button>{w.trailer ?? ' '}
+                    <button type="button" class="font-hebrew cursor-pointer hover:bg-rule rounded focus:outline-none inline" onclick={(e) => { e.stopPropagation(); showWordInfo(w, bhsLexemes, 'bhs'); }}>{formatHebrew(w.word, hebrewMode)}</button>{w.trailer ?? ' '}
                   {/each}
                 {:else}
-                  <span class="font-hebrew">{bhsChapterData[v]?.text || ''}</span>
+                  <span class="font-hebrew">{formatHebrew(bhsChapterData[v]?.text || '', hebrewMode)}</span>
                 {/if}
               </div>
             </div>
 
             <!-- LXX Column -->
             <div class="flex flex-col items-start">
-              {#if selectedBook === 'Jer' && String(selectedChapter) === '30'}
-                 <div class="text-xs text-red-400 font-bold mb-1">{selectedBook} 37:{v}</div>
-              {:else}
-                 <div class="text-xs text-ink-soft font-bold mb-1">{selectedBook} {selectedChapter}:{v}</div>
+              <div class="md:hidden w-[90%] self-center border-t border-rule opacity-50 h-0 my-0 -translate-y-3"></div>
+              {#if lxxInfo}
+                <div class="text-xs font-bold mb-1 self-center md:self-start text-center md:text-left {lxxInfo.isDivergent ? 'text-amber-600 dark:text-amber-400' : 'text-ink-soft'}">
+                  {lxxInfo.label} <span class="md:hidden">(LXX)</span>
+                </div>
+                <div class="text-xl leading-snug">
+                  {#if lxxInfo.omitted}
+                    <span class="text-sm italic text-ink-soft">[No corresponding text in Septuagint]</span>
+                  {:else if lxxInfo.verseData?.words}
+                    {#each lxxInfo.verseData.words as w}
+                      <button type="button" class="font-greek cursor-pointer hover:bg-rule rounded focus:outline-none inline" onclick={(e) => { e.stopPropagation(); showWordInfo(w, lxxLexemes, 'lxx'); }}>{formatGreek(w.word, greekDiacritics)}</button>{w.trailer ?? ' '}
+                    {/each}
+                  {:else if lxxInfo.verseData?.text}
+                    <span class="font-greek">{formatGreek(lxxInfo.verseData.text, greekDiacritics)}</span>
+                  {:else}
+                    <span class="text-sm italic text-ink-soft">[Verse text not available]</span>
+                  {/if}
+                </div>
               {/if}
-              <div class="text-xl leading-snug">
-                {#if lxxChapterData[v]?.words}
-                  {#each lxxChapterData[v].words as w}
-                    <button type="button" class="font-greek cursor-pointer hover:bg-rule rounded focus:outline-none inline" onclick={(e) => { e.stopPropagation(); showWordInfo(w, lxxLexemes, 'lxx'); }}>{w.word}</button>{w.trailer ?? ' '}
-                  {/each}
-                {:else}
-                  <span class="font-greek">{lxxChapterData[v]?.text || ''}</span>
-                {/if}
-              </div>
             </div>
           </div>
         {/each}
       </div>
 
     {:else if isNT}
-      <div class="grid grid-cols-1 gap-6 mb-4 sticky top-0 bg-page pt-2 pb-2 border-b border-rule z-10">
+      <div class="hidden md:grid grid-cols-1 gap-6 mb-4 sticky top-0 bg-page pt-2 pb-2 border-b border-rule z-10">
         <h2 class="text-xl font-bold text-center">Greek NT (SBLGNT)</h2>
       </div>
       
@@ -270,14 +431,14 @@
         {#each verseKeys as v}
           <div class="bg-page p-4 rounded shadow-sm border border-rule hover:bg-rule transition-colors">
             <div class="flex flex-col items-start">
-              <div class="text-xs text-ink-soft font-bold mb-1">{selectedBook} {selectedChapter}:{v}</div>
+              <div class="text-xs text-ink-soft font-bold mb-1 self-center md:self-start text-center md:text-left">{selectedBook} {selectedChapter}:{v} <span class="md:hidden">(SBLGNT)</span></div>
               <div class="text-xl leading-snug">
                 {#if sblgntChapterData[v]?.words}
                   {#each sblgntChapterData[v].words as w}
-                    <button type="button" class="font-greek cursor-pointer hover:bg-rule rounded focus:outline-none inline" onclick={(e) => { e.stopPropagation(); showWordInfo(w, sblgntLexemes, 'sblgnt'); }}>{w.word}</button>{w.trailer ?? ' '}
+                    <button type="button" class="font-greek cursor-pointer hover:bg-rule rounded focus:outline-none inline" onclick={(e) => { e.stopPropagation(); showWordInfo(w, sblgntLexemes, 'sblgnt'); }}>{formatGreek(w.word, greekDiacritics)}</button>{w.trailer ?? ' '}
                   {/each}
                 {:else}
-                  <span class="font-greek">{sblgntChapterData[v]?.text || ''}</span>
+                  <span class="font-greek">{formatGreek(sblgntChapterData[v]?.text || '', greekDiacritics)}</span>
                 {/if}
               </div>
             </div>
@@ -285,6 +446,30 @@
         {/each}
       </div>
     {/if}
+
+    <!-- Open Source & Licensing Banner -->
+    <div class="mt-12 mb-8 mx-auto max-w-3xl border border-rule bg-page p-6 text-center rounded-lg shadow-sm sm:p-8">
+      <h3 class="mb-2 text-lg font-bold">Open Source &amp; Open Data</h3>
+      <p class="mx-auto mb-4 max-w-2xl text-sm text-ink-soft">
+        Polyglot Ancient Text Reader is built on open-source code (<a
+          href="https://www.gnu.org/licenses/agpl-3.0.html"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="text-link underline font-semibold hover:opacity-80">AGPL-3.0</a
+        >) and variously open-licensed Biblical datasets (<a
+          href="https://creativecommons.org/licenses/by-sa/4.0/"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="text-link underline font-semibold hover:opacity-80">CC BY-SA 4.0</a
+        > and <a href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank" rel="noopener noreferrer" class="text-link underline font-semibold hover:opacity-80">CC BY-NC 4.0 (BHS)</a>).
+      </p>
+      <div>
+        <a href="{base}/sources-and-licenses" class="inline-flex items-center gap-2 border border-rule px-4 py-2 rounded text-sm font-medium hover:bg-rule transition-colors">
+          <span>View Full Sources &amp; Licensing Framework</span>
+          <span aria-hidden="true">&rarr;</span>
+        </a>
+      </div>
+    </div>
   </main>
 </div>
 

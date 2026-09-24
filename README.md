@@ -1,42 +1,77 @@
-# sv
+# Polyglot Ancient Text Reader
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+An interactive, high-performance web application for side-by-side reading, comparative analysis, and morphological study across the **Hebrew Bible (BHS)**, **Septuagint (LXX)**, and **Greek New Testament (SBLGNT)**, complete with versification mapping, instant lexical and morphological lookups, and customizable reading themes.
 
-## Creating a project
+---
 
-If you're seeing this, you've probably already done this step. Congrats!
+## Features
 
-```sh
-# create a new project
-npx sv create my-app
-```
+- **Multilingual Side-by-Side Reading**: Synchronized parallel display of Hebrew (BHS) and Greek (LXX) for Old Testament books, and Greek New Testament (SBLGNT).
+- **Versification Alignment (TVTMS)**: Cross-tradition verse synchronization powered by the STEPBible Tyndale Versification Mapping System.
+- **Deep Lexical & Morphological Inspection**: Interactive word clicking with modal display of lemmas, glosses, part-of-speech, and grammatical analysis.
+- **Adaptive Reading Themes**: Smooth, contrast-invariant piecewise color stop interpolation theme slider adapted from OpenScriptorium.
+- **Fast Static Performance**: Pre-rendered static data pipeline optimized for instant client-side navigation.
 
-To recreate this project with the same configuration:
+---
 
-```sh
-# recreate this project
-npx sv@0.17.1 create --template minimal --types ts --add sveltekit-adapter="adapter:static" tailwindcss="plugins:none" --install npm .
-```
+## Data Provenance & Licensing
 
-## Developing
+All data assets in this repository are derived from datasets with various types of open licenses which allow (minimally) for non-commercial use. For complete details, see the [LICENSES.md page](LICENSES.md).
 
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
+> [!IMPORTANT]
+> **Non-Commercial Data Notice (BHS & TVTMS)**:
+> The Hebrew Bible text, lemma, and morphological dataset is derived from the **ETCBC / Text-Fabric BHSA** dataset and **Eliran Wong's BHS-morphology** package, and is licensed under **[CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/)**, which explicitly restricts usage to **Non-Commercial** purposes. Likewise, the **TVTMS versification alignment** data from STEPBible is licensed under **[CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/)**. Commercial use of these data assets is strictly prohibited.
 
-```sh
+### Upstream Sources & Credits
+
+- **Hebrew Bible (BHS)**:
+  - Developed by the [Eep Talstra Centre for Bible and Computer](https://etcbc.nl) (Vrije Universiteit Amsterdam); source: [ETCBC/bhsa on GitHub](https://github.com/ETCBC/bhsa).
+  - Morphology package curated by Eliran Wong: [eliranwong/BHS-morphology on GitHub](https://github.com/eliranwong/BHS-morphology).
+  - License: [Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)](https://creativecommons.org/licenses/by-nc/4.0/) (Commercial use prohibited).
+- **Septuagint (LXX)**:
+  - Base text: Henry Barclay Swete, *The Old Testament in Greek according to the Septuagint* (Cambridge: Cambridge University Press, 3 vols., 1887–1912, reprint 1930; Public Domain worldwide).
+  - Digital transcription curated by Eliran Wong and collaborators ([eliranwong/LXX-Swete-1930](https://github.com/eliranwong/LXX-Swete-1930), Public Domain).
+- **Greek New Testament (SBLGNT)**:
+  - Edited by Michael W. Holmes, Copyright 2010 Society of Biblical Literature and Logos Bible Software ([CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)).
+  - Morphological parsing: MorphGNT by James Tauber ([CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)).
+- **Versification Alignment (TVTMS)**:
+  - Tyndale Versification Mapping System provided by STEPBible.org and Tyndale House, Cambridge ([STEPBible-Data](https://github.com/STEPBible/STEPBible-Data)).
+  - License: [Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)](https://creativecommons.org/licenses/by-nc/4.0/).
+- **Lexica & Dictionaries**:
+  - Liddell-Scott-Jones (LSJ) & Middle Liddell: Public Domain.
+  - Brown-Driver-Briggs (BDB): Public Domain.
+- **UI Architecture**:
+  - OpenScriptorium reading theme selector and contrast-invariant color stop interpolation pattern (ISC License).
+- **AI Engineering & Development**:
+  - The application developer used Google DeepMind's Antigravity 2.0 and Gemini models in the development of this project.
+
+---
+
+## Licensing Terms
+
+This project utilizes a dual-licensing structure to clearly separate application software from data assets:
+
+- **Application Software**: Licensed under the [GNU Affero General Public License v3.0 (AGPL-3.0)](LICENSE). Covers all source code, SvelteKit components, user interface logic, build scripts, and test suites.
+- **Data Assets & Transformations**: 
+  - General static datasets and transformations are licensed under the [Creative Commons Attribution-ShareAlike 4.0 International License (CC BY-SA 4.0)](LICENSE-DATA).
+  - BHS Hebrew Bible data (text, lemma, morphology) and TVTMS versification alignment data are licensed under the [Creative Commons Attribution-NonCommercial 4.0 International License (CC BY-NC 4.0)](https://creativecommons.org/licenses/by-nc/4.0/) (**Commercial use prohibited**).
+
+For full details, see [LICENSES.md](LICENSES.md).
+
+---
+
+## Development & Building
+
+```bash
+# Install dependencies
+npm install
+
+# Run development server
 npm run dev
 
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
-```
-
-## Building
-
-To create a production version of your app:
-
-```sh
+# Build production bundle
 npm run build
+
+# Preview production build locally
+npm run preview
 ```
-
-You can preview the production build with `npm run preview`.
-
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
