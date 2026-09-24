@@ -1,7 +1,7 @@
 {
 	"name": "polyglot-bible-reader",
 	"private": true,
-	"version": "0.0.4",
+	"version": "0.0.5",
 	"type": "module",
 	"scripts": {
 		"dev": "vite dev",
@@ -21,7 +21,8 @@
 		"svelte-check": "^4.6.0",
 		"tailwindcss": "^4.3.0",
 		"typescript": "^6.0.3",
-		"vite": "^8.0.16"
+		"vite": "^8.0.16",
+		"vitest": "^5.0.1"
 	},
 	"dependencies": {
 		"@biblical-data/svelte-lemma-ui": "file:../biblical-data-pipeline/packages/svelte-lemma-ui",

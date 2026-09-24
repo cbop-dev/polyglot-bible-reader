@@ -5,10 +5,112 @@
   import VersionButton from '$lib/components/ui/VersionButton.svelte';
   import { formatHebrew, formatGreek, type HebrewDiacriticMode } from '$lib/utils/diacritics';
 
-  let selectedVersion = $state<'BHS' | 'LXX' | 'SBLGNT'>('BHS');
+  let versionGrid = $state<string[][]>([
+    ['BHS', 'LXX']
+  ]);
+
+  let gridAlignments = $state<(( 'left' | 'right' ) | null)[][]>([
+    [null, null]
+  ]);
+
+  function getDefaultAlign(rIdx: number, cIdx: number, version: string): 'left' | 'right' {
+    const totalCols = versionGrid[0]?.length || 2;
+    if (totalCols === 2) {
+      return cIdx === 0 ? 'right' : 'left';
+    }
+    return version === 'BHS' ? 'right' : 'left';
+  }
+
+  function getCellAlign(rIdx: number, cIdx: number): 'left' | 'right' {
+    const override = gridAlignments[rIdx]?.[cIdx];
+    if (override) return override;
+    const ver = versionGrid[rIdx]?.[cIdx] || 'WEB';
+    return getDefaultAlign(rIdx, cIdx, ver);
+  }
+
+  function toggleCellAlign(rIdx: number, cIdx: number) {
+    const current = getCellAlign(rIdx, cIdx);
+    const next = current === 'right' ? 'left' : 'right';
+    gridAlignments = gridAlignments.map((row, r) => {
+      if (r !== rIdx) return row;
+      const newRow = [...row];
+      newRow[cIdx] = next;
+      return newRow;
+    });
+  }
+  const allVersions = ['BHS', 'LXX', 'SBLGNT', 'WEB', 'Vulgate', 'KJV', 'Brenton'];
+
+  let activeVersions = $derived<string[]>(
+    Array.from(new Set([...versionGrid.flat(), selectedVersion]))
+  );
+
+  let currentBooks = $derived<Record<string, any>>({
+    BHS: currentBhsBook,
+    LXX: currentLxxBook,
+    SBLGNT: currentSblgntBook,
+    WEB: currentWebBook,
+    Vulgate: currentVulgateBook,
+    KJV: currentKjvBook,
+    Brenton: currentBrentonBook
+  });
+
+  function formatVersionLabel(opt: string): string {
+    if (opt === 'BHS') return 'Hebrew (BHS)';
+    if (opt === 'LXX') return 'Greek (LXX)';
+    if (opt === 'SBLGNT') return 'Greek NT (SBLGNT)';
+    if (opt === 'WEB') return 'English (WEB)';
+    if (opt === 'Vulgate') return 'Latin (Vulgate)';
+    if (opt === 'KJV') return 'English (KJV)';
+    if (opt === 'Brenton') return "Brenton's (LXX)";
+    return opt;
+  }
+
+  function addColumn() {
+    const defaults = ['BHS', 'LXX', 'KJV', 'Vulgate', 'WEB', 'Brenton', 'SBLGNT'];
+    const used = new Set(versionGrid.flat());
+    const nextVer = defaults.find(d => !used.has(d)) || 'WEB';
+    versionGrid = versionGrid.map(row => [...row, nextVer]);
+    gridAlignments = gridAlignments.map(row => [...row, null]);
+  }
+
+  function removeColumn(colIndex: number) {
+    if ((versionGrid[0]?.length || 0) <= 1) return;
+    versionGrid = versionGrid.map(row => row.filter((_, idx) => idx !== colIndex));
+    gridAlignments = gridAlignments.map(row => row.filter((_, idx) => idx !== colIndex));
+  }
+
+  function addRow() {
+    const cols = versionGrid[0]?.length || 2;
+    const defaults = ['KJV', 'Vulgate', 'WEB', 'Brenton', 'BHS', 'LXX', 'SBLGNT'];
+    const used = new Set(versionGrid.flat());
+    const unused = defaults.filter(d => !used.has(d));
+    const newRow: string[] = [];
+    for (let c = 0; c < cols; c++) {
+      newRow.push(unused[c] || defaults[c % defaults.length] || 'WEB');
+    }
+    versionGrid = [...versionGrid, newRow];
+    gridAlignments = [...gridAlignments, new Array(cols).fill(null)];
+  }
+
+  function removeRow(rowIndex: number) {
+    if (versionGrid.length <= 1) return;
+    versionGrid = versionGrid.filter((_, idx) => idx !== rowIndex);
+    gridAlignments = gridAlignments.filter((_, idx) => idx !== rowIndex);
+  }
+
+  function updateCell(rIdx: number, cIdx: number, version: string) {
+    versionGrid = versionGrid.map((row, r) => {
+      if (r !== rIdx) return row;
+      const newRow = [...row];
+      newRow[cIdx] = version;
+      return newRow;
+    });
+  }
+  let selectedVersion = $state('BHS');
   let selectedBook = $state('Gen');
   let selectedChapter = $state('1');
   let versionDropdownOpen = $state(false);
+  
 
   let hebrewMode = $state<HebrewDiacriticMode>('all');
   let greekDiacritics = $state(true);
@@ -30,122 +132,28 @@
   let currentBhsBook: any = $state(null);
   let currentLxxBook: any = $state(null);
   let currentSblgntBook: any = $state(null);
+  let currentWebBook: any = $state(null);
+  let currentVulgateBook: any = $state(null);
+  let currentKjvBook: any = $state(null);
+  let currentBrentonBook: any = $state(null);
 
   let bhsChapterData = $derived(currentBhsBook?.chapters?.[String(selectedChapter)] || {});
   let lxxChapterData = $derived(currentLxxBook?.chapters?.[String(selectedChapter)] || {});
   let sblgntChapterData = $derived(currentSblgntBook?.chapters?.[String(selectedChapter)] || {});
+  let webChapterData = $derived(currentWebBook?.chapters?.[String(selectedChapter)] || {});
+  let vulgateChapterData = $derived(currentVulgateBook?.chapters?.[String(selectedChapter)] || {});
   let alignmentData: any = $state({});
 
-  let lxxChapterHeader = $derived.by(() => {
-    if (selectedVersion !== 'BHS' || !verseKeys.length || !alignmentData) return '';
-    const mappedChapters = new Set<string>();
-    for (const v of verseKeys) {
-      const key = `${selectedBook} ${selectedChapter}:${v}`;
-      if (alignmentData && key in alignmentData) {
-        const target = alignmentData[key];
-        if (target) mappedChapters.add(String(target.chapter));
-      } else {
-        mappedChapters.add(String(selectedChapter));
-      }
-    }
-    const chList = Array.from(mappedChapters).sort((a, b) => Number(a) - Number(b));
-    if (chList.length === 1 && chList[0] !== String(selectedChapter)) {
-      return ` (ch. ${chList[0]})`;
-    } else if (chList.length > 1) {
-      return ` (ch. ${chList.join(', ')})`;
-    }
-    return '';
-  });
+  
 
-  let bhsChapterHeader = $derived.by(() => {
-    if (selectedVersion !== 'LXX' || !verseKeys.length || !alignmentData) return '';
-    const mappedChapters = new Set<string>();
-    for (const v of verseKeys) {
-       let foundKey = Object.keys(alignmentData).find(k => {
-           const val = alignmentData[k];
-           return k.startsWith(selectedBook + ' ') && val && String(val.chapter) === String(selectedChapter) && String(val.verse) === String(v);
-       });
-       if (foundKey) {
-           const parts = foundKey.split(' ')[1].split(':');
-           mappedChapters.add(parts[0]);
-       } else {
-           mappedChapters.add(String(selectedChapter));
-       }
-    }
-    const chList = Array.from(mappedChapters).sort((a, b) => Number(a) - Number(b));
-    if (chList.length === 1 && chList[0] !== String(selectedChapter)) {
-      return ` (ch. ${chList[0]})`;
-    } else if (chList.length > 1) {
-      return ` (ch. ${chList.join(', ')})`;
-    }
-    return '';
-  });
+  
 
-  function getLxxVerse(v: string) {
-    if (!currentLxxBook?.chapters) return null;
-    const key = `${selectedBook} ${selectedChapter}:${v}`;
-    let ch = String(selectedChapter);
-    let vs = v;
-    let isDivergent = false;
 
-    if (alignmentData && key in alignmentData) {
-      const target = alignmentData[key];
-      if (target === null) {
-        return {
-          exists: false,
-          omitted: true,
-          label: `${selectedBook} [omitted in LXX]`,
-          isDivergent: true,
-          verseData: null
-        };
-      }
-      ch = String(target.chapter);
-      vs = String(target.verse);
-      isDivergent = ch !== String(selectedChapter) || vs !== v;
-    }
-
-    const verseData = currentLxxBook.chapters?.[ch]?.[vs] || null;
-    return {
-      exists: !!verseData,
-      omitted: false,
-      label: `${selectedBook} ${ch}:${vs}`,
-      isDivergent,
-      verseData
-    };
-  }
-
-  function getBhsVerse(v: string) {
-    if (!currentBhsBook?.chapters) return null;
-    let ch = String(selectedChapter);
-    let vs = v;
-    let isDivergent = false;
-
-    if (alignmentData) {
-       let foundKey = Object.keys(alignmentData).find(k => {
-           const val = alignmentData[k];
-           return k.startsWith(selectedBook + ' ') && val && String(val.chapter) === String(selectedChapter) && String(val.verse) === String(v);
-       });
-       if (foundKey) {
-           const parts = foundKey.split(' ')[1].split(':');
-           ch = parts[0];
-           vs = parts[1];
-           isDivergent = true;
-       }
-    }
-    
-    const verseData = currentBhsBook.chapters?.[ch]?.[vs] || null;
-    return {
-       exists: !!verseData,
-       omitted: !verseData,
-       label: `${selectedBook} ${ch}:${vs}`,
-       isDivergent,
-       verseData
-    };
-  }
   
   let bhsLexemes: any = $state({});
   let lxxLexemes: any = $state({});
   let sblgntLexemes: any = $state({});
+  let vulgateLexemes: any = $state({});
 
   let activeWord: any = $state(null);
   let chapterDropdownOpen = $state(false);
@@ -157,44 +165,50 @@
 
   let availableBooks = $derived(selectedVersion === 'BHS' ? bhsBooks : selectedVersion === 'LXX' ? lxxBooks : ntBooks);
 
-  let availableChapters = $derived(
-    selectedVersion === 'BHS' && currentBhsBook 
-      ? Object.keys(currentBhsBook.chapters).map(Number).sort((a,b)=>a-b)
-      : selectedVersion === 'LXX' && currentLxxBook
-        ? Object.keys(currentLxxBook.chapters).map(Number).sort((a,b)=>a-b)
-        : selectedVersion === 'SBLGNT' && currentSblgntBook 
-          ? Object.keys(currentSblgntBook.chapters).map(Number).sort((a,b)=>a-b)
-          : []
-  );
+  let availableChapters = $derived((() => {
+    let chapters;
+    if (selectedVersion === 'BHS') chapters = currentBhsBook?.chapters;
+    else if (selectedVersion === 'LXX') chapters = currentLxxBook?.chapters;
+    else if (selectedVersion === 'SBLGNT') chapters = currentSblgntBook?.chapters;
+    else if (selectedVersion === 'WEB') chapters = currentWebBook?.chapters;
+    else if (selectedVersion === 'Vulgate') chapters = currentVulgateBook?.chapters;
+    else if (selectedVersion === 'KJV') chapters = currentKjvBook?.chapters;
+    else if (selectedVersion === 'Brenton') chapters = currentBrentonBook?.chapters;
+    if (!chapters) return [];
+    return Object.keys(chapters).map(Number).sort((a,b)=>a-b);
+  })());
   
-  function handleVersionSelect(version: 'BHS' | 'LXX' | 'SBLGNT') {
-    selectedVersion = version;
-    versionDropdownOpen = false;
-    const allowed = version === 'BHS' ? bhsBooks : version === 'LXX' ? lxxBooks : ntBooks;
-    if (!allowed.includes(selectedBook)) {
-      selectedBook = allowed[0];
-      selectedChapter = '1';
-    } else {
-      selectedChapter = '1'; // Or reset to 1 on version change for simplicity
-    }
-  }
+    
 
   async function loadBookData(book: string) {
     currentBhsBook = null;
     currentLxxBook = null;
     currentSblgntBook = null;
+    currentWebBook = null;
+    currentVulgateBook = null;
+    currentKjvBook = null;
+    currentBrentonBook = null;
+
+    // Additionally, ALWAYS fetch the selectedVersion's book even if it's not in activeColumns!
+    // This ensures availableChapters will work.
+    const toFetchBhs = activeVersions.includes('BHS');
+    const toFetchLxx = activeVersions.includes('LXX');
+    const toFetchSblgnt = activeVersions.includes('SBLGNT');
+    const toFetchWeb = activeVersions.includes('WEB');
+    const toFetchVulgate = activeVersions.includes('Vulgate');
+    const toFetchKjv = activeVersions.includes('KJV');
+    const toFetchBrenton = activeVersions.includes('Brenton');
 
     try {
-      if (bhsBooks.includes(book) || lxxBooks.includes(book)) {
-        const fetches = [];
-        if (bhsBooks.includes(book)) fetches.push(fetch(`/data/bhs/books/${book}.json`).then(r => r.ok ? r.json() : null).then(d => currentBhsBook = d));
-        if (lxxBooks.includes(book)) fetches.push(fetch(`/data/lxx/books/${book}.json`).then(r => r.ok ? r.json() : null).then(d => currentLxxBook = d));
-        await Promise.all(fetches);
-      }
-      if (ntBooks.includes(book)) {
-        const ntRes = await fetch(`/data/sblgnt/books/${book}.json`);
-        if (ntRes.ok) currentSblgntBook = await ntRes.json();
-      }
+      const fetches = [];
+      if (toFetchBhs) fetches.push(fetch(`/data/bhs/books/${getBookFile('BHS', book)}.json`).then(r => r.ok ? r.json() : null).then(d => currentBhsBook = d));
+      if (toFetchLxx) fetches.push(fetch(`/data/lxx/books/${getBookFile('LXX', book)}.json`).then(r => r.ok ? r.json() : null).then(d => currentLxxBook = d));
+      if (toFetchSblgnt) fetches.push(fetch(`/data/sblgnt/books/${getBookFile('SBLGNT', book)}.json`).then(r => r.ok ? r.json() : null).then(d => currentSblgntBook = d));
+      if (toFetchWeb) fetches.push(fetch(`/data/web/books/${getBookFile('WEB', book)}.json`).then(r => r.ok ? r.json() : null).then(d => currentWebBook = d));
+      if (toFetchVulgate) fetches.push(fetch(`/data/vulgate/books/${getBookFile('Vulgate', book)}.json`).then(r => r.ok ? r.json() : null).then(d => currentVulgateBook = d));
+      if (toFetchKjv) fetches.push(fetch(`/data/kjv/books/${getBookFile('KJV', book)}.json`).then(r => r.ok ? r.json() : null).then(d => currentKjvBook = d));
+      if (toFetchBrenton) fetches.push(fetch(`/data/brenton/books/${getBookFile('Brenton', book)}.json`).then(r => r.ok ? r.json() : null).then(d => currentBrentonBook = d));
+      await Promise.all(fetches);
     } catch (e) {
       console.error("Error loading book data", e);
     }
@@ -202,16 +216,18 @@
 
   onMount(async () => {
     try {
-      const [alignRes, bhsLex, lxxLex, sblgntLex] = await Promise.all([
+      const [alignRes, bhsLex, lxxLex, sblgntLex, vulgateLex] = await Promise.all([
         fetch('/data/tvtms_alignment.json'),
         fetch('/data/bhs/lexemes.json'),
         fetch('/data/lxx/lexemes.json'),
-        fetch('/data/sblgnt/lexemes.json')
+        fetch('/data/sblgnt/lexemes.json'),
+        fetch('/data/vulgate/lexemes.json')
       ]);
       if (alignRes.ok) alignmentData = await alignRes.json();
       if (bhsLex.ok) bhsLexemes = await bhsLex.json();
       if (lxxLex.ok) lxxLexemes = await lxxLex.json();
       if (sblgntLex.ok) sblgntLexemes = await sblgntLex.json();
+      if (vulgateLex && vulgateLex.ok) vulgateLexemes = await vulgateLex.json();
     } catch (e) {
       console.error("Error loading lexemes or alignment data", e);
     }
@@ -219,51 +235,97 @@
 
   $effect(() => {
     loadBookData(selectedBook);
+    // Explicitly track selectedVersion to reload if it changes
+    selectedVersion;
   });
 
   import Modal2 from '@biblical-data/svelte-lemma-ui/components/ui/Modal2.svelte';
   import LemmaInfo from '@biblical-data/svelte-lemma-ui/components/LemmaInfo.svelte';
   import { Lexeme } from '@biblical-data/svelte-lemma-ui/Lexeme.js';
+import { getBookFile, getMappedReference } from '$lib/bookMapping.js';
   import { VocabEngine } from '@biblical-data/svelte-lemma-ui/engine/VocabEngine.js';
+  import { GenericVocabDataset } from '@biblical-data/svelte-lemma-ui/data/VocabDataset.js';
 
   let showLemmaModal = $state(false);
-  let verseKeys = $derived(
-    selectedVersion === 'BHS' 
-      ? Object.keys(bhsChapterData || {}).sort((a,b) => parseInt(a) - parseInt(b))
-      : selectedVersion === 'LXX'
-        ? Object.keys(lxxChapterData || {}).sort((a,b) => parseInt(a) - parseInt(b))
-        : Object.keys(sblgntChapterData || {}).sort((a,b) => parseInt(a) - parseInt(b))
-  );
+  let verseKeys = $derived((() => {
+    let chapters;
+    if (selectedVersion === 'BHS') chapters = currentBhsBook?.chapters?.[selectedChapter];
+    else if (selectedVersion === 'LXX') chapters = currentLxxBook?.chapters?.[selectedChapter];
+    else if (selectedVersion === 'SBLGNT') chapters = currentSblgntBook?.chapters?.[selectedChapter];
+    else if (selectedVersion === 'WEB') chapters = currentWebBook?.chapters?.[selectedChapter];
+    else if (selectedVersion === 'Vulgate') chapters = currentVulgateBook?.chapters?.[selectedChapter];
+    else if (selectedVersion === 'KJV') chapters = currentKjvBook?.chapters?.[selectedChapter];
+    else if (selectedVersion === 'Brenton') chapters = currentBrentonBook?.chapters?.[selectedChapter];
+    
+    if (!chapters) return [];
+    return Object.keys(chapters).sort((a,b) => Number(a) - Number(b)).map(String);
+  })());
+
+  let kjvConcordance: any = null;
+
+  async function getDataset(corpus: string) {
+    await initDatasets();
+    if (tfDataMap[corpus]) return tfDataMap[corpus];
+    
+    const names: Record<string, { name: string, lang: string }> = {
+      kjv: { name: 'King James Version', lang: 'english' },
+      web: { name: 'World English Bible', lang: 'english' },
+      vulgate: { name: 'Vulgate', lang: 'latin' },
+      brenton: { name: "Brenton's Septuagint", lang: 'english' }
+    };
+    const meta = names[corpus] || { name: corpus.toUpperCase(), lang: 'english' };
+    const ds = new GenericVocabDataset(corpus, meta.name, meta.lang);
+    await ds.initBooks();
+    tfDataMap[corpus] = ds;
+    return ds;
+  }
 
   async function showWordInfo(wordObj: any, lexemesDict: any, corpus: string) {
     if (!wordObj || !wordObj.id) return;
-    const baseLex = lexemesDict ? lexemesDict[wordObj.id] : {};
-    activeWord = { ...baseLex, ...wordObj, isLoading: true };
+    activeWord = { ...wordObj, isLoading: true, corpus };
     showLemmaModal = true;
     
-    // Ensure dataset classes are loaded
-    await initDatasets();
-    const tfData = tfDataMap[corpus];
+    const tfData = await getDataset(corpus);
     
     // Create and fetch full lemma stats
     let lexemeInstance = new Lexeme();
-    await VocabEngine.fetchLexInfo(wordObj.id, lexemeInstance, tfData);
+    await VocabEngine.fetchLexInfo(wordObj.id, lexemeInstance, tfData, corpus);
     
-    if (lexemeInstance.id) {
-        // Keep wordObj properties (e.g. word, trailer) so the template can still use activeWord.word
+    if (lexemeInstance.id && lexemeInstance.id !== -1) {
         Object.assign(lexemeInstance, wordObj);
+        lexemeInstance.corpus = corpus;
         lexemeInstance._tfData = tfData;
         lexemeInstance.isLoading = false;
         activeWord = lexemeInstance;
     } else {
         // Fallback to basic dictionary entry if stats aren't found
-        const lexData = lexemesDict[wordObj.id];
-        Object.assign(lexemeInstance, lexData);
+        const lexData = lexemesDict ? lexemesDict[wordObj.id] : null;
+        if (lexData) Object.assign(lexemeInstance, lexData);
         Object.assign(lexemeInstance, wordObj);
+        lexemeInstance.corpus = corpus;
+        lexemeInstance.lemma = lexemeInstance.lemma || (wordObj.id ? `Strongs: ${wordObj.id}` : wordObj.word);
         lexemeInstance._tfData = tfData;
         lexemeInstance.isLoading = false;
         activeWord = lexemeInstance;
     }
+  }
+
+  
+  
+  function handleVersionSelect(version: string) {
+    selectedVersion = version;
+    versionDropdownOpen = false;
+    const books = version === 'BHS' ? bhsBooks : version === 'LXX' ? lxxBooks : ntBooks;
+    if (!books.includes(selectedBook)) {
+      selectedBook = books[0];
+      selectedChapter = '1';
+    }
+  }
+
+  function handleWordClick(e: Event, w: any, colVersion: string) {
+    e.stopPropagation();
+    const dict = colVersion === 'BHS' ? bhsLexemes : colVersion === 'LXX' ? lxxLexemes : colVersion === 'SBLGNT' ? sblgntLexemes : vulgateLexemes;
+    showWordInfo(w, dict, colVersion.toLowerCase());
   }
 
   function closePopup() {
@@ -272,6 +334,7 @@
     chapterDropdownOpen = false;
     bookDropdownOpen = false;
     versionDropdownOpen = false;
+    
   }
 </script>
 
@@ -314,7 +377,7 @@
             </a>
           </span>
         </h1>
-        <p class="hidden sm:block text-ink-soft mt-1 text-sm sm:text-base">BHS | LXX | SBLGNT</p>
+        
       </div>
     </div>
     
@@ -325,7 +388,7 @@
 
 
 
-      {#if selectedVersion === 'BHS' || selectedVersion === 'LXX'}
+      {#if activeVersions.includes("BHS")}
         <div class="relative">
           <label class="hidden sm:block text-xs font-bold mb-1 text-center text-ink-soft" for="hebrew-diacritics">Heb</label>
           <button
@@ -349,6 +412,7 @@
         </div>
       {/if}
 
+      {#if activeVersions.includes("LXX") || activeVersions.includes("SBLGNT")}
       <div class="relative">
         <label class="hidden sm:block text-xs font-bold mb-1 text-center text-ink-soft" for="greek-diacritics">Grk</label>
         <button
@@ -366,8 +430,10 @@
           <span>{greekDiacritics ? 'ἀ' : 'α'}</span>
         </button>
       </div>
+      {/if}
         <div class="h-6 sm:h-8 w-px bg-rule mx-0.5 sm:mx-1 self-end mb-1 hidden sm:inline"></div>
-              <!-- Version Dropdown -->
+        
+          
       <div class="relative">
         <label class="hidden sm:block text-sm font-bold mb-1">Version</label>
         <button 
@@ -381,10 +447,10 @@
         
         {#if versionDropdownOpen}
           <div class="absolute top-full left-0 mt-1 bg-page border border-rule rounded shadow-lg z-50 overflow-hidden w-24">
-            {#each ['BHS', 'LXX', 'SBLGNT'] as v}
+            {#each allVersions as v}
               <button 
                 class="w-full text-left px-3 py-2 text-sm hover:bg-rule {v === selectedVersion ? 'bg-blue-500 text-white hover:bg-blue-600' : ''}"
-                onclick={() => handleVersionSelect(v as 'BHS' | 'LXX' | 'SBLGNT')}
+                onclick={() => handleVersionSelect(v)}
               >
                 {v}
               </button>
@@ -406,7 +472,7 @@
         {#if bookDropdownOpen}
           <div class="fixed inset-0 bg-black/20 z-40 flex items-center justify-center p-4" onclick={() => bookDropdownOpen = false}>
             <div class="bg-page border border-rule rounded-lg shadow-xl p-4 z-50 max-h-[80vh] overflow-y-auto w-full max-w-3xl" onclick={(e) => e.stopPropagation()}>
-              <h3 class="font-bold mb-4 text-lg border-b border-rule pb-2">Available Books ({selectedVersion})</h3>
+              <h3 class="font-bold mb-4 text-lg border-b border-rule pb-2">Available Books</h3>
               <div class="grid grid-cols-3 md:grid-cols-6 gap-2">
                 {#each availableBooks as book}
                   <button 
@@ -458,108 +524,146 @@
   </header>
 
   <main>
-    {#if selectedVersion === 'BHS' || selectedVersion === 'LXX'}
-      <div class="hidden md:grid md:grid-cols-2 gap-6 mb-4 sticky top-0 bg-page pt-2 pb-2 border-b border-rule z-10">
-        <h2 class="text-xl font-bold text-center">Hebrew (BHS){selectedVersion === 'LXX' ? bhsChapterHeader : ''}</h2>
-        <h2 class="text-xl font-bold text-center">Greek (LXX){selectedVersion === 'BHS' ? lxxChapterHeader : ''}</h2>
-      </div>
-      
-      <div class="flex flex-col gap-4">
-        {#if Object.keys(selectedVersion === 'BHS' ? bhsChapterData : lxxChapterData).length === 0}
-          <p class="text-center text-ink-soft py-10">Loading or chapter not found.</p>
-        {/if}
-        {#each verseKeys as v}
-          {@const lxxInfo = selectedVersion === 'BHS' ? getLxxVerse(v) : {
-             exists: !!lxxChapterData[v],
-             omitted: !lxxChapterData[v],
-             label: `${selectedBook} ${selectedChapter}:${v}`,
-             isDivergent: false,
-             verseData: lxxChapterData[v] || null
-          }}
-          {@const bhsInfo = selectedVersion === 'LXX' ? getBhsVerse(v) : {
-             exists: !!bhsChapterData[v],
-             omitted: !bhsChapterData[v],
-             label: `${selectedBook} ${selectedChapter}:${v}`,
-             isDivergent: false,
-             verseData: bhsChapterData[v] || null
-          }}
-          
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 bg-page p-4 rounded shadow-sm border border-rule hover:bg-rule transition-colors relative">
-            <!-- BHS Column -->
-            <div class="flex flex-col items-end">
-              {#if bhsInfo}
-                <div class="text-xs font-bold mb-1 self-center md:self-end text-center md:text-right {bhsInfo.isDivergent ? 'text-amber-600 dark:text-amber-400' : 'text-ink-soft'}">
-                  {bhsInfo.label} <span class="md:hidden">(BHS)</span>
-                </div>
-                <div class="text-right text-2xl leading-snug" dir="rtl">
-                  {#if bhsInfo.omitted}
-                    <span class="text-sm italic text-ink-soft font-sans">[No corresponding text in BHS]</span>
-                  {:else if bhsInfo.verseData?.words}
-                    {#each bhsInfo.verseData.words as w}
-                      <button type="button" class="font-hebrew cursor-pointer hover:bg-rule rounded focus:outline-none inline" onclick={(e) => { e.stopPropagation(); showWordInfo(w, bhsLexemes, 'bhs'); }}>{formatHebrew(w.word, hebrewMode)}</button>{w.trailer ?? ' '}
-                    {/each}
-                  {:else if bhsInfo.verseData?.text}
-                    <span class="font-hebrew">{formatHebrew(bhsInfo.verseData.text, hebrewMode)}</span>
-                  {:else}
-                    <span class="text-sm italic text-ink-soft font-sans">[Verse text not available]</span>
-                  {/if}
-                </div>
-              {/if}
-            </div>
-
-            <!-- LXX Column -->
-            <div class="flex flex-col items-start">
-              <div class="md:hidden w-[90%] self-center border-t border-rule opacity-50 h-0 my-0 -translate-y-3"></div>
-              {#if lxxInfo}
-                <div class="text-xs font-bold mb-1 self-center md:self-start text-center md:text-left {lxxInfo.isDivergent ? 'text-amber-600 dark:text-amber-400' : 'text-ink-soft'}">
-                  {lxxInfo.label} <span class="md:hidden">(LXX)</span>
-                </div>
-                <div class="text-xl leading-snug">
-                  {#if lxxInfo.omitted}
-                    <span class="text-sm italic text-ink-soft">[No corresponding text in Septuagint]</span>
-                  {:else if lxxInfo.verseData?.words}
-                    {#each lxxInfo.verseData.words as w}
-                      <button type="button" class="font-greek cursor-pointer hover:bg-rule rounded focus:outline-none inline" onclick={(e) => { e.stopPropagation(); showWordInfo(w, lxxLexemes, 'lxx'); }}>{formatGreek(w.word, greekDiacritics)}</button>{w.trailer ?? ' '}
-                    {/each}
-                  {:else if lxxInfo.verseData?.text}
-                    <span class="font-greek">{formatGreek(lxxInfo.verseData.text, greekDiacritics)}</span>
-                  {:else}
-                    <span class="text-sm italic text-ink-soft">[Verse text not available]</span>
-                  {/if}
-                </div>
-              {/if}
-            </div>
-          </div>
-        {/each}
+    <!-- Dynamic Grid Controls Header -->
+    <div class="flex md:flex flex-col gap-0.5 md:gap-2 mb-4 sticky top-0 bg-page pt-2 pb-2 border-b border-rule z-10 shadow-xs">
+      <div class="flex items-center justify-between px-2 text-xs font-semibold text-ink-soft">
+        <span class="flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-link inline-block"></span>
+          Verse Grid Layout: <strong class="text-ink">{versionGrid.length} {versionGrid.length === 1 ? 'Row' : 'Rows'} × {versionGrid[0]?.length || 0} {versionGrid[0]?.length === 1 ? 'Col' : 'Cols'}</strong>
+        </span>
+        <div class="flex items-center gap-2">
+          <button 
+            type="button"
+            class="px-2.5 py-1 rounded border border-rule hover:bg-rule active:scale-95 cursor-pointer flex items-center gap-1 text-xs font-medium text-ink transition-transform"
+            onclick={addColumn}
+            title="Add a parallel column"
+          >
+            <span class="font-bold">+</span> Add Column
+          </button>
+          <button 
+            type="button"
+            class="px-2.5 py-1 rounded border border-rule hover:bg-rule active:scale-95 cursor-pointer flex items-center gap-1 text-xs font-medium text-ink transition-transform"
+            onclick={addRow}
+            title="Add a parallel row"
+          >
+            <span class="font-bold">+</span> Add Row
+          </button>
+        </div>
       </div>
 
-    {:else if selectedVersion === 'SBLGNT'}
-      <div class="hidden md:grid grid-cols-1 gap-6 mb-4 sticky top-0 bg-page pt-2 pb-2 border-b border-rule z-10">
-        <h2 class="text-xl font-bold text-center">Greek NT (SBLGNT)</h2>
-      </div>
-      
-      <div class="flex flex-col gap-4 max-w-4xl mx-auto">
-        {#if Object.keys(sblgntChapterData).length === 0}
-          <p class="text-center text-ink-soft py-10">Loading or chapter not found.</p>
-        {/if}
-        {#each verseKeys as v}
-          <div class="bg-page p-4 rounded shadow-sm border border-rule hover:bg-rule transition-colors">
-            <div class="flex flex-col items-start">
-              <div class="text-xs text-ink-soft font-bold mb-1 self-center md:self-start text-center md:text-left">{selectedBook} {selectedChapter}:{v} <span class="md:hidden">(SBLGNT)</span></div>
-              <div class="text-xl leading-snug">
-                {#if sblgntChapterData[v]?.words}
-                  {#each sblgntChapterData[v].words as w}
-                    <button type="button" class="font-greek cursor-pointer hover:bg-rule rounded focus:outline-none inline" onclick={(e) => { e.stopPropagation(); showWordInfo(w, sblgntLexemes, 'sblgnt'); }}>{formatGreek(w.word, greekDiacritics)}</button>{w.trailer ?? ' '}
+      {#each versionGrid as row, rIdx}
+        <div class="px-4 sm:px-5 border-x border-transparent">
+          {#if versionGrid.length > 1}
+            <div class="flex items-center justify-between text-[11px] font-semibold text-ink-soft mb-1 px-0.5">
+              <span>Row {rIdx + 1}</span>
+              <button 
+                type="button"
+                class="text-ink-soft hover:text-red-500 text-xs cursor-pointer flex items-center gap-1 hover:underline font-normal"
+                onclick={() => removeRow(rIdx)}
+                title="Remove row {rIdx + 1}"
+                aria-label="Remove row {rIdx + 1}"
+              >
+                ✕ Remove Row
+              </button>
+            </div>
+          {/if}
+          <div class="grid gap-6 verse-grid" style="grid-template-columns: repeat({row.length > 0 ? row.length : 1}, minmax(0, 1fr))">
+            {#each row as cellVersion, cIdx}
+              {@const align = getCellAlign(rIdx, cIdx)}
+              <div class="relative flex items-center justify-center gap-1.5 bg-page border border-rule/60 rounded-md px-3 py-1.5 group hover:border-link transition-colors shadow-xs">
+                <select 
+                  class="font-bold text-sm bg-transparent cursor-pointer appearance-none text-center focus:outline-none text-ink truncate"
+                  value={cellVersion}
+                  onchange={(e) => updateCell(rIdx, cIdx, e.currentTarget.value)}
+                  aria-label="Select translation for Row {rIdx + 1}, Column {cIdx + 1}"
+                >
+                  {#each allVersions as opt}
+                    <option value={opt}>{formatVersionLabel(opt)}</option>
                   {/each}
-                {:else}
-                  <span class="font-greek">{formatGreek(sblgntChapterData[v]?.text || '', greekDiacritics)}</span>
+                </select>
+                <button
+                  type="button"
+                  class="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold border transition-all cursor-pointer shrink-0 shadow-2xs {align === 'right' ? 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700' : 'bg-page text-ink-soft border-rule hover:bg-rule hover:text-ink'}"
+                  onclick={() => toggleCellAlign(rIdx, cIdx)}
+                  title="Text alignment: {align === 'right' ? 'Right-aligned' : 'Left-aligned'} (click to toggle)"
+                  aria-label="Toggle text alignment for Row {rIdx + 1}, Column {cIdx + 1}"
+                >
+                  {align === 'right' ? 'R' : 'L'}
+                </button>
+                {#if rIdx === 0 && row.length > 1}
+                  <button 
+                    type="button"
+                    class="text-ink-soft hover:text-red-500 text-xs opacity-0 group-hover:opacity-100 transition-opacity absolute right-1.5 p-0.5 rounded hover:bg-red-50 dark:hover:bg-red-950/30"
+                    onclick={() => removeColumn(cIdx)}
+                    title="Remove column {cIdx + 1}"
+                    aria-label="Remove column {cIdx + 1}"
+                  >✕</button>
                 {/if}
               </div>
-            </div>
+            {/each}
           </div>
-        {/each}
-      </div>
-    {/if}
+        </div>
+      {/each}
+    </div>
+
+    <!-- Dynamic Grid Verse Cards -->
+    <div class="flex flex-col gap-5 max-w-full mx-auto">
+      {#if verseKeys.length === 0}
+         <p class="text-center text-ink-soft py-10">Loading or chapter not found.</p>
+      {/if}
+
+      {#each verseKeys as v}
+        <div class="flex flex-col gap-4 bg-page p-4 sm:p-5 rounded-lg shadow-sm border border-rule transition-colors hover:shadow-md">
+          {#each versionGrid as row, rIdx}
+            {#if rIdx > 0}
+              <div class="border-t border-rule/50 my-1"></div>
+            {/if}
+            <div class="grid gap-6 verse-grid" style="grid-template-columns: repeat({row.length > 0 ? row.length : 1}, minmax(0, 1fr))">
+              {#each row as colVersion, cIdx}
+                {@const align = getCellAlign(rIdx, cIdx)}
+                {@const mapped = getMappedReference(colVersion, selectedBook, String(selectedChapter), v)}
+                {@const mChap = mapped.mappedChapter}
+                {@const mVerse = mapped.mappedVerse}
+                {@const bookData = currentBooks[colVersion]}
+                {@const vData = {
+                  exists: !!(bookData?.chapters?.[mChap]?.[mVerse]),
+                  omitted: !(bookData?.chapters?.[mChap]?.[mVerse]),
+                  label: `${mapped.mappedBook} ${mChap}:${mVerse}`,
+                  isDivergent: mChap !== String(selectedChapter) || mVerse !== v,
+                  verseData: bookData?.chapters?.[mChap]?.[mVerse]
+                }}
+                
+                <div class="flex flex-col {cIdx !== 0 ? 'border-t border-rule/40 pt-3.5 sm:border-0 sm:pt-0' : ''} {align === 'right' ? 'items-end text-right' : 'items-start text-left'}">
+                  <div class="text-xs font-bold mb-1.5 flex items-center gap-1.5 {align === 'right' ? 'self-end text-right' : 'self-start text-left'} {vData?.isDivergent ? 'text-amber-600 dark:text-amber-400' : 'text-ink-soft'}">
+                      <span>{vData?.label}</span>
+                      <span class="px-1.5 py-0.2 rounded text-[10px] bg-rule/50 font-medium">({colVersion})</span>
+                  </div>
+                  <div class="{colVersion === 'BHS' ? 'text-2xl' : 'text-xl'} {align === 'right' ? 'text-right' : 'text-left'} leading-snug w-full" dir={colVersion === 'BHS' ? 'rtl' : 'ltr'}>
+                     {#if vData?.omitted}
+                        <span class="text-sm italic text-ink-soft font-sans">[Not found in this version.]</span>
+                     {:else if vData?.verseData?.words}
+                        {#each vData.verseData.words as w}
+                           {#if colVersion === 'WEB' || colVersion === 'Vulgate' || colVersion === 'Brenton'}
+                             <span class="font-sans inline">{w.word}{w.trailer ?? ' '}</span>
+                           {:else}
+                             <button type="button" class="{colVersion === 'BHS' ? 'font-hebrew' : colVersion === 'Vulgate' ? 'font-sans' : 'font-greek'} cursor-pointer hover:bg-rule rounded focus:outline-none inline" onclick={(e) => handleWordClick(e, w, colVersion)}>{colVersion === 'BHS' ? formatHebrew(w.word, hebrewMode) : colVersion === 'LXX' || colVersion === 'SBLGNT' ? formatGreek(w.word, greekDiacritics) : w.word}</button>{w.trailer ?? ' '}
+                           {/if}
+                        {/each}
+                     {:else if vData?.verseData?.text}
+                        <span class="{colVersion === 'BHS' ? 'font-hebrew' : colVersion === 'Vulgate' || colVersion === 'WEB' ? 'font-sans' : 'font-greek'}">
+                           {colVersion === 'BHS' ? formatHebrew(vData.verseData.text, hebrewMode) : colVersion === 'LXX' || colVersion === 'SBLGNT' ? formatGreek(vData.verseData.text, greekDiacritics) : vData.verseData.text}
+                        </span>
+                     {:else}
+                        <span class="text-sm italic text-ink-soft font-sans">[Verse text not available]</span>
+                     {/if}
+                  </div>
+                </div>
+              {/each}
+            </div>
+          {/each}
+        </div>
+      {/each}
+    </div>
 
     <!-- Open Source & Licensing Banner -->
     <div class="mt-12 mb-8 mx-auto max-w-3xl border border-rule bg-page p-6 text-center rounded-lg shadow-sm sm:p-8">
@@ -611,19 +715,25 @@
   }
 </script>
 
+
 <Modal2 bind:showModal={showLemmaModal} onclose={closePopup}>
   {#if activeWord}
-    {#if activeWord.isLoading}
-      <div class="py-16 text-center flex flex-col items-center justify-center gap-3">
-        <span class="inline-block w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></span>
-        <p class="text-base font-medium text-gray-700">Loading lemma data for <strong class="{activeWord.word?.match(/[\u0590-\u05FF]/) ? 'font-hebrew text-xl' : 'font-greek text-xl'}">{activeWord.word}</strong>...</p>
-      </div>
-    {:else if activeWord._tfData}
-      <LemmaInfo tfData={activeWord._tfData} lemma={activeWord} />
+    {#if activeWord._tfData}
+       <LemmaInfo tfData={activeWord._tfData} lemma={activeWord} />
     {:else}
-      <div class="py-12 text-center text-gray-500">
-        <p>Lexicon data unavailable for this word.</p>
-      </div>
+       <div class="py-12 text-center text-ink-soft">
+         <span class="inline-block w-8 h-8 border-4 border-link border-t-transparent rounded-full animate-spin"></span>
+         <p class="mt-4 font-semibold">Loading linguistic data...</p>
+       </div>
     {/if}
   {/if}
 </Modal2>
+
+<style>
+  @media (max-width: 639px) {
+    :global(.verse-grid) {
+      grid-template-columns: 1fr !important;
+    }
+  }
+</style>
+
