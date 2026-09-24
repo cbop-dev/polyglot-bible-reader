@@ -9,7 +9,7 @@
 
 	onMount(() => {
 		const isSmallScreen = window.innerWidth < 768;
-		const saved = localStorage.getItem('lxx-footer-collapsed');
+		const saved = localStorage.getItem('polyglot-footer-collapsed');
 		if (saved !== null) {
 			isCollapsed = saved === 'true';
 			userToggled = true;
@@ -31,7 +31,7 @@
 		userToggled = true;
 		isCollapsed = !isCollapsed;
 		try {
-			localStorage.setItem('lxx-footer-collapsed', String(isCollapsed));
+			localStorage.setItem('polyglot-footer-collapsed', String(isCollapsed));
 		} catch {}
 	}
 </script>

@@ -4,7 +4,7 @@
 </script>
 
 <svelte:head>
-	<title>Sources & Licenses | Polyglot Ancient Text Reader</title>
+	<title>Sources & Licenses | Polyglot Bible Reader</title>
 </svelte:head>
 
 <div class="max-w-4xl mx-auto px-4 py-12 md:py-16 space-y-12">
@@ -19,7 +19,7 @@
 	<header class="space-y-4 border-b border-rule pb-6">
 		<h1 class="text-3xl md:text-4xl font-bold">Sources &amp; Licenses</h1>
 		<p class="text-lg text-ink-soft">
-			Licensing framework, upstream source attributions, and copyright notices for the <strong>Polyglot Ancient Text Reader</strong>.
+			Licensing framework, upstream source attributions, and copyright notices for the <strong>Polyglot Bible Reader</strong>.
 		</p>
 	</header>
 

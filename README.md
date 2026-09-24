@@ -1,4 +1,4 @@
-# Polyglot Ancient Text Reader
+# Polyglot Bible Reader
 
 An interactive, high-performance web application for side-by-side reading, comparative analysis, and morphological study across the **Hebrew Bible (BHS)**, **Septuagint (LXX)**, and **Greek New Testament (SBLGNT)**, complete with versification mapping, instant lexical and morphological lookups, and customizable reading themes.
 

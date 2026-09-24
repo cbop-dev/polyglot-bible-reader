@@ -7,7 +7,7 @@
 	target="_blank"
 	rel="noopener noreferrer"
 	class="version-badge"
-	title="View Polyglot Ancient Text Reader on GitHub"
+	title="View Polyglot Bible Reader on GitHub"
 >
 	v{APP_VERSION}
 </a>

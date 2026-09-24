@@ -1,30 +1,41 @@
 /**
  * Reading-theme engine with contrast-invariant piecewise interpolation.
- *
- * Based on the design pattern from OpenScriptorium (ISC License):
- * Maps a 0..100 slider value to a (background, foreground) color pair
- * with a hard flip at 50% to ensure high contrast throughout the range.
- *
- * Stop interpolation:
- *   0%   Pure Paper (black on white)
- *   25%  Solarized Light (warm parchment)
- *   50%  Split-half contrast flip
- *   75%  Solarized Dark / Deep Slate
- *   100% High Contrast Dark (white on black)
  */
 
-// Light-side stops (t < 0.5)
-export const LIGHT_STOPS = [
+// --- COOL PALETTE ---
+const LIGHT_STOPS_COOL = [
+	[0.00, [255, 255, 255], [26, 26, 26]],    // pure black on white
+	[0.25, [240, 244, 248], [15, 23, 42]],    // cool slate-50
+	[0.50, [226, 232, 240], [51, 65, 85]]     // cool slate-200
+];
+const DARK_STOPS_COOL = [
+	[0.50, [15, 23, 42], [148, 163, 184]],    // deep slate
+	[0.75, [9, 14, 25], [100, 116, 139]],     // darker slate
+	[1.00, [0, 0, 5], [200, 210, 220]]        // pure black-blue
+];
+
+// --- NEUTRAL PALETTE (Current Solarized) ---
+const LIGHT_STOPS_NEUTRAL = [
 	[0.00, [255, 255, 255], [26, 26, 26]],    // pure black on white
 	[0.25, [253, 246, 227], [7, 54, 66]],     // Solarized base3 / base02 (parchment)
 	[0.50, [238, 232, 213], [101, 123, 131]]  // Solarized base2 / base00 (soft light edge)
 ];
-
-// Dark-side stops (t >= 0.5)
-export const DARK_STOPS = [
+const DARK_STOPS_NEUTRAL = [
 	[0.50, [7, 54, 66], [131, 148, 150]],     // Solarized base02 / base0 (soft dark edge)
 	[0.75, [0, 43, 54], [147, 161, 161]],     // Solarized base03 / base1 (slate/midnight)
 	[1.00, [0, 0, 0], [255, 255, 255]]        // pure white on black
+];
+
+// --- WARM PALETTE ---
+const LIGHT_STOPS_WARM = [
+	[0.00, [255, 250, 240], [40, 20, 10]],    // floral white
+	[0.25, [245, 222, 179], [60, 30, 15]],    // wheat / sepia
+	[0.50, [222, 184, 135], [90, 50, 30]]     // burlywood / dark sepia
+];
+const DARK_STOPS_WARM = [
+	[0.50, [45, 35, 30], [180, 160, 140]],    // espresso
+	[0.75, [25, 20, 15], [150, 130, 110]],    // deep mocha
+	[1.00, [5, 0, 0], [220, 200, 180]]        // warm black
 ];
 
 // Lemma button stops: deep burgundy on light backgrounds, refined slate/ocean blue on dark
@@ -125,10 +136,28 @@ function interpolateStops(stops, t) {
 }
 
 /**
- * Returns { bg, fg } for a normalized t (0.0 to 1.0)
+ * Returns { bg, fg } for a normalized t (0.0 to 1.0) and w (0.0 to 1.0)
  */
-export function colorAt(t) {
-	return t < 0.5 ? interpolateStops(LIGHT_STOPS, t) : interpolateStops(DARK_STOPS, t);
+export function colorAt(t, w = 0.5) {
+	let stopsA, stopsB, blend;
+	
+	if (w < 0.5) {
+		blend = w * 2.0;
+		stopsA = t < 0.5 ? LIGHT_STOPS_COOL : DARK_STOPS_COOL;
+		stopsB = t < 0.5 ? LIGHT_STOPS_NEUTRAL : DARK_STOPS_NEUTRAL;
+	} else {
+		blend = (w - 0.5) * 2.0;
+		stopsA = t < 0.5 ? LIGHT_STOPS_NEUTRAL : DARK_STOPS_NEUTRAL;
+		stopsB = t < 0.5 ? LIGHT_STOPS_WARM : DARK_STOPS_WARM;
+	}
+
+	const cA = interpolateStops(stopsA, t);
+	const cB = interpolateStops(stopsB, t);
+
+	return {
+		bg: lerpRgb(cA.bg, cB.bg, blend),
+		fg: lerpRgb(cA.fg, cB.fg, blend)
+	};
 }
 
 export function getThemeLabel(v) {
@@ -141,19 +170,23 @@ export function getThemeLabel(v) {
 }
 
 export const THEME_STORAGE_KEY = 'biblical_reading_theme';
+export const WARMTH_STORAGE_KEY = 'biblical_reading_warmth';
 
 /**
  * Applies the computed theme colors to CSS custom properties and DaisyUI root variables.
  * @param {number} value - Slider integer from 0 to 100
+ * @param {number} warmthValue - Warmth integer from 0 to 100
  */
-export function applyReadingTheme(value) {
+export function applyReadingTheme(value, warmthValue = 50) {
 	if (typeof document === 'undefined') return;
 
 	const clamped = Math.max(0, Math.min(100, Math.round(value)));
+	const clampedWarmth = Math.max(0, Math.min(100, Math.round(warmthValue)));
 	const t = clamped / 100;
+	const w = clampedWarmth / 100;
 	const isDark = clamped >= 50;
 
-	const { bg, fg } = colorAt(t);
+	const { bg, fg } = colorAt(t, w);
 
 	// Secondary ink: pulled 35% from fg toward bg
 	const inkSoft = lerpRgb(fg, bg, 0.35);
@@ -247,42 +280,56 @@ export function applyReadingTheme(value) {
 	);
 }
 
-/**
- * Initializes theme from localStorage or system preference.
- * @returns {number} The active theme value (0 to 100)
- */
+export function initReadingWarmth() {
+	if (typeof window === 'undefined') return 50;
+	try {
+		const stored = localStorage.getItem(WARMTH_STORAGE_KEY);
+		if (stored !== null) {
+			const parsed = parseInt(stored, 10);
+			if (!isNaN(parsed) && parsed >= 0 && parsed <= 100) {
+				return parsed;
+			}
+		}
+		return 50;
+	} catch {
+		return 50;
+	}
+}
+
+export function saveReadingWarmth(value) {
+	if (typeof window === 'undefined') return;
+	try {
+		localStorage.setItem(WARMTH_STORAGE_KEY, String(value));
+	} catch {}
+}
+
 export function initReadingTheme() {
 	if (typeof window === 'undefined') return 25;
 
 	try {
 		const stored = localStorage.getItem(THEME_STORAGE_KEY);
+		let themeVal = 25;
 		if (stored !== null) {
 			const parsed = parseInt(stored, 10);
 			if (!isNaN(parsed) && parsed >= 0 && parsed <= 100) {
-				applyReadingTheme(parsed);
-				return parsed;
+				themeVal = parsed;
 			}
+		} else {
+			const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+			themeVal = prefersDark ? 75 : 25;
 		}
 
-		// Check system preference
-		const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-		const defaultVal = prefersDark ? 75 : 25;
-		applyReadingTheme(defaultVal);
-		return defaultVal;
+		applyReadingTheme(themeVal, initReadingWarmth());
+		return themeVal;
 	} catch {
-		applyReadingTheme(25);
+		applyReadingTheme(25, 50);
 		return 25;
 	}
 }
 
-/**
- * Persists theme value to localStorage.
- */
 export function saveReadingTheme(value) {
 	if (typeof window === 'undefined') return;
 	try {
 		localStorage.setItem(THEME_STORAGE_KEY, String(value));
-	} catch {
-		// Ignore local storage write errors
-	}
+	} catch {}
 }

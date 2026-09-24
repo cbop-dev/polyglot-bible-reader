@@ -3,6 +3,7 @@
   import { base } from '$app/paths';
   import siteLogo from '$lib/assets/logo.png';
   import VersionButton from '$lib/components/ui/VersionButton.svelte';
+  import VerseNavPill from '$lib/components/ui/VerseNavPill.svelte';
   import { formatHebrew, formatGreek, type HebrewDiacriticMode } from '$lib/utils/diacritics';
 
   let versionGrid = $state<string[][]>([
@@ -110,6 +111,7 @@
   let selectedBook = $state('Gen');
   let selectedChapter = $state('1');
   let versionDropdownOpen = $state(false);
+  let gridHeaderExpanded = $state(false);
   
 
   let hebrewMode = $state<HebrewDiacriticMode>('all');
@@ -158,6 +160,7 @@
   let activeWord: any = $state(null);
   let chapterDropdownOpen = $state(false);
   let bookDropdownOpen = $state(false);
+  let verseDropdownOpen = $state(false);
 
   const bhsBooks = ['Gen', 'Exod', 'Lev', 'Num', 'Deut', 'Josh', 'Judg', 'Ruth', '1Sam', '2Sam', '1Kgs', '2Kgs', '1Chr', '2Chr', 'Ezra', 'Neh', 'Esth', 'Job', 'Ps', 'Prov', 'Qoh', 'Cant', 'Isa', 'Jer', 'Lam', 'Ezek', 'Dan', 'Hos', 'Joel', 'Amos', 'Obad', 'Jonah', 'Mic', 'Nah', 'Hab', 'Zeph', 'Hag', 'Zech', 'Mal'];
   const lxxBooks = ['Gen','Exod','Lev','Num','Deut','Josh','Judg','Ruth','1Sam','2Sam','1Kgs','2Kgs','1Chr','2Chr','1Esdr','2Esdr','Esth','Jdt','TobBA','TobS','1Mac','2Mac','3Mac','4Mac','Ps','Od','Prov','Qoh','Cant','Job','Wis','Sir','PsSol','Hos','Mic','Amos','Joel','Jonah','Obad','Nah','Hab','Zeph','Hag','Zech','Mal','Isa','Jer','Bar','EpJer','Lam','Ezek','Bel','BelTh','Dan','DanTh','Sus','SusTh'];
@@ -310,7 +313,18 @@ import { getBookFile, getMappedReference } from '$lib/bookMapping.js';
     }
   }
 
-  
+  function scrollToVerse(verseKey: string) {
+    const el = document.getElementById(`verse-${verseKey}`);
+    if (el) {
+      const headerOffset = 150; // Account for sticky headers
+      const elementPosition = el.getBoundingClientRect().top;
+      const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+      window.scrollTo({
+         top: offsetPosition,
+         behavior: "smooth"
+      });
+    }
+  }
   
   function handleVersionSelect(version: string) {
     selectedVersion = version;
@@ -334,23 +348,22 @@ import { getBookFile, getMappedReference } from '$lib/bookMapping.js';
     chapterDropdownOpen = false;
     bookDropdownOpen = false;
     versionDropdownOpen = false;
-    
+    verseDropdownOpen = false;
   }
 </script>
 
-<div class="min-h-screen bg-page text-ink font-sans p-3 sm:p-4 md:p-8" onclick={closePopup}>
-  <header class="mb-6 sm:mb-8 border-b border-rule pb-3 sm:pb-4 flex flex-row justify-between items-center gap-2 sm:gap-4">
+<div class="min-h-screen bg-page text-ink font-sans p-3 sm:p-4 md:p-8 pt-0 sm:pt-0 md:pt-0" onclick={closePopup}>
+  <header class="sticky top-0 z-30 bg-page pt-3 sm:pt-4 md:pt-8 mb-6 sm:mb-8 border-b border-rule pb-3 sm:pb-4 flex flex-row justify-between items-center gap-2 sm:gap-4 -mx-3 px-3 sm:-mx-4 sm:px-4 md:-mx-8 md:px-8">
     <div class="flex items-center gap-2 sm:gap-3 md:gap-4 min-w-0">
       <img
         src={siteLogo}
-        alt="Polyglot Ancient Text Reader logo"
+        alt="Polyglot Bible Reader logo"
         class="w-8 h-8 sm:w-11 sm:h-11 md:w-14 md:h-14 lg:w-16 lg:h-16 flex-shrink-0 object-contain rounded-full shadow-xs"
       />
       <div class="min-w-0">
         <h1 class="text-sm min-[360px]:text-base min-[410px]:text-lg sm:text-2xl md:text-3xl lg:text-4xl font-bold tracking-tight inline-flex items-center flex-wrap gap-x-1 sm:gap-x-1.5">
-          <span class="truncate sm:whitespace-normal">
-            <span class="sm:hidden">Polyglot Reader</span>
-            <span class="hidden sm:inline">Polyglot Ancient Text Reader</span>
+          <span class="truncate sm:whitespace-normal hidden sm:inline">
+            <span>Polyglot Bible Reader</span>
           </span>
           <span class="inline-flex items-center flex-shrink-0">
             <VersionButton />
@@ -519,14 +532,55 @@ import { getBookFile, getMappedReference } from '$lib/bookMapping.js';
         {/if}
       </div>
 
-      
+      <div class="relative hidden sm:block">
+        <label class="hidden sm:block text-sm font-bold mb-1" for="verse">Verse</label>
+        <button 
+          id="verse"
+          aria-label="Select verse"
+          class="border border-rule rounded p-1 sm:p-2 w-12 sm:w-16 md:w-20 text-xs sm:text-sm text-left bg-page flex justify-between items-center shadow-xs sm:shadow-sm"
+          onclick={(e) => { e.stopPropagation(); verseDropdownOpen = !verseDropdownOpen; }}
+        >
+          <span class="truncate">v.</span>
+          <span class="text-[10px] sm:text-xs text-ink-soft ml-0.5">▼</span>
+        </button>
+        
+        {#if verseDropdownOpen}
+          <div class="fixed inset-0 bg-black/20 z-40 flex items-center justify-center p-4" onclick={() => verseDropdownOpen = false}>
+            <div class="bg-page border border-rule rounded-lg shadow-xl p-4 z-50 max-h-[80vh] overflow-y-auto w-full max-w-lg" onclick={(e) => e.stopPropagation()}>
+              <h3 class="font-bold mb-4 text-lg border-b border-rule pb-2">{selectedBook} {selectedChapter} - Select Verse</h3>
+              <div class="grid grid-cols-5 md:grid-cols-8 gap-2">
+                {#each verseKeys as v}
+                  <button 
+                    class="p-2 text-center rounded hover:bg-rule bg-page border"
+                    onclick={() => { scrollToVerse(v); verseDropdownOpen = false; }}
+                  >
+                    {v}
+                  </button>
+                {/each}
+              </div>
+            </div>
+          </div>
+        {/if}
+      </div>
+
     </div>
+
+    <!-- Mobile toggle button (< sm:) -->
+    <button
+      type="button"
+      class="sm:hidden absolute left-1/2 -translate-x-1/2 -bottom-[12px] z-40 flex items-center justify-center w-6 h-6 bg-page border border-rule rounded-full shadow-xs text-[10px] font-bold text-ink-soft hover:text-ink hover:bg-rule cursor-pointer transition-colors"
+      onclick={(e) => { e.stopPropagation(); gridHeaderExpanded = !gridHeaderExpanded; }}
+      title={gridHeaderExpanded ? "Collapse Layout Options" : "Expand Layout Options"}
+      aria-label={gridHeaderExpanded ? "Collapse Layout Options" : "Expand Layout Options"}
+    >
+      {gridHeaderExpanded ? '▲' : '▼'}
+    </button>
   </header>
 
   <main>
     <!-- Dynamic Grid Controls Header -->
-    <div class="flex md:flex flex-col gap-0.5 md:gap-2 mb-4 sticky top-0 bg-page pt-2 pb-2 border-b border-rule z-10 shadow-xs">
-      <div class="flex items-center justify-between px-2 text-xs font-semibold text-ink-soft">
+    <div class="{gridHeaderExpanded ? 'flex' : 'hidden'} sm:flex flex-col gap-2 mb-4 sticky top-[57px] sm:top-[77px] md:top-[105px] bg-page pt-2 pb-2.5 border-b border-rule z-20 shadow-xs">
+      <div class="flex items-center justify-between px-4 sm:px-5 text-xs font-semibold text-ink-soft">
         <span class="flex items-center gap-1.5">
           <span class="w-2 h-2 rounded-full bg-link inline-block"></span>
           Verse Grid Layout: <strong class="text-ink">{versionGrid.length} {versionGrid.length === 1 ? 'Row' : 'Rows'} × {versionGrid[0]?.length || 0} {versionGrid[0]?.length === 1 ? 'Col' : 'Cols'}</strong>
@@ -613,7 +667,7 @@ import { getBookFile, getMappedReference } from '$lib/bookMapping.js';
       {/if}
 
       {#each verseKeys as v}
-        <div class="flex flex-col gap-4 bg-page p-4 sm:p-5 rounded-lg shadow-sm border border-rule transition-colors hover:shadow-md">
+        <div id="verse-{v}" class="flex flex-col gap-4 bg-page p-4 sm:p-5 rounded-lg shadow-sm border border-rule transition-colors hover:shadow-md">
           {#each versionGrid as row, rIdx}
             {#if rIdx > 0}
               <div class="border-t border-rule/50 my-1"></div>
@@ -669,7 +723,7 @@ import { getBookFile, getMappedReference } from '$lib/bookMapping.js';
     <div class="mt-12 mb-8 mx-auto max-w-3xl border border-rule bg-page p-6 text-center rounded-lg shadow-sm sm:p-8">
       <h3 class="mb-2 text-lg font-bold">Open Source &amp; Open Data</h3>
       <p class="mx-auto mb-4 max-w-2xl text-sm text-ink-soft">
-        Polyglot Ancient Text Reader is built on open-source code (<a
+        Polyglot Bible Reader is built on open-source code (<a
           href="https://www.gnu.org/licenses/agpl-3.0.html"
           target="_blank"
           rel="noopener noreferrer"
@@ -688,6 +742,8 @@ import { getBookFile, getMappedReference } from '$lib/bookMapping.js';
         </a>
       </div>
     </div>
+    
+    <VerseNavPill verses={verseKeys} />
   </main>
 </div>
 
