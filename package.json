@@ -22,5 +22,12 @@
 		"tailwindcss": "^4.3.0",
 		"typescript": "^6.0.3",
 		"vite": "^8.0.16"
+	},
+	"dependencies": {
+		"@biblical-data/svelte-lemma-ui": "file:../biblical-data-pipeline/packages/svelte-lemma-ui",
+		"chart.js": "^4.5.1",
+		"gridjs": "^6.2.0",
+		"gridjs-svelte": "^2.1.1",
+		"svelte-chartjs": "^4.0.1"
 	}
 }

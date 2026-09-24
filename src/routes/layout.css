@@ -1,10 +1,89 @@
-@import 'tailwindcss';
 @import url('https://fonts.googleapis.com/css2?family=Charis+SIL:ital,wght@0,400;0,700;1,400;1,700&display=swap');
+@import 'tailwindcss';
 
-.font-hebrew {
-  font-family: 'Ezra SIL', 'SBL Hebrew', 'Cardo', 'Frank Ruehl Libre', serif;
+@source "../../../biblical-data-pipeline/packages/svelte-lemma-ui/src";
+@source "../../node_modules/@biblical-data/svelte-lemma-ui/src";
+
+@theme {
+  --color-page: var(--color-page);
+  --color-ink: var(--color-ink);
+  --color-ink-soft: var(--color-ink-soft);
+  --color-rule: var(--color-rule);
+  --color-link: var(--color-link);
+  --color-accent: var(--color-accent);
 }
 
-.font-greek {
-  font-family: 'Charis SIL', 'Gentium Plus', 'Gentium Book Basic', 'Cardo', serif;
+:root {
+  /* Fallback values before JS applies the theme (Solarized Light) */
+  --color-page: rgb(253, 246, 227);
+  --color-ink: rgb(7, 54, 66);
+  --color-ink-soft: rgb(93, 121, 122);
+  --color-rule: rgb(228, 227, 211);
+  --color-link: rgb(54, 102, 162);
+  --color-accent: rgb(133, 79, 41);
+}
+
+body {
+  background-color: var(--color-page);
+  color: var(--color-ink);
+}
+
+@font-face {
+  font-family: 'Ezra SIL';
+  src: url('/fonts/SILEOT.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Gentium Plus';
+  src: url('/fonts/GentiumPlus-R.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Charis SIL';
+  src: url('/fonts/CharisSIL-R.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'SBL Hebrew';
+  src: url('/fonts/SBL_Hbrw.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'SBL BibLit';
+  src: url('/fonts/SBL_BLit.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+.font-hebrew,
+.hebrew {
+  font-family: 'Ezra SIL', 'SBL Hebrew', serif;
+  direction: rtl;
+}
+
+.font-greek,
+.greek {
+  font-family: 'Gentium Plus', 'Charis SIL', 'SBL BibLit', serif;
+}
+
+:root[data-theme="dark"] {
+  --color-page: rgb(0, 43, 54);
+  --color-ink: rgb(147, 161, 161);
+  --color-ink-soft: rgb(51, 84, 91);
+  --color-rule: rgb(18, 57, 67);
+  --color-link: rgb(122, 176, 232);
+  --color-accent: rgb(212, 165, 116);
 }
