@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - astro-svelte
   workflow_dispatch:
 
 permissions:
@@ -35,15 +34,15 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build
+      - name: Build site for GitHub Pages
         env:
           BASE_PATH: '/${{ github.event.repository.name }}'
-        run: npm run build
+        run: npm run build:github
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: 'build/'
+          path: 'build/github'
 
       - name: Deploy to GitHub Pages
         id: deployment
