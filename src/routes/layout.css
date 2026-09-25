@@ -1,9 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Charis+SIL:ital,wght@0,400;0,700;1,400;1,700&display=swap');
 @import 'tailwindcss';
 
-@source "../../../biblical-data-pipeline/packages/svelte-lemma-ui/src";
-@source "../../node_modules/@biblical-data/svelte-lemma-ui/src";
-
 @theme {
   --color-page: var(--color-page);
   --color-ink: var(--color-ink);

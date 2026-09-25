@@ -58,24 +58,32 @@
 				<div class="mb-4 flex flex-wrap items-center justify-between gap-3">
 					<h2 class="text-xl font-bold">Curated Datasets &amp; Static Indexes</h2>
 					<div class="flex flex-wrap gap-1.5 font-mono text-xs font-semibold">
+						<span class="border border-rule px-2.5 py-1 rounded bg-rule/50">ISC (OpenScriptorium)</span>
+						<span class="border border-rule px-2.5 py-1 rounded bg-rule/50">Public Domain</span>
 						<span class="border border-rule px-2.5 py-1 rounded bg-rule/50">CC BY-SA 4.0</span>
-						<span class="border border-rule px-2.5 py-1 rounded bg-rule/50">CC BY-NC 4.0 (BHS)</span>
+						<span class="border border-rule px-2.5 py-1 rounded bg-rule/50">CC BY-NC 4.0</span>
 					</div>
 				</div>
 				<p class="mb-3 text-sm opacity-90">
-					Curated static datasets, lexical search indexes, and lexicon entries are licensed under
-					<a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener noreferrer" class="text-link underline hover:opacity-80">CC BY-SA 4.0</a>
-					for general datasets, <strong>except the BHS Hebrew Bible dataset and TVTMS alignment tables</strong>, which are licensed under
-					<a href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank" rel="noopener noreferrer" class="text-link underline hover:opacity-80">CC BY-NC 4.0</a>
-					(<strong>Commercial use prohibited</strong>).
+					Some Biblical text datasets (KJV, WEB, Vulgate), chapter data, and alignments, and concordance databases were obtained from the
+					<a href="https://github.com/OpenScriptorium" target="_blank" rel="noopener noreferrer" class="text-link underline hover:opacity-80">Openscriptorium.org GitHub project database</a>
+					(licensed under the <a href="https://opensource.org/licenses/ISC" target="_blank" rel="noopener noreferrer" class="text-link underline hover:opacity-80">ISC License</a>).
+					The Latin Vulgate, King James Version (KJV), World English Bible (WEB), Swete Septuagint, and classical lexica are in the <strong>Public Domain</strong>.
+					Scholarly morphological datasets and versification tables are licensed under CC BY-SA 4.0 or CC BY-NC 4.0 (<strong>Commercial use prohibited for BHS and TVTMS</strong>).
 				</p>
 				<ul class="mb-4 list-inside list-disc space-y-1 text-xs text-ink-soft">
-					<li><strong>Share &amp; Adapt:</strong> Freely copy and build upon the datasets.</li>
-					<li><strong>Attribution:</strong> Credit the upstream scholarly projects.</li>
+					<li><strong>OpenScriptorium Database:</strong> Core text databases provided under the permissive ISC License.</li>
+					<li><strong>Public Domain Translations:</strong> Latin Vulgate, King James Version (KJV), and World English Bible (WEB) are fully public domain worldwide.</li>
 					<li><strong>Non-Commercial Restriction:</strong> BHS and TVTMS data are strictly restricted to non-commercial usage.</li>
 				</ul>
 			</div>
 			<div class="flex flex-wrap gap-2 border-t border-rule pt-4 text-xs">
+				<a href="https://openscriptorium.org" target="_blank" rel="noopener noreferrer" class="border border-rule px-2.5 py-1 rounded hover:bg-rule transition-colors">
+					OpenScriptorium.org
+				</a>
+				<a href="https://opensource.org/licenses/ISC" target="_blank" rel="noopener noreferrer" class="border border-rule px-2.5 py-1 rounded hover:bg-rule transition-colors">
+					View ISC License
+				</a>
 				<a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener noreferrer" class="border border-rule px-2.5 py-1 rounded hover:bg-rule transition-colors">
 					View CC BY-SA 4.0 Deed
 				</a>
@@ -94,6 +102,64 @@
 		</p>
 		
 		<div class="space-y-6">
+			<!-- Openscriptorium.org Database -->
+			<div class="border border-rule bg-page p-5 rounded-lg shadow-sm space-y-2">
+				<div class="flex flex-wrap items-baseline justify-between gap-2">
+					<h3 class="text-lg font-bold">Openscriptorium.org Project Database</h3>
+					<span class="font-mono text-xs border border-rule px-2 py-0.5 rounded">
+						<a href="https://opensource.org/licenses/ISC" target="_blank" rel="noopener noreferrer" class="text-link underline">ISC License</a>
+					</span>
+				</div>
+				<p class="text-sm opacity-90">
+					Some Biblical text datasets (KJV, WEB, Vulgate), chapter data, and alignments, and concordance databases were obtained from the
+					<a href="https://openscriptorium.org" target="_blank" rel="noopener noreferrer" class="text-link underline hover:opacity-80">Openscriptorium.org</a>
+					GitHub project database.
+				</p>
+				<p class="text-xs text-ink-soft">
+					Source repository: <a href="https://github.com/OpenScriptorium" target="_blank" rel="noopener noreferrer" class="text-link underline">OpenScriptorium on GitHub</a>.
+					Licensed under the <a href="https://opensource.org/licenses/ISC" target="_blank" rel="noopener noreferrer" class="text-link underline">ISC License</a>.
+				</p>
+			</div>
+
+			<!-- Latin Vulgate (Vulgate) -->
+			<div class="border border-rule bg-page p-5 rounded-lg shadow-sm space-y-2">
+				<div class="flex flex-wrap items-baseline justify-between gap-2">
+					<h3 class="text-lg font-bold">Latin Vulgate (Biblia Sacra Vulgata)</h3>
+					<span class="font-mono text-xs border border-rule px-2 py-0.5 rounded">Public Domain</span>
+				</div>
+				<p class="text-sm opacity-90">
+					Saint Jerome's ancient Latin translation (completed c. 405 A.D.) and the Sixto-Clementine Vulgate (1592). The text is in the <strong>Public Domain worldwide</strong>.
+					Dataset sourced from the OpenScriptorium project database.
+				</p>
+			</div>
+
+			<!-- King James Version (KJV) -->
+			<div class="border border-rule bg-page p-5 rounded-lg shadow-sm space-y-2">
+				<div class="flex flex-wrap items-baseline justify-between gap-2">
+					<h3 class="text-lg font-bold">King James Version (KJV)</h3>
+					<span class="font-mono text-xs border border-rule px-2 py-0.5 rounded">Public Domain</span>
+				</div>
+				<p class="text-sm opacity-90">
+					The King James Version (Authorized Version) of 1611. The biblical text is unencumbered and in the <strong>Public Domain worldwide</strong>.
+					Dataset sourced from the OpenScriptorium project database.
+				</p>
+			</div>
+
+			<!-- World English Bible (WEB) -->
+			<div class="border border-rule bg-page p-5 rounded-lg shadow-sm space-y-2">
+				<div class="flex flex-wrap items-baseline justify-between gap-2">
+					<h3 class="text-lg font-bold">World English Bible (WEB)</h3>
+					<span class="font-mono text-xs border border-rule px-2 py-0.5 rounded">Public Domain</span>
+				</div>
+				<p class="text-sm opacity-90">
+					A modern English translation produced by Rainbow Missions, Inc. and Michael Paul Johnson, translated directly from the original biblical languages. The editors have explicitly and irrevocably dedicated the entire work to the <strong>Public Domain worldwide</strong>.
+					Dataset sourced from the OpenScriptorium project database.
+				</p>
+				<p>
+					<a href="https://worldenglish.bible" target="_blank" rel="noopener noreferrer" class="text-link text-xs underline hover:opacity-80">View World English Bible Website</a>
+				</p>
+			</div>
+
 			<!-- BHS Hebrew Bible / ETCBC -->
 			<div class="border border-rule bg-page p-5 rounded-lg shadow-sm space-y-2">
 				<div class="flex flex-wrap items-baseline justify-between gap-2">

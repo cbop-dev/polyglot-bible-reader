@@ -5,7 +5,7 @@
   import VersionButton from '$lib/components/ui/VersionButton.svelte';
   import VerseNavPill from '$lib/components/ui/VerseNavPill.svelte';
   import { formatHebrew, formatGreek, type HebrewDiacriticMode } from '$lib/utils/diacritics';
-
+  import CopyText from '$lib/lemma-ui/components/ui/CopyText.svelte';
   let versionGrid = $state<string[][]>([
     ['BHS', 'LXX']
   ]);
@@ -39,7 +39,40 @@
       return newRow;
     });
   }
-  const allVersions = ['BHS', 'LXX', 'SBLGNT', 'WEB', 'Vulgate', 'KJV', 'Brenton'];
+  const versionGroups = [
+    {
+      language: 'Hebrew',
+      versions: ['BHS']
+    },
+    {
+      language: 'Greek',
+      versions: ['LXX', 'SBLGNT']
+    },
+    {
+      language: 'Latin',
+      versions: ['Vulgate']
+    },
+    {
+      language: 'English',
+      versions: ['KJV', 'WEB', 'Brenton']
+    }
+  ];
+
+  const allVersions = versionGroups.flatMap(g => g.versions);
+
+  let selectedVersion = $state('BHS');
+  let selectedBook = $state('Gen');
+  let selectedChapter = $state('1');
+  let versionDropdownOpen = $state(false);
+  let gridHeaderExpanded = $state(false);
+
+  let currentBhsBook: any = $state(null);
+  let currentLxxBook: any = $state(null);
+  let currentSblgntBook: any = $state(null);
+  let currentWebBook: any = $state(null);
+  let currentVulgateBook: any = $state(null);
+  let currentKjvBook: any = $state(null);
+  let currentBrentonBook: any = $state(null);
 
   let activeVersions = $derived<string[]>(
     Array.from(new Set([...versionGrid.flat(), selectedVersion]))
@@ -64,6 +97,15 @@
     if (opt === 'KJV') return 'English (KJV)';
     if (opt === 'Brenton') return "Brenton's (LXX)";
     return opt;
+  }
+
+  function formatText(text: any, version: string){
+    let ret = text; 
+    if (version=== 'BHS') 
+      ret = formatHebrew(text, hebrewMode);
+    else if (version==='LXX' || version === 'SBLGNT')
+      ret = formatGreek(text, greekDiacritics);
+    return ret;
   }
 
   function addColumn() {
@@ -107,12 +149,6 @@
       return newRow;
     });
   }
-  let selectedVersion = $state('BHS');
-  let selectedBook = $state('Gen');
-  let selectedChapter = $state('1');
-  let versionDropdownOpen = $state(false);
-  let gridHeaderExpanded = $state(false);
-  
 
   let hebrewMode = $state<HebrewDiacriticMode>('all');
   let greekDiacritics = $state(true);
@@ -131,14 +167,6 @@
     greekDiacritics = !greekDiacritics;
   }
 
-  let currentBhsBook: any = $state(null);
-  let currentLxxBook: any = $state(null);
-  let currentSblgntBook: any = $state(null);
-  let currentWebBook: any = $state(null);
-  let currentVulgateBook: any = $state(null);
-  let currentKjvBook: any = $state(null);
-  let currentBrentonBook: any = $state(null);
-
   let bhsChapterData = $derived(currentBhsBook?.chapters?.[String(selectedChapter)] || {});
   let lxxChapterData = $derived(currentLxxBook?.chapters?.[String(selectedChapter)] || {});
   let sblgntChapterData = $derived(currentSblgntBook?.chapters?.[String(selectedChapter)] || {});
@@ -146,12 +174,6 @@
   let vulgateChapterData = $derived(currentVulgateBook?.chapters?.[String(selectedChapter)] || {});
   let alignmentData: any = $state({});
 
-  
-
-  
-
-
-  
   let bhsLexemes: any = $state({});
   let lxxLexemes: any = $state({});
   let sblgntLexemes: any = $state({});
@@ -166,7 +188,43 @@
   const lxxBooks = ['Gen','Exod','Lev','Num','Deut','Josh','Judg','Ruth','1Sam','2Sam','1Kgs','2Kgs','1Chr','2Chr','1Esdr','2Esdr','Esth','Jdt','TobBA','TobS','1Mac','2Mac','3Mac','4Mac','Ps','Od','Prov','Qoh','Cant','Job','Wis','Sir','PsSol','Hos','Mic','Amos','Joel','Jonah','Obad','Nah','Hab','Zeph','Hag','Zech','Mal','Isa','Jer','Bar','EpJer','Lam','Ezek','Bel','BelTh','Dan','DanTh','Sus','SusTh'];
   const ntBooks = ['Matt', 'Mark', 'Luke', 'John', 'Acts', 'Rom', '1_Cor', '2_Cor', 'Gal', 'Eph', 'Phil', 'Col', '1_Thess', '2_Thess', '1_Tim', '2_Tim', 'Titus', 'Phlm', 'Heb', 'Jas', '1_Pet', '2_Pet', '1_John', '2_John', '3_John', 'Jude', 'Rev'];
 
-  let availableBooks = $derived(selectedVersion === 'BHS' ? bhsBooks : selectedVersion === 'LXX' ? lxxBooks : ntBooks);
+  const kjvBooks = [
+    'Gen', 'Exod', 'Lev', 'Num', 'Deut', 'Josh', 'Judg', 'Ruth', '1Sam', '2Sam', '1Kgs', '2Kgs', '1Chr', '2Chr', 'Ezra', 'Neh', 'Esth', 'Job', 'Ps', 'Prov', 'Eccl', 'Song', 'Isa', 'Jer', 'Lam', 'Ezek', 'Dan', 'Hos', 'Joel', 'Amos', 'Obad', 'Jonah', 'Mic', 'Nah', 'Hab', 'Zeph', 'Hag', 'Zech', 'Mal',
+    'Matt', 'Mark', 'Luke', 'John', 'Acts', 'Rom', '1_Cor', '2_Cor', 'Gal', 'Eph', 'Phil', 'Col', '1_Thess', '2_Thess', '1_Tim', '2_Tim', 'Titus', 'Phlm', 'Heb', 'Jas', '1_Pet', '2_Pet', '1_John', '2_John', '3_John', 'Jude', 'Rev',
+    'Tob', 'Jdt', 'Wis', 'Sus', 'Bel', '1Mac', '2Mac', '1Esdr', 'PrMan', '2Esdr', 'AddEsth', 'Sir', 'Bar', 'PrAzar'
+  ];
+
+  const vulgateBooks = [
+    'Gen', 'Exod', 'Lev', 'Num', 'Deut', 'Josh', 'Judg', 'Ruth', '1Sam', '2Sam', '1Kgs', '2Kgs', '1Chr', '2Chr', 'Ezra', 'Neh', 'Esth', 'Job', 'Ps', 'Prov', 'Eccl', 'Song', 'Isa', 'Jer', 'Lam', 'Ezek', 'Dan', 'Hos', 'Joel', 'Amos', 'Obad', 'Jonah', 'Mic', 'Nah', 'Hab', 'Zeph', 'Hag', 'Zech', 'Mal',
+    'Matt', 'Mark', 'Luke', 'John', 'Acts', 'Rom', '1_Cor', '2_Cor', 'Gal', 'Eph', 'Phil', 'Col', '1_Thess', '2_Thess', '1_Tim', '2_Tim', 'Titus', 'Phlm', 'Heb', 'Jas', '1_Pet', '2_Pet', '1_John', '2_John', '3_John', 'Jude',
+    'Tob', 'Jdt', 'Wis', 'Sir', 'Bar', '1Mac', '2Mac'
+  ];
+
+  const webBooks = [
+    'Gen', 'Exod', 'Lev', 'Num', 'Deut', 'Josh', 'Judg', 'Ruth', '1Sam', '2Sam', '1Kgs', '2Kgs', '1Chr', '2Chr', 'Ezra', 'Neh', 'Esth', 'Job', 'Ps', 'Prov', 'Eccl', 'Song', 'Isa', 'Jer', 'Lam', 'Ezek', 'Dan', 'Hos', 'Joel', 'Amos', 'Obad', 'Jonah', 'Mic', 'Nah', 'Hab', 'Zeph', 'Hag', 'Zech', 'Mal',
+    'Matt', 'Mark', 'Luke', 'John', 'Acts', 'Rom', '1_Cor', '2_Cor', 'Gal', 'Eph', 'Phil', 'Col', '1_Thess', '2_Thess', '1_Tim', '2_Tim', 'Titus', 'Phlm', 'Heb', 'Jas', '1_Pet', '2_Pet', '1_John', '2_John', '3_John', 'Jude', 'Rev',
+    'Tob', 'Jdt', 'AddEsth', 'Wis', 'Sir', 'Bar', '1Mac', '2Mac', '1Esdr', '2Esdr', 'PrMan'
+  ];
+
+  const brentonBooks = [
+    'Gen', 'Exod', 'Lev', 'Num', 'Deut', 'Josh', 'Judg', 'Ruth', '1Sam', '2Sam', '1Kgs', '2Kgs', '1Chr', '2Chr', 'Ezra', 'Neh', 'Ps', 'Prov', 'Eccl', 'Song', 'Job', 'Isa', 'Jer', 'Lam', 'Ezek', 'Dan', 'Hos', 'Joel', 'Amos', 'Obad', 'Jonah', 'Mic', 'Nah', 'Hab', 'Zeph', 'Hag', 'Zech', 'Mal',
+    '1Esdr', '2Esdr', 'Tob', 'Jdt', 'AddEsth', 'Wis', 'Sir', 'Bar', 'EpJer', 'Sus', 'Bel', '1Mac', '2Mac', '3Mac', '4Mac', 'PrMan'
+  ];
+
+  function getVersionBooks(version: string): string[] {
+    switch (version) {
+      case 'BHS': return bhsBooks;
+      case 'LXX': return lxxBooks;
+      case 'SBLGNT': return ntBooks;
+      case 'KJV': return kjvBooks;
+      case 'Vulgate': return vulgateBooks;
+      case 'WEB': return webBooks;
+      case 'Brenton': return brentonBooks;
+      default: return ntBooks;
+    }
+  }
+
+  let availableBooks = $derived(getVersionBooks(selectedVersion));
 
   let availableChapters = $derived((() => {
     let chapters;
@@ -204,13 +262,13 @@
 
     try {
       const fetches = [];
-      if (toFetchBhs) fetches.push(fetch(`/data/bhs/books/${getBookFile('BHS', book)}.json`).then(r => r.ok ? r.json() : null).then(d => currentBhsBook = d));
-      if (toFetchLxx) fetches.push(fetch(`/data/lxx/books/${getBookFile('LXX', book)}.json`).then(r => r.ok ? r.json() : null).then(d => currentLxxBook = d));
-      if (toFetchSblgnt) fetches.push(fetch(`/data/sblgnt/books/${getBookFile('SBLGNT', book)}.json`).then(r => r.ok ? r.json() : null).then(d => currentSblgntBook = d));
-      if (toFetchWeb) fetches.push(fetch(`/data/web/books/${getBookFile('WEB', book)}.json`).then(r => r.ok ? r.json() : null).then(d => currentWebBook = d));
-      if (toFetchVulgate) fetches.push(fetch(`/data/vulgate/books/${getBookFile('Vulgate', book)}.json`).then(r => r.ok ? r.json() : null).then(d => currentVulgateBook = d));
-      if (toFetchKjv) fetches.push(fetch(`/data/kjv/books/${getBookFile('KJV', book)}.json`).then(r => r.ok ? r.json() : null).then(d => currentKjvBook = d));
-      if (toFetchBrenton) fetches.push(fetch(`/data/brenton/books/${getBookFile('Brenton', book)}.json`).then(r => r.ok ? r.json() : null).then(d => currentBrentonBook = d));
+      if (toFetchBhs) fetches.push(fetch(`${base}/data/bhs/books/${getBookFile('BHS', book)}.json`).then(r => r.ok ? r.json() : null).then(d => currentBhsBook = d));
+      if (toFetchLxx) fetches.push(fetch(`${base}/data/lxx/books/${getBookFile('LXX', book)}.json`).then(r => r.ok ? r.json() : null).then(d => currentLxxBook = d));
+      if (toFetchSblgnt) fetches.push(fetch(`${base}/data/sblgnt/books/${getBookFile('SBLGNT', book)}.json`).then(r => r.ok ? r.json() : null).then(d => currentSblgntBook = d));
+      if (toFetchWeb) fetches.push(fetch(`${base}/data/web/books/${getBookFile('WEB', book)}.json`).then(r => r.ok ? r.json() : null).then(d => currentWebBook = d));
+      if (toFetchVulgate) fetches.push(fetch(`${base}/data/vulgate/books/${getBookFile('Vulgate', book)}.json`).then(r => r.ok ? r.json() : null).then(d => currentVulgateBook = d));
+      if (toFetchKjv) fetches.push(fetch(`${base}/data/kjv/books/${getBookFile('KJV', book)}.json`).then(r => r.ok ? r.json() : null).then(d => currentKjvBook = d));
+      if (toFetchBrenton) fetches.push(fetch(`${base}/data/brenton/books/${getBookFile('Brenton', book)}.json`).then(r => r.ok ? r.json() : null).then(d => currentBrentonBook = d));
       await Promise.all(fetches);
     } catch (e) {
       console.error("Error loading book data", e);
@@ -220,11 +278,11 @@
   onMount(async () => {
     try {
       const [alignRes, bhsLex, lxxLex, sblgntLex, vulgateLex] = await Promise.all([
-        fetch('/data/tvtms_alignment.json'),
-        fetch('/data/bhs/lexemes.json'),
-        fetch('/data/lxx/lexemes.json'),
-        fetch('/data/sblgnt/lexemes.json'),
-        fetch('/data/vulgate/lexemes.json')
+        fetch(`${base}/data/tvtms_alignment.json`),
+        fetch(`${base}/data/bhs/lexemes.json`),
+        fetch(`${base}/data/lxx/lexemes.json`),
+        fetch(`${base}/data/sblgnt/lexemes.json`),
+        fetch(`${base}/data/vulgate/lexemes.json`)
       ]);
       if (alignRes.ok) alignmentData = await alignRes.json();
       if (bhsLex.ok) bhsLexemes = await bhsLex.json();
@@ -242,12 +300,12 @@
     selectedVersion;
   });
 
-  import Modal2 from '@biblical-data/svelte-lemma-ui/components/ui/Modal2.svelte';
-  import LemmaInfo from '@biblical-data/svelte-lemma-ui/components/LemmaInfo.svelte';
-  import { Lexeme } from '@biblical-data/svelte-lemma-ui/Lexeme.js';
+  import Modal2 from '$lib/lemma-ui/components/ui/Modal2.svelte';
+  import LemmaInfo from '$lib/lemma-ui/components/LemmaInfo.svelte';
+  import { Lexeme } from '$lib/lemma-ui/Lexeme.js';
 import { getBookFile, getMappedReference } from '$lib/bookMapping.js';
-  import { VocabEngine } from '@biblical-data/svelte-lemma-ui/engine/VocabEngine.js';
-  import { GenericVocabDataset } from '@biblical-data/svelte-lemma-ui/data/VocabDataset.js';
+  import { VocabEngine } from '$lib/lemma-ui/engine/VocabEngine.js';
+  import { GenericVocabDataset } from '$lib/lemma-ui/data/VocabDataset.js';
 
   let showLemmaModal = $state(false);
   let verseKeys = $derived((() => {
@@ -329,11 +387,17 @@ import { getBookFile, getMappedReference } from '$lib/bookMapping.js';
   function handleVersionSelect(version: string) {
     selectedVersion = version;
     versionDropdownOpen = false;
-    const books = version === 'BHS' ? bhsBooks : version === 'LXX' ? lxxBooks : ntBooks;
-    if (!books.includes(selectedBook)) {
-      selectedBook = books[0];
-      selectedChapter = '1';
+    const books = getVersionBooks(version);
+    if (books.includes(selectedBook)) {
+      return;
     }
+    const targetBook = getBookFile(version, selectedBook);
+    if (books.includes(targetBook)) {
+      selectedBook = targetBook;
+      return;
+    }
+    selectedBook = books[0] || 'Gen';
+    selectedChapter = '1';
   }
 
   function handleWordClick(e: Event, w: any, colVersion: string) {
@@ -459,14 +523,34 @@ import { getBookFile, getMappedReference } from '$lib/bookMapping.js';
         </button>
         
         {#if versionDropdownOpen}
-          <div class="absolute top-full left-0 mt-1 bg-page border border-rule rounded shadow-lg z-50 overflow-hidden w-24">
-            {#each allVersions as v}
-              <button 
-                class="w-full text-left px-3 py-2 text-sm hover:bg-rule {v === selectedVersion ? 'bg-blue-500 text-white hover:bg-blue-600' : ''}"
-                onclick={() => handleVersionSelect(v)}
-              >
-                {v}
-              </button>
+          <button 
+            type="button" 
+            class="fixed inset-0 z-40 cursor-default bg-transparent border-0 p-0 m-0 w-full h-full" 
+            onclick={() => versionDropdownOpen = false} 
+            aria-label="Close version menu" 
+            tabindex="-1"
+          ></button>
+          <div class="absolute top-full left-0 mt-1 bg-page border border-rule rounded-md shadow-lg z-50 overflow-hidden min-w-[7.5rem] sm:min-w-[8.5rem] w-32 py-1">
+            {#each versionGroups as group, gIdx}
+              {#if gIdx > 0}
+                <div class="border-t border-rule my-1"></div>
+              {/if}
+              <div class="px-2.5 py-1 text-[10px] sm:text-xs font-bold uppercase tracking-wider text-ink-soft select-none">
+                {group.language}
+              </div>
+              {#each group.versions as v}
+                <button 
+                  type="button"
+                  class="w-full text-left px-3 py-1.5 text-xs sm:text-sm hover:bg-rule flex items-center justify-between cursor-pointer {v === selectedVersion ? 'bg-blue-500 text-white hover:bg-blue-600 font-semibold' : 'text-ink'}"
+                  onclick={() => handleVersionSelect(v)}
+                  title={formatVersionLabel(v)}
+                >
+                  <span>{v}</span>
+                  {#if v === selectedVersion}
+                    <span class="text-xs">✓</span>
+                  {/if}
+                </button>
+              {/each}
             {/each}
           </div>
         {/if}
@@ -631,8 +715,12 @@ import { getBookFile, getMappedReference } from '$lib/bookMapping.js';
                   onchange={(e) => updateCell(rIdx, cIdx, e.currentTarget.value)}
                   aria-label="Select translation for Row {rIdx + 1}, Column {cIdx + 1}"
                 >
-                  {#each allVersions as opt}
-                    <option value={opt}>{formatVersionLabel(opt)}</option>
+                  {#each versionGroups as group}
+                    <optgroup label={group.language}>
+                      {#each group.versions as opt}
+                        <option value={opt}>{formatVersionLabel(opt)}</option>
+                      {/each}
+                    </optgroup>
                   {/each}
                 </select>
                 <button
@@ -686,29 +774,41 @@ import { getBookFile, getMappedReference } from '$lib/bookMapping.js';
                   isDivergent: mChap !== String(selectedChapter) || mVerse !== v,
                   verseData: bookData?.chapters?.[mChap]?.[mVerse]
                 }}
-                
+                {@const unformattedVerseText = vData?.omitted ? '' : (vData?.verseData?.words?.length ? vData.verseData.words.reduce((acc: string, w: any) => acc + w.word + (w.trailer ?? ' '), '') : (vData?.verseData?.text || ''))}
+                {@const formattedVerseText = formatText(unformattedVerseText, colVersion)}
+              
                 <div class="flex flex-col {cIdx !== 0 ? 'border-t border-rule/40 pt-3.5 sm:border-0 sm:pt-0' : ''} {align === 'right' ? 'items-end text-right' : 'items-start text-left'}">
                   <div class="text-xs font-bold mb-1.5 flex items-center gap-1.5 {align === 'right' ? 'self-end text-right' : 'self-start text-left'} {vData?.isDivergent ? 'text-amber-600 dark:text-amber-400' : 'text-ink-soft'}">
                       <span>{vData?.label}</span>
                       <span class="px-1.5 py-0.2 rounded text-[10px] bg-rule/50 font-medium">({colVersion})</span>
+ 
                   </div>
                   <div class="{colVersion === 'BHS' ? 'text-2xl' : 'text-xl'} {align === 'right' ? 'text-right' : 'text-left'} leading-snug w-full" dir={colVersion === 'BHS' ? 'rtl' : 'ltr'}>
                      {#if vData?.omitted}
-                        <span class="text-sm italic text-ink-soft font-sans">[Not found in this version.]</span>
+                        <span class="text-sm italic text-ink-soft font-sans" dir="ltr">[Not found in this version.]</span>
                      {:else if vData?.verseData?.words}
                         {#each vData.verseData.words as w}
                            {#if colVersion === 'WEB' || colVersion === 'Vulgate' || colVersion === 'Brenton'}
-                             <span class="font-sans inline">{w.word}{w.trailer ?? ' '}</span>
+                           {@const text=w.word}
+                             <span class="font-sans inline">{text}{w.trailer ?? ' '}</span>
                            {:else}
-                             <button type="button" class="{colVersion === 'BHS' ? 'font-hebrew' : colVersion === 'Vulgate' ? 'font-sans' : 'font-greek'} cursor-pointer hover:bg-rule rounded focus:outline-none inline" onclick={(e) => handleWordClick(e, w, colVersion)}>{colVersion === 'BHS' ? formatHebrew(w.word, hebrewMode) : colVersion === 'LXX' || colVersion === 'SBLGNT' ? formatGreek(w.word, greekDiacritics) : w.word}</button>{w.trailer ?? ' '}
+                            {@const text=formatText(w.word,colVersion)}
+                             <button type="button" class="{colVersion === 'BHS' ? 'font-hebrew' : colVersion === 'Vulgate' ? 'font-sans' : 'font-greek'} cursor-pointer hover:bg-rule rounded focus:outline-none inline" 
+                             onclick={(e) => handleWordClick(e, w, colVersion)}>{text}</button>{w.trailer ?? ' '}
                            {/if}
                         {/each}
                      {:else if vData?.verseData?.text}
+                      {@const text=formatText(vData.verseData.text,colVersion)}
                         <span class="{colVersion === 'BHS' ? 'font-hebrew' : colVersion === 'Vulgate' || colVersion === 'WEB' ? 'font-sans' : 'font-greek'}">
-                           {colVersion === 'BHS' ? formatHebrew(vData.verseData.text, hebrewMode) : colVersion === 'LXX' || colVersion === 'SBLGNT' ? formatGreek(vData.verseData.text, greekDiacritics) : vData.verseData.text}
+                           {text}
                         </span>
                      {:else}
                         <span class="text-sm italic text-ink-soft font-sans">[Verse text not available]</span>
+                     {/if}
+                          {#if vData?.verseData?.text}
+                      
+                        <span dir="ltr"><CopyText linkText="" copyText={formattedVerseText}/></span>
+                      
                      {/if}
                   </div>
                 </div>
@@ -755,9 +855,9 @@ import { getBookFile, getMappedReference } from '$lib/bookMapping.js';
   async function initDatasets() {
     if (tfDataMap.bhs) return;
     try {
-      const bhsMod = await import('@biblical-data/svelte-lemma-ui/bhs/bhsDataset.js');
-      const lxxMod = await import('@biblical-data/svelte-lemma-ui/lxx/lxxDataset.js');
-      const sblMod = await import('@biblical-data/svelte-lemma-ui/sblgnt/sblgntDataset.js');
+      const bhsMod = await import('$lib/lemma-ui/bhs/bhsDataset.js');
+      const lxxMod = await import('$lib/lemma-ui/lxx/lxxDataset.js');
+      const sblMod = await import('$lib/lemma-ui/sblgnt/sblgntDataset.js');
       TfBhsDataset = bhsMod.default || bhsMod.BhsVocabDataset || bhsMod.TfBhsDataset;
       TfLxxDataset = lxxMod.default || lxxMod.TfLxxDataset;
       TfSblgntDataset = sblMod.default || sblMod.TfSblgntDataset;

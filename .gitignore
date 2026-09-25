@@ -7,7 +7,7 @@ node_modules
 .wrangler
 /.svelte-kit
 /build
-
+/src/lib/lemma-ui
 # OS
 .DS_Store
 Thumbs.db

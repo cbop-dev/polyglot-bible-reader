@@ -24,6 +24,16 @@ All data assets in this repository are derived from datasets with various types 
 
 ### Upstream Sources & Credits
 
+- **OpenScriptorium Project Database**:
+  - Source: [Openscriptorium.org](https://openscriptorium.org) / [OpenScriptorium on GitHub](https://github.com/OpenScriptorium).
+  - License: [ISC License](https://opensource.org/licenses/ISC).
+  - Some Biblical text datasets (KJV, WEB, Vulgate), chapter data, and alignments, and concordance databases were obtained from the Openscriptorium.org project database.
+- **Latin Vulgate (Biblia Sacra Vulgata)**:
+  - St. Jerome's Latin translation (c. 405 A.D.) and Clementine Vulgate (1592); Public Domain worldwide.
+- **King James Version (KJV)**:
+  - Authorized King James Version (1611); Public Domain worldwide.
+- **World English Bible (WEB)**:
+  - Produced by Rainbow Missions, Inc. / Michael Paul Johnson; Public Domain worldwide.
 - **Hebrew Bible (BHS)**:
   - Developed by the [Eep Talstra Centre for Bible and Computer](https://etcbc.nl) (Vrije Universiteit Amsterdam); source: [ETCBC/bhsa on GitHub](https://github.com/ETCBC/bhsa).
   - Morphology package curated by Eliran Wong: [eliranwong/BHS-morphology on GitHub](https://github.com/eliranwong/BHS-morphology).
