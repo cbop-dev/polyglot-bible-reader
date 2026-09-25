@@ -33,6 +33,9 @@ export class ReaderState {
   showLemmaModal = $state<boolean>(false);
   activeWord = $state<any>(null);
 
+  visibleVersions = $derived<string[]>(
+    Array.from(new Set(this.versionGrid.flat()))
+  );
   activeVersions = $derived<string[]>(
     Array.from(new Set([...this.versionGrid.flat(), this.selectedVersion]))
   );

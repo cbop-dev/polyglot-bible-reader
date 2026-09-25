@@ -5,9 +5,13 @@
   import { versionGroups, formatVersionLabel } from '$lib/config/versions';
   import { readerState } from '$lib/stores/readerState.svelte';
     import { expandRefs } from '$lib/utils/bible-utils';
+     $inspect('readerState.visibleVersions',readerState.visibleVersions);
 </script>
 
-<header class="sticky top-0 z-30 bg-page pt-3 sm:pt-4 md:pt-8 mb-6 sm:mb-8 border-b border-rule pb-3 sm:pb-4 flex flex-wrap sm:flex-nowrap sm:flex-row justify-between items-center gap-2 sm:gap-4 -mx-3 px-3 sm:-mx-4 sm:px-4 md:-mx-8 md:px-8">
+<header id="site-header" 
+class="sticky top-0 z-30 bg-page pt-1 pt-0 sm:pt-1 md:pt-4 mb-3 sm:mb-5 border-b border-rule pb-1 sm:pb-2 flex 
+flex-wrap sm:flex-nowrap sm:flex-row justify-between items-center 
+gap-2 sm:gap-4 -mx-3 px-1 sm:-mx-4 sm:px-4 md:-mx-8 md:px-3">
   <div class="flex items-center gap-2 sm:gap-3 md:gap-4 min-w-0">
     <img
       src={siteLogo}
@@ -17,10 +21,13 @@
     <div class="min-w-0">
       <h1 class="text-sm min-[360px]:text-base min-[410px]:text-lg sm:text-2xl md:text-3xl lg:text-4xl font-bold tracking-tight inline-flex items-center flex-wrap gap-x-1 sm:gap-x-1.5">
         <span class="truncate sm:whitespace-normal hidden sm:inline">
-          <span>Polyglot Bible Reader</span>
+          <span class="hidden md:inline">Polyglot</span> Bible Reader
         </span>
+        
         <span class="{readerState.gridHeaderExpanded? '' : 'hidden'} sm:inline-flex items-center flex-shrink-0">
           <VersionButton />
+        </span>
+        <span class=" sm:inline-flex items-center flex-shrink-0">
           <a
             href="{base}/sources-and-licenses"
             class="btn btn-circle btn-ghost btn-xs text-base-content/80 sm:btn-sm hover:bg-base-200 hover:text-base-content inline-flex items-center justify-center rounded-full p-0.5 sm:p-1 text-ink-soft hover:text-ink hover:bg-rule/50 transition-colors align-super relative -top-0.5 sm:-top-1 ml-0.5 sm:ml-1"
@@ -49,10 +56,12 @@
 
   <div class="flex gap-1 sm:gap-2.5 bg-page p-1 sm:p-2.5 md:p-4 rounded shadow-xs sm:shadow items-center flex-shrink-0 break-all" onclick={(e) => e.stopPropagation()}>
     
-    {#if readerState.gridHeaderExpanded}
+    {#if true}
     <!-- Diacritic Controls -->
-    {#if readerState.activeVersions.includes("BHS")}
-      <div class="relative">
+     <div class="flex flex-row sm:relative {readerState.gridHeaderExpanded ? 'relative' : 'hidden'}">
+     
+    {#if true}
+      <div class="{readerState.visibleVersions.includes("BHS") ? 'relative' : 'hidden'}">
         <label class="hidden sm:block text-xs font-bold mb-1 text-center text-ink-soft" for="hebrew-diacritics">Heb</label>
         <button
           id="hebrew-diacritics"
@@ -75,8 +84,8 @@
       </div>
     {/if}
 
-    {#if readerState.activeVersions.includes("LXX") || readerState.activeVersions.includes("SBLGNT")}
-      <div class="relative">
+    {#if readerState.visibleVersions.includes("LXX") || readerState.visibleVersions.includes("SBLGNT")}
+      <div class="relative ml-1">
         <label class="hidden sm:block text-xs font-bold mb-1 text-center text-ink-soft" for="greek-diacritics">Grk</label>
         <button
           id="greek-diacritics"
@@ -95,8 +104,8 @@
       </div>
     {/if}
 
-    <div class="h-6 sm:h-8 w-px bg-rule mx-0.5 sm:mx-1 self-end mb-1 hidden sm:inline"></div>
-
+      <div class="relativeh-6 sm:h-8 w-px bg-rule mx-0.5 sm:mx-1 self-end mb-1 hidden sm:inline"></div>
+      </div>
     {/if}
     
     <!-- Version Dropdown -->

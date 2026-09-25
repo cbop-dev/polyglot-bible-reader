@@ -3,7 +3,9 @@
   import { readerState } from '$lib/stores/readerState.svelte';
 </script>
 
-<div class="{readerState.gridHeaderExpanded ? 'flex' : 'hidden'} sm:flex flex-col gap-2 mb-4 sticky top-[57px] sm:top-[77px] md:top-[105px] bg-page pt-2 pb-2.5 border-b border-rule z-20 shadow-xs">
+<div id="grid-header"
+class="{readerState.gridHeaderExpanded ? 'flex' : 'hidden'} sm:flex flex-col gap-2 mb-4 sticky top-5 sm:top-25
+bg-page pt-2 pb-2.5 border-b border-rule z-20 shadow-xs">
   <div class="flex items-center justify-between px-4 sm:px-5 text-xs font-semibold text-ink-soft">
     <span class="flex items-center gap-1.5">
       <span class="w-2 h-2 rounded-full bg-link inline-block"></span>

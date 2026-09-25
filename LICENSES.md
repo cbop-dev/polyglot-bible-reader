@@ -115,7 +115,7 @@ The developer(s) is(are) grateful to the digital humanities projects whose open-
 
 ### AI Engineering & Development Tools
 1. **Google DeepMind Antigravity 2.0 & Gemini**:
-   - The application developer used Google DeepMind's Antigravity 2.0 and Gemini models in the development of this project.
+   - The application developer used Google DeepMind's Antigravity 2.0, and Google's Gemini and Anthropic's Sonnet models in the development of this project.
 
 ---
 

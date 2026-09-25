@@ -294,6 +294,7 @@
 			<ul class="list-disc list-inside space-y-1 ml-2 text-ink-soft">
 				<li><strong><a href="https://antigravity.google/product/antigravity-2" class="link" rel="noopener noreferrer">Google Antigravity 2.0</a></strong></li>
 				<li><strong>Google Gemini Models</strong></li>
+				<li><strong>Anthropic's Sonnet Models</strong></li>
 			</ul>
 		</div>
 	</section>
@@ -305,7 +306,7 @@
 </div>
 <style>
 	:root[data-theme="dark"] div.border{
-		background-color: rgba(255,255,255,0.1);
+		background-color: rgba(255,255,255,0.05);
 	}
 	:root[data-theme="light"] div.border{
 		background-color: rgba(0,0,0,0.1);

@@ -53,7 +53,7 @@ All data assets in this repository are derived from datasets with various types 
 - **UI Architecture**:
   - OpenScriptorium reading theme selector and contrast-invariant color stop interpolation pattern (ISC License).
 - **AI Engineering & Development**:
-  - The application developer used Google DeepMind's Antigravity 2.0 and Gemini models in the development of this project.
+  - The application developer used Google DeepMind's Antigravity 2.0 with Google's Gemini and Anthropic's Sonnet models in the development of this project.
 
 ---
 
