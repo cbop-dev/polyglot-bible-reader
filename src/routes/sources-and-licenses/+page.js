@@ -1,7 +1,7 @@
-import showdown from 'showdown';
+/*import showdown from 'showdown';
 
 // Adjust relative path to wherever LICENSES.md resides in your project root
-import licenseMarkdown from '../../LICENSES.md?raw';
+import licenseMarkdown from '../../../LICENSES.md?raw';
 
 
 export const prerender = true;
@@ -20,3 +20,4 @@ export function load() {
     content: html
   };
 }
+  */

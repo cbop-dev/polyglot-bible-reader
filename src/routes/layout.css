@@ -1,8 +1,9 @@
 @import url('https://fonts.googleapis.com/css2?family=Charis+SIL:ital,wght@0,400;0,700;1,400;1,700&display=swap');
 @import 'tailwindcss';
+@plugin "@tailwindcss/typography";
 @source '../lib';
 @source '..';
-
+@import '../app.css';
 @theme {
   --color-page: var(--color-page);
   --color-page-soft: var(--color-page-soft);

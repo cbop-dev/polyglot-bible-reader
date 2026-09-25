@@ -100,7 +100,9 @@ The developer(s) is(are) grateful to the digital humanities projects whose open-
 1. **Liddell-Scott-Jones (LSJ) & Middle Liddell**:
    - **License**: **Public Domain**/ **CC 3.0 BY-NC-SA** ([CEX source](https://github.com/Eumaeus/cite_lsj_cex/))
    - **Source**: H.G. Liddell, R. Scott, H.S. Jones, *A Greek-English Lexicon* (Oxford: Clarendon Press, 1940). Digital edition curated by Perseus Digital Library (Tufts University) and Logeion (University of Chicago).
-     - NB: Although the version used by the Chicago CEX edition is that of 1940, [the University of Chicago *Logeion* treats this source data as public domain](https://logeion.uchicago.edu/about), likely because it is so treated in the UK::
+   
+      NB: Although the version used by the Chicago CEX edition is that of 1940, [the University of Chicago *Logeion* treats this source data as public domain](https://logeion.uchicago.edu/about), likely because it is so treated in the UK::
+      
       > For full-text searches of the dictionaries (where in LSJ do we find reference to Xenophon's Anabasis, where is λόγος used in any entry, not just in the entry for λόγος), use the links in the list of sources below. Full-text search is only possible for the reference works that are fully in the public domain. 
 2. **Brown-Driver-Briggs (BDB) Hebrew and English Lexicon**:
    - **License**: **Public Domain** (Francis Brown, S.R. Driver, Charles A. Briggs, 1906).

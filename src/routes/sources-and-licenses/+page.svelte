@@ -3,13 +3,15 @@
 	import { page } from '$app/state';
 	import { APP_REPO } from '$lib/config/version';
 	let { data } = $props();
+	
+
 </script>
 
 <svelte:head>
 	<title>Sources & Licenses | Polyglot Bible Reader</title>
 </svelte:head>
 
-<div class="max-w-4xl mx-auto px-4 py-12 md:py-16 space-y-12">
+<div class="licenses-navigation max-w-4xl mx-auto px-4 py-12 md:py-16 space-y-12" >
 	<!-- Navigation -->
 	<div>
 		<a href="{base}/" class="inline-flex items-center gap-2 border border-rule px-3 py-1.5 rounded text-sm hover:bg-rule transition-colors">
@@ -301,3 +303,11 @@
 		Web application &copy; Fr. Christopher Brannan, O.P., 2026. All rights reserved for original creative works where not otherwise licensed above.
 	</footer>
 </div>
+<style>
+	:root[data-theme="dark"] div.border{
+		background-color: rgba(255,255,255,0.1);
+	}
+	:root[data-theme="light"] div.border{
+		background-color: rgba(0,0,0,0.1);
+	}
+</style>
