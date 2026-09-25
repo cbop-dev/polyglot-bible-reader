@@ -1,8 +1,11 @@
 @import url('https://fonts.googleapis.com/css2?family=Charis+SIL:ital,wght@0,400;0,700;1,400;1,700&display=swap');
 @import 'tailwindcss';
+@source '../lib';
+@source '..';
 
 @theme {
   --color-page: var(--color-page);
+  --color-page-soft: var(--color-page-soft);
   --color-ink: var(--color-ink);
   --color-ink-soft: var(--color-ink-soft);
   --color-rule: var(--color-rule);
@@ -13,6 +16,7 @@
 :root {
   /* Fallback values before JS applies the theme (Solarized Light) */
   --color-page: rgb(253, 246, 227);
+  --color-page-soft: rgb(245, 237, 216);
   --color-ink: rgb(7, 54, 66);
   --color-ink-soft: rgb(93, 121, 122);
   --color-rule: rgb(228, 227, 211);
@@ -78,6 +82,7 @@ body {
 
 :root[data-theme="dark"] {
   --color-page: rgb(0, 43, 54);
+  --color-page-soft: rgb(7, 54, 66);
   --color-ink: rgb(147, 161, 161);
   --color-ink-soft: rgb(51, 84, 91);
   --color-rule: rgb(18, 57, 67);
