@@ -1,6 +1,8 @@
 <script>
 	import { base } from '$app/paths';
+	import { page } from '$app/state';
 	import { APP_REPO } from '$lib/config/version';
+	let { data } = $props();
 </script>
 
 <svelte:head>
@@ -59,7 +61,7 @@
 					<h2 class="text-xl font-bold">Curated Datasets &amp; Static Indexes</h2>
 					<div class="flex flex-wrap gap-1.5 font-mono text-xs font-semibold">
 						<span class="border border-rule px-2.5 py-1 rounded bg-rule/50">ISC (OpenScriptorium)</span>
-						<span class="border border-rule px-2.5 py-1 rounded bg-rule/50">Public Domain</span>
+						<span class="border border-rule px-2.5 py-1 rounded bg-rule/50"><a href="#lsj-note">Public Domain<sup>*</sup></a></span>
 						<span class="border border-rule px-2.5 py-1 rounded bg-rule/50">CC BY-SA 4.0</span>
 						<span class="border border-rule px-2.5 py-1 rounded bg-rule/50">CC BY-NC 4.0</span>
 					</div>
@@ -238,11 +240,21 @@
 			<div class="border border-rule bg-page p-5 rounded-lg shadow-sm space-y-2">
 				<div class="flex flex-wrap items-baseline justify-between gap-2">
 					<h3 class="text-lg font-bold">Lexica &amp; Dictionaries (LSJ &amp; BDB)</h3>
-					<span class="font-mono text-xs border border-rule px-2 py-0.5 rounded">Public Domain</span>
+					<span class="font-mono text-xs border border-rule px-2 py-0.5 rounded">Public Domain<sup>*</sup></span>
 				</div>
 				<p class="text-sm opacity-90">
-					Liddell-Scott-Jones (LSJ) &amp; Middle Liddell Greek-English Lexicon (Oxford: Clarendon Press, 1940; Perseus Digital Library &amp; Logeion) and Brown-Driver-Briggs (BDB) Hebrew and English Lexicon (1906). Both works are in the public domain.
+					Liddell-Scott-Jones (LSJ) &amp; Middle Liddell Greek-English Lexicon (Oxford: Clarendon Press, 1940; Perseus Digital Library &amp; Logeion) and 
+					Brown-Driver-Briggs (BDB) Hebrew and English Lexicon (1906). 
+					Both works are (at least treated as) in the public domain. </p>
+					
+				<p id="lsj-note" class="text-sm opacity-90"><sup>*</sup>Though the LSJ was published 1940, <a href="https://logeion.uchicago.edu/about" target="_blank" rel="noopener noreferrer" class="text-link underline" >
+						University of Chicago's <i>Logeion</i> project treats it as public domain (emphasis added)</a>:
 				</p>
+					<blockquote class="text-sm opacity-90 border-l-4 border-gray-500 italic my-8 pl-4 md:pl-8 py-4 mx-4">
+						For <u>full-text searches</u> of the dictionaries (where <u>in LSJ</u> do we find reference to Xenophon's Anabasis, where is λόγος used in any entry, 
+						not just in the entry for λόγος), use the links in the list of sources below. 
+						<u>Full-text search is only possible for the reference works that are fully in the public domain.</u></blockquote>
+				
 			</div>
 		</div>
 	</section>

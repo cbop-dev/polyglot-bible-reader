@@ -1,9 +1,12 @@
 <script>
 	import { onMount } from 'svelte';
+	import { resolve } from '$app/paths';
+	import { page } from '$app/state';
 	import { base } from '$app/paths';
 	import { APP_REPO } from '$lib/config/version';
 	import ThemeSlider from './ThemeSlider.svelte';
 
+	let baseurl=$derived(page.url.protocol+"//"+page.url.hostname+(page.url.port ? ":"+page.url.port:'')+resolve("/"))
 	let isCollapsed = $state(false);
 	let userToggled = false;
 
@@ -54,13 +57,9 @@
 				<span class="opacity-40">|</span>
 				<span>Code: <a href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank" rel="noopener noreferrer" class="link">AGPL v3</a></span>
 				<span class="opacity-40">•</span>
-				<span>Data: <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener noreferrer" class="link">CC BY-SA 4.0</a>
-				/ <a href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank" rel="noopener noreferrer" class="link">BY-NC 4.0</a>
-				</span>
-				<span class="opacity-40">|</span>
-				<a href="{base}/sources-and-licenses" class="link font-semibold">Sources &amp; Licenses</a>
+				<span>Data: see <a href="{baseurl}sources-and-licenses" class="link font-semibold">Sources &amp; Licenses</a>
 				<span class="opacity-40">•</span>
-				<span>AI-assisted with <a href="{base}/sources-and-licenses#ai-attribution" class="link">Antigravity 2.0 &amp; Gemini</a></span>
+				<a href="{baseurl}sources-and-licenses#ai-attribution" class="link"><span>AI-assisted</span></a>
 				<span class="opacity-40">•</span>
 				<a href="{APP_REPO}" target="_blank" rel="noopener noreferrer" class="link">GitHub</a>
 			</div>
