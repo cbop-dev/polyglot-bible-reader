@@ -2,7 +2,7 @@ import { getVersionBooks } from '$lib/config/versions';
 import { getBookFile } from '$lib/bookMapping.js';
 import type { HebrewDiacriticMode } from '$lib/utils/diacritics';
 import { loadChapterFromDb, loadChaptersForBook } from '$lib/services/bibleDataLoader';
-import { getLemma, getWorks, type WorkRow } from '$lib/services/dbClient';
+import { getLemma, getWorks, translateReference, type WorkRow } from '$lib/services/dbClient';
 
 export interface VerseDataItem {
 	exists: boolean;
@@ -90,16 +90,20 @@ export class ReaderState {
 		const book = this.selectedBook;
 		const chapNum = parseInt(this.selectedChapter, 10) || 1;
 		const versions = this.activeVersions;
+		const primaryVersion = this.selectedVersion;
 
 		try {
-			// Fetch book chapters in parallel if not already loaded for current book
-			const chaptersPromise = loadChaptersForBook(book);
-			const chapterDataPromise = loadChapterFromDb(book, chapNum, versions);
+			// Fetch book chapters in parallel if not already loaded for current book and primary version
+			const chaptersPromise = loadChaptersForBook(book, primaryVersion);
+			const chapterDataPromise = loadChapterFromDb(book, chapNum, versions, primaryVersion);
 
 			const [chapters, res] = await Promise.all([chaptersPromise, chapterDataPromise]);
 
 			if (chapters.length > 0) {
 				this.bookChapters = chapters;
+				if (!chapters.includes(chapNum)) {
+					this.selectedChapter = String(chapters[0] || 1);
+				}
 			}
 
 			this.chapterVerseKeys = res.verseKeys;
@@ -226,20 +230,45 @@ export class ReaderState {
 		this.greekDiacritics = !this.greekDiacritics;
 	}
 
-	handleVersionSelect(version: string) {
+	async handleVersionSelect(version: string) {
+		const oldVersion = this.selectedVersion;
 		this.selectedVersion = version;
 		this.versionDropdownOpen = false;
+
 		const books = getVersionBooks(version);
+
+		// If current book is available in new version, attempt reference translation (Option B)
 		if (books.includes(this.selectedBook)) {
+			const currentCh = parseInt(this.selectedChapter, 10) || 1;
+			try {
+				const translated = await translateReference(this.selectedBook, currentCh, 1, oldVersion, version);
+				if (translated && translated.chapter) {
+					this.selectedChapter = String(translated.chapter);
+				}
+			} catch (e) {
+				console.warn('[ReaderState] Reference translation error:', e);
+			}
 			this.loadCurrentChapter();
 			return;
 		}
+
+		// Try mapped book
 		const targetBook = getBookFile(version, this.selectedBook);
 		if (books.includes(targetBook)) {
 			this.selectedBook = targetBook;
+			const currentCh = parseInt(this.selectedChapter, 10) || 1;
+			try {
+				const translated = await translateReference(targetBook, currentCh, 1, oldVersion, version);
+				if (translated && translated.chapter) {
+					this.selectedChapter = String(translated.chapter);
+				}
+			} catch (e) {
+				console.warn('[ReaderState] Reference translation error:', e);
+			}
 			this.loadCurrentChapter();
 			return;
 		}
+
 		this.selectedBook = books[0] || 'Gen';
 		this.selectedChapter = '1';
 		this.loadCurrentChapter();

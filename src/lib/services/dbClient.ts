@@ -128,42 +128,102 @@ export async function getCanonicalWorks(): Promise<CanonicalWorkRow[]> {
 	return rows;
 }
 
-function cleanNorm(str: string): string {
+function cleanNorm(str?: string | null): string {
+	if (!str) return '';
 	return str.trim().toLowerCase().replace(/[\s\-_]+/g, '');
 }
 
+export const BOOK_ALIASES: Record<string, string> = {
+	qoh: 'ecclesiastes',
+	eccl: 'ecclesiastes',
+	cant: 'song-of-solomon',
+	song: 'song-of-solomon',
+	pssol: 'psalms-of-solomon',
+	epjer: 'letter-of-jeremiah',
+	'1mac': '1-maccabees',
+	'2mac': '2-maccabees',
+	'3mac': '3-maccabees',
+	'4mac': '4-maccabees',
+	'1esdr': '1-esdras',
+	'2esdr': '2-esdras',
+	tobba: 'tobit',
+	tobs: 'tobit',
+	tob: 'tobit',
+	danth: 'daniel',
+	susth: 'susanna',
+	sus: 'susanna',
+	belth: 'bel-and-the-dragon',
+	bel: 'bel-and-the-dragon',
+	addesth: 'esther-greek',
+	prman: 'prayer-of-manasseh',
+	prazar: 'prayer-of-azariah',
+	addps: 'psalm-151',
+	ps151: 'psalm-151'
+};
+
+export const LXX_VARIANT_BOOKS: Record<string, string> = {
+	psalms: 'psalms-lxx',
+	jeremiah: 'jeremiah-lxx',
+	job: 'job-lxx'
+};
+
 /**
  * Resolve any book identifier (abbreviation, slug, or title) to its canonical_work_id.
+ * If version is provided (e.g. 'LXX' or 'Brenton'), resolves variant canonical works
+ * (e.g. 'psalms-lxx', 'jeremiah-lxx', 'job-lxx').
  */
-export async function resolveCanonicalWorkId(bookIdentifier: string): Promise<number | null> {
+export async function resolveCanonicalWorkId(
+	bookIdentifier: string,
+	version?: string
+): Promise<number | null> {
 	if (!bookIdentifier) return null;
 	const books = await getCanonicalWorks();
 	const norm = cleanNorm(bookIdentifier);
+	let targetSlug = cleanNorm(BOOK_ALIASES[norm] || norm);
+
+	const isLxx = version === 'LXX' || version === 'Brenton' || version === 'swete-lxx' || version === 'brenton-lxx';
+	if (isLxx && LXX_VARIANT_BOOKS[targetSlug]) {
+		targetSlug = cleanNorm(LXX_VARIANT_BOOKS[targetSlug]);
+	}
 
 	// Exact slug match (e.g. '1-corinthians' -> '1corinthians')
-	const bySlug = books.find((b) => cleanNorm(b.slug) === norm);
+	const bySlug = books.find((b) => cleanNorm(b.slug) === targetSlug);
 	if (bySlug) return bySlug.id;
 
 	// SBL abbreviation match (e.g. '1 Cor', 'Gen', 'Matt')
 	const byAbbrev = books.find((b) => b.sbl_abbreviation && cleanNorm(b.sbl_abbreviation) === norm);
-	if (byAbbrev) return byAbbrev.id;
+	if (byAbbrev) {
+		if (isLxx && LXX_VARIANT_BOOKS[cleanNorm(byAbbrev.slug)]) {
+			const lxxSlug = cleanNorm(LXX_VARIANT_BOOKS[cleanNorm(byAbbrev.slug)]);
+			const lxxBook = books.find((b) => cleanNorm(b.slug) === lxxSlug);
+			if (lxxBook) return lxxBook.id;
+		}
+		return byAbbrev.id;
+	}
 
 	// Title match (e.g. '1 Corinthians')
 	const byTitle = books.find((b) => cleanNorm(b.title) === norm);
-	if (byTitle) return byTitle.id;
+	if (byTitle) {
+		if (isLxx && LXX_VARIANT_BOOKS[cleanNorm(byTitle.slug)]) {
+			const lxxSlug = cleanNorm(LXX_VARIANT_BOOKS[cleanNorm(byTitle.slug)]);
+			const lxxBook = books.find((b) => cleanNorm(b.slug) === lxxSlug);
+			if (lxxBook) return lxxBook.id;
+		}
+		return byTitle.id;
+	}
 
 	// Partial match on slug
-	const byPartial = books.find((b) => cleanNorm(b.slug).includes(norm));
+	const byPartial = books.find((b) => cleanNorm(b.slug).includes(targetSlug));
 	if (byPartial) return byPartial.id;
 
 	return null;
 }
 
 /**
- * Fetch all available chapter numbers for a canonical book.
+ * Fetch all available chapter numbers for a canonical book and version.
  */
-export async function getBookChapters(bookIdentifier: string): Promise<number[]> {
-	const cwId = await resolveCanonicalWorkId(bookIdentifier);
+export async function getBookChapters(bookIdentifier: string, version?: string): Promise<number[]> {
+	const cwId = await resolveCanonicalWorkId(bookIdentifier, version);
 	if (!cwId) return [];
 	const rows = await query<{ chapter: number }>(`
 		SELECT DISTINCT CAST(substr(hierarchy, 1, instr(hierarchy, ',') - 1) AS INTEGER) AS chapter
@@ -174,6 +234,75 @@ export async function getBookChapters(bookIdentifier: string): Promise<number[]>
 	return rows.map((r) => r.chapter);
 }
 
+export interface TranslatedReference {
+	book: string;
+	chapter: number;
+	verse: number;
+}
+
+/**
+ * Translates a reference from one version's versification to another using versification_mappings.
+ */
+export async function translateReference(
+	book: string,
+	chapter: number,
+	verse: number = 1,
+	fromVersion: string,
+	toVersion: string
+): Promise<TranslatedReference | null> {
+	if (!book) return null;
+	const fromCwId = await resolveCanonicalWorkId(book, fromVersion);
+	const toCwId = await resolveCanonicalWorkId(book, toVersion);
+
+	if (!fromCwId || !toCwId || fromCwId === toCwId) {
+		return { book, chapter, verse };
+	}
+
+	const hier = `${chapter},${verse}`;
+	// 1. Direct mapping
+	const directRows = await query<{ hierarchy: string }>(`
+		SELECT cr_to.hierarchy
+		FROM versification_mappings vm
+		JOIN canonical_refs cr_from ON vm.from_canonical_ref_id = cr_from.id
+		JOIN canonical_refs cr_to ON vm.to_canonical_ref_id = cr_to.id
+		WHERE cr_from.canonical_work_id = ? AND cr_from.hierarchy = ?
+		  AND cr_to.canonical_work_id = ?
+		LIMIT 1
+	`, [fromCwId, hier, toCwId]);
+
+	if (directRows.length > 0) {
+		const parts = directRows[0].hierarchy.split(',');
+		return { book, chapter: parseInt(parts[0], 10), verse: parseInt(parts[1], 10) || 1 };
+	}
+
+	// 2. Reverse mapping
+	const reverseRows = await query<{ hierarchy: string }>(`
+		SELECT cr_from.hierarchy
+		FROM versification_mappings vm
+		JOIN canonical_refs cr_to ON vm.to_canonical_ref_id = cr_to.id
+		JOIN canonical_refs cr_from ON vm.from_canonical_ref_id = cr_from.id
+		WHERE cr_to.canonical_work_id = ? AND cr_to.hierarchy = ?
+		  AND cr_from.canonical_work_id = ?
+		LIMIT 1
+	`, [fromCwId, hier, toCwId]);
+
+	if (reverseRows.length > 0) {
+		const parts = reverseRows[0].hierarchy.split(',');
+		return { book, chapter: parseInt(parts[0], 10), verse: parseInt(parts[1], 10) || 1 };
+	}
+
+	// 3. Fallback: check if the exact chapter/verse exists in target canonical work
+	const identityRows = await query<{ id: number }>(`
+		SELECT id FROM canonical_refs WHERE canonical_work_id = ? AND hierarchy = ? LIMIT 1
+	`, [toCwId, hier]);
+
+	if (identityRows.length > 0) {
+		return { book, chapter, verse };
+	}
+
+	return { book, chapter, verse };
+}
+
 /**
  * Load aligned parallel chapter verses for specified versions.
  * Integrates TVTMS versification mappings so divergent verses align side-by-side.
@@ -182,11 +311,12 @@ export async function getChapterVerses(
 	bookIdentifier: string,
 	chapter: number,
 	versions: string[],
-	includeWords: boolean = true
+	includeWords: boolean = true,
+	primaryVersion?: string
 ): Promise<VerseResult[]> {
-	const cwId = await resolveCanonicalWorkId(bookIdentifier);
+	const cwId = await resolveCanonicalWorkId(bookIdentifier, primaryVersion);
 	if (!cwId) {
-		console.warn(`[DB] Book not found for identifier: ${bookIdentifier}`);
+		console.warn(`[DB] Book not found for identifier: ${bookIdentifier} (version: ${primaryVersion})`);
 		return [];
 	}
 

@@ -8,6 +8,7 @@ import {
 	getLemma,
 	getWordFrequencyByBook,
 	getConcordance,
+	translateReference,
 	_clearDbClientCache
 } from './dbClient';
 import * as dbWorker from './dbWorker';
@@ -70,6 +71,46 @@ describe('dbClient service', () => {
 			expect(await resolveCanonicalWorkId('1 Cor')).toBe(46);
 			expect(await resolveCanonicalWorkId('psalms')).toBe(19);
 			expect(await resolveCanonicalWorkId('Ps')).toBe(19);
+		});
+
+		it('resolves version-specific canonical work IDs for LXX and Brenton', async () => {
+			mockQuery.mockResolvedValueOnce([
+				{ id: 19, slug: 'psalms', title: 'Psalms', sbl_abbreviation: 'Ps', book_key: 'psalms', testament: 'ot' },
+				{ id: 87, slug: 'psalms-lxx', title: 'Psalms (LXX)', sbl_abbreviation: null, book_key: 'psalms-lxx', testament: 'ot' },
+				{ id: 24, slug: 'jeremiah', title: 'Jeremiah', sbl_abbreviation: 'Jer', book_key: 'jeremiah', testament: 'ot' },
+				{ id: 88, slug: 'jeremiah-lxx', title: 'Jeremiah (LXX)', sbl_abbreviation: null, book_key: 'jeremiah-lxx', testament: 'ot' },
+				{ id: 21, slug: 'ecclesiastes', title: 'Ecclesiastes', sbl_abbreviation: 'Eccl', book_key: 'ecclesiastes', testament: 'ot' },
+				{ id: 85, slug: 'psalms-of-solomon', title: 'Psalms of Solomon', sbl_abbreviation: null, book_key: 'psalms-of-solomon', testament: 'ot' }
+			]);
+
+			// Jer in BHS vs LXX
+			expect(await resolveCanonicalWorkId('Jer', 'BHS')).toBe(24);
+			expect(await resolveCanonicalWorkId('Jer', 'LXX')).toBe(88);
+			expect(await resolveCanonicalWorkId('Jer', 'Brenton')).toBe(88);
+
+			// Ps in BHS vs LXX
+			expect(await resolveCanonicalWorkId('Ps', 'BHS')).toBe(19);
+			expect(await resolveCanonicalWorkId('Ps', 'LXX')).toBe(87);
+
+			// Aliases
+			expect(await resolveCanonicalWorkId('Qoh', 'BHS')).toBe(21);
+			expect(await resolveCanonicalWorkId('PsSol', 'LXX')).toBe(85);
+		});
+
+		it('translates references between versions using versification mappings', async () => {
+			// Mock canonical works resolution
+			mockQuery.mockResolvedValueOnce([
+				{ id: 24, slug: 'jeremiah', title: 'Jeremiah', sbl_abbreviation: 'Jer', book_key: 'jeremiah', testament: 'ot' },
+				{ id: 88, slug: 'jeremiah-lxx', title: 'Jeremiah (LXX)', sbl_abbreviation: null, book_key: 'jeremiah-lxx', testament: 'ot' }
+			]);
+
+			// Mock versification mapping query returning Jer 38:1
+			mockQuery.mockResolvedValueOnce([
+				{ hierarchy: '38,1' }
+			]);
+
+			const trans = await translateReference('Jer', 31, 1, 'BHS', 'LXX');
+			expect(trans).toEqual({ book: 'Jer', chapter: 38, verse: 1 });
 		});
 
 		it('retrieves chapter verses and re-maps slugs to UI version acronyms', async () => {

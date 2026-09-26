@@ -19,10 +19,11 @@ export interface ChapterDataResult {
 export async function loadChapterFromDb(
 	book: string,
 	chapter: number,
-	activeVersions: string[]
+	activeVersions: string[],
+	primaryVersion?: string
 ): Promise<ChapterDataResult> {
 	try {
-		const verses = await getChapterVerses(book, chapter, activeVersions, true);
+		const verses = await getChapterVerses(book, chapter, activeVersions, true, primaryVersion);
 
 		// Extract unique verse keys in numerical order based on canonical hierarchy
 		const verseKeySet = new Set<string>();
@@ -85,8 +86,8 @@ export async function loadChapterFromDb(
 /**
  * Fetch available chapters for a given book from SQLite database.
  */
-export async function loadChaptersForBook(book: string): Promise<number[]> {
-	return getBookChapters(book);
+export async function loadChaptersForBook(book: string, primaryVersion?: string): Promise<number[]> {
+	return getBookChapters(book, primaryVersion);
 }
 
 /**
