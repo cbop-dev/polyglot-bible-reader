@@ -162,6 +162,47 @@ describe('dbClient service', () => {
 			);
 		});
 
+		it('retrieves Jeremiah 31 verses aligned with LXX 38', async () => {
+			// Mock canonical works resolution for 'Jer'
+			mockQuery.mockResolvedValueOnce([
+				{ id: 24, slug: 'jeremiah', title: 'Jeremiah', sbl_abbreviation: 'Jer', book_key: 'jeremiah', testament: 'ot' }
+			]);
+
+			// Mock verse rows for Jer 31:1 (BHS 31:1, LXX 38:1)
+			mockQuery.mockResolvedValueOnce([
+				{
+					base_cref_id: 19693,
+					ord: 19693,
+					hierarchy: '31,1',
+					base_label: 'Jeremiah 31:1',
+					version: 'wlc',
+					work_unit_id: 985300,
+					verse_label: '31:1',
+					body: 'בָּעֵ֤ת הַהִיא֙ נְאֻם־ יְהוָ֔ה אֶֽהְיֶה֙ לֵֽאלֹהִ֔ים...'
+				},
+				{
+					base_cref_id: 19693,
+					ord: 19693,
+					hierarchy: '31,1',
+					base_label: 'Jeremiah 31:1',
+					version: 'swete-lxx',
+					work_unit_id: 985400,
+					verse_label: '38:1',
+					body: 'ἐν τῷ χρόνῳ ἐκείνῳ εἶπεν κύριος ἔσομαι εἰς θεὸν...'
+				}
+			]);
+
+			// Mock words
+			mockQuery.mockResolvedValueOnce([]);
+
+			const verses = await getChapterVerses('Jer', 31, ['BHS', 'LXX'], true);
+			expect(verses).toHaveLength(2);
+			expect(verses[0].version).toBe('BHS');
+			expect(verses[0].verse_label).toBe('31:1');
+			expect(verses[1].version).toBe('LXX');
+			expect(verses[1].verse_label).toBe('38:1');
+		});
+
 		it('retrieves lemma information by lemma or lex_id', async () => {
 			mockQuery.mockResolvedValueOnce([
 				{
