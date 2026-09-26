@@ -200,9 +200,7 @@ export async function getChapterVerses(
 			FROM canonical_refs
 			WHERE canonical_work_id = ? AND (hierarchy = ? OR hierarchy LIKE ?)
 		),
-		aligned_refs AS (
-			SELECT id AS target_cref_id, id AS aligned_cref_id FROM target_refs
-			UNION
+		mapped_refs AS (
 			SELECT vm.to_canonical_ref_id AS target_cref_id, vm.from_canonical_ref_id AS aligned_cref_id
 			FROM versification_mappings vm
 			JOIN target_refs tr ON vm.to_canonical_ref_id = tr.id
@@ -210,6 +208,27 @@ export async function getChapterVerses(
 			SELECT vm.from_canonical_ref_id AS target_cref_id, vm.to_canonical_ref_id AS aligned_cref_id
 			FROM versification_mappings vm
 			JOIN target_refs tr ON vm.from_canonical_ref_id = tr.id
+		),
+		variant_identity_refs AS (
+			SELECT tr.id AS target_cref_id, cr_alt.id AS aligned_cref_id
+			FROM target_refs tr
+			JOIN canonical_works cw_main ON cw_main.id = ?
+			JOIN canonical_works cw_alt ON (
+				cw_alt.slug = cw_main.slug || '-lxx' OR cw_main.slug = cw_alt.slug || '-lxx'
+			)
+			JOIN canonical_refs cr_alt ON cr_alt.canonical_work_id = cw_alt.id AND cr_alt.hierarchy = tr.hierarchy
+			WHERE NOT EXISTS (
+				SELECT 1 FROM mapped_refs mr
+				JOIN canonical_refs cr_mapped ON mr.aligned_cref_id = cr_mapped.id
+				WHERE mr.target_cref_id = tr.id AND cr_mapped.canonical_work_id = cw_alt.id
+			)
+		),
+		aligned_refs AS (
+			SELECT id AS target_cref_id, id AS aligned_cref_id FROM target_refs
+			UNION
+			SELECT * FROM mapped_refs
+			UNION
+			SELECT * FROM variant_identity_refs
 		)
 		SELECT 
 			tr.id AS base_cref_id,
@@ -228,7 +247,7 @@ export async function getChapterVerses(
 		ORDER BY tr.ord, w.id;
 	`;
 
-	const params = [cwId, String(chapter), `${chapter},%`, ...workSlugs];
+	const params = [cwId, String(chapter), `${chapter},%`, cwId, ...workSlugs];
 	const rows = await query<VerseResult>(sql, params);
 
 	// Remap version slug back to UI version acronym (e.g. 'wlc' -> 'BHS')
@@ -310,14 +329,18 @@ export async function getWordFrequencyByBook(
 	lemma: string
 ): Promise<BookFrequency[]> {
 	const sql = `
-		SELECT cw.title, cw.sbl_abbreviation, count(*) as count
+		SELECT 
+			COALESCE(cw_parent.title, cw.title) AS title, 
+			COALESCE(cw_parent.sbl_abbreviation, cw.sbl_abbreviation) AS sbl_abbreviation, 
+			count(*) as count
 		FROM words wd
 		JOIN work_units wu ON wd.work_unit_id = wu.id
 		JOIN canonical_refs cr ON wu.canonical_ref_id = cr.id
 		JOIN canonical_works cw ON cr.canonical_work_id = cw.id
+		LEFT JOIN canonical_works cw_parent ON cw.slug = cw_parent.slug || '-lxx'
 		WHERE wd.work_id = ? AND wd.normalized = ?
-		GROUP BY cw.id
-		ORDER BY cw.id
+		GROUP BY COALESCE(cw_parent.id, cw.id)
+		ORDER BY COALESCE(cw_parent.id, cw.id)
 	`;
 	return query<BookFrequency>(sql, [workId, lemma]);
 }

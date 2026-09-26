@@ -117,6 +117,51 @@ describe('dbClient service', () => {
 			expect(verses[1].words).toHaveLength(1);
 		});
 
+		it('retrieves Psalms 1 verses using variant_identity_refs SQL structure', async () => {
+			// Mock canonical works resolution for 'Ps'
+			mockQuery.mockResolvedValueOnce([
+				{ id: 19, slug: 'psalms', title: 'Psalms', sbl_abbreviation: 'Ps', book_key: 'psalms', testament: 'ot' }
+			]);
+
+			// Mock verse rows for Ps 1:1 in BHS and LXX
+			mockQuery.mockResolvedValueOnce([
+				{
+					base_cref_id: 13941,
+					ord: 13941,
+					hierarchy: '1,1',
+					base_label: 'Psalms 1:1',
+					version: 'wlc',
+					work_unit_id: 974950,
+					verse_label: '1:1',
+					body: 'אַ֥שְֽׁרֵי־ הָאִ֗ישׁ...'
+				},
+				{
+					base_cref_id: 13941,
+					ord: 13941,
+					hierarchy: '1,1',
+					base_label: 'Psalms 1:1',
+					version: 'swete-lxx',
+					work_unit_id: 974960,
+					verse_label: '1:1',
+					body: 'μακάριος ἀνήρ...'
+				}
+			]);
+
+			// Mock word tokens
+			mockQuery.mockResolvedValueOnce([]);
+
+			const verses = await getChapterVerses('Ps', 1, ['BHS', 'LXX'], true);
+			expect(verses).toHaveLength(2);
+			expect(verses[0].version).toBe('BHS');
+			expect(verses[1].version).toBe('LXX');
+
+			// Verify that the query was called with the variant_identity_refs CTE and both cwId params
+			expect(mockQuery).toHaveBeenCalledWith(
+				expect.stringContaining('variant_identity_refs'),
+				[19, '1', '1,%', 19, 'wlc', 'swete-lxx']
+			);
+		});
+
 		it('retrieves lemma information by lemma or lex_id', async () => {
 			mockQuery.mockResolvedValueOnce([
 				{
