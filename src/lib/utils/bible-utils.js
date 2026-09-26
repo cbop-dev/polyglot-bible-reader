@@ -41,7 +41,7 @@ export var bookAbbrevMap =
     '3 Macc': ['3 Maccabees', '3 Macc', '3 Mac', '3 Maccab', 'III Macc', 'III Mac', 'III Maccab'],
     '4 Macc': ['4 Maccabees', '4 Macc', '4 Mac', '4 Maccab', 'IV Macc', 'IV Mac', 'IV Maccab'],
     'Job': ['Job'],
-    'Ps(s)': ['Psalms'],
+    'Ps': ['Psalms',"Psalmi", 'Ps(s)', 'Psalms', 'Psa'],
     'Prov': ['Proverbs'],
     'Eccl': ['Ecclesiastes', 'Qoheleth', 'Qoh'],
     'Song': ['Song of Songs', 'Song of Solomon', 'Canticles', 'Cant'],

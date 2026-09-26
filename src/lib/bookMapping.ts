@@ -1,8 +1,9 @@
 import { bibleRefReverseLookupHash } from '$lib/utils/bible-utils.js';
+import * as bibleUtils from '$lib/utils/bible-utils.js';
 
 export function getBookFile(version: string, canonicalBook: string): string {
   const normKey = bibleRefReverseLookupHash[canonicalBook.toLowerCase()] || canonicalBook;
-
+ //TODO: We should normalize the names and use the normed names!
   if (version === 'LXX') {
     if (canonicalBook === 'Ezra' || canonicalBook === 'Neh') return '2Esdr';
     if (normKey === '1 Macc' || canonicalBook === '1Macc') return '1Mac';
