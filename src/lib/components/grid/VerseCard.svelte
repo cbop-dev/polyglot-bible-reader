@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { getMappedReference } from '$lib/bookMapping.js';
   import CopyText from '$lib/lemma-ui/components/ui/CopyText.svelte';
   import { readerState } from '$lib/stores/readerState.svelte';
   import { formatVerseText } from '$lib/services/bibleDataLoader';
@@ -15,17 +14,7 @@
     <div class="grid gap-6 verse-grid" style="grid-template-columns: repeat({row.length > 0 ? row.length : 1}, minmax(0, 1fr))">
       {#each row as colVersion, cIdx}
         {@const align = readerState.getCellAlign(rIdx, cIdx)}
-        {@const mapped = getMappedReference(colVersion, readerState.selectedBook, String(readerState.selectedChapter), verseKey)}
-        {@const mChap = mapped.mappedChapter}
-        {@const mVerse = mapped.mappedVerse}
-        {@const bookData = readerState.loadedBooks[colVersion]}
-        {@const vData = {
-          exists: !!(bookData?.chapters?.[mChap]?.[mVerse]),
-          omitted: !(bookData?.chapters?.[mChap]?.[mVerse]),
-          label: `${mapped.mappedBook} ${mChap}:${mVerse}`,
-          isDivergent: mChap !== String(readerState.selectedChapter) || mVerse !== verseKey,
-          verseData: bookData?.chapters?.[mChap]?.[mVerse]
-        }}
+        {@const vData = readerState.getVerseData(verseKey, colVersion)}
         {@const unformattedVerseText = vData?.omitted
           ? ''
           : (vData?.verseData?.words?.length

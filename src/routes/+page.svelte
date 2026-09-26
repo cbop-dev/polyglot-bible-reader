@@ -13,10 +13,11 @@
   });
 
   $effect(() => {
-    // Explicitly track book and versions to reactively reload when modified
-    const book = readerState.selectedBook;
+    // Explicitly track book, chapter, and active versions to reactively reload when modified
+    const _book = readerState.selectedBook;
+    const _chapter = readerState.selectedChapter;
     const _versions = readerState.activeVersions;
-    readerState.loadCurrentBooks();
+    readerState.loadCurrentChapter();
   });
 </script>
 

@@ -160,6 +160,21 @@ export async function resolveCanonicalWorkId(bookIdentifier: string): Promise<nu
 }
 
 /**
+ * Fetch all available chapter numbers for a canonical book.
+ */
+export async function getBookChapters(bookIdentifier: string): Promise<number[]> {
+	const cwId = await resolveCanonicalWorkId(bookIdentifier);
+	if (!cwId) return [];
+	const rows = await query<{ chapter: number }>(`
+		SELECT DISTINCT CAST(substr(hierarchy, 1, instr(hierarchy, ',') - 1) AS INTEGER) AS chapter
+		FROM canonical_refs
+		WHERE canonical_work_id = ?
+		ORDER BY chapter
+	`, [cwId]);
+	return rows.map((r) => r.chapter);
+}
+
+/**
  * Load aligned parallel chapter verses for specified versions.
  * Integrates TVTMS versification mappings so divergent verses align side-by-side.
  */
