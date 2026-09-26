@@ -19,7 +19,7 @@ gap-2 sm:gap-4 -mx-3 px-1 sm:-mx-4 sm:px-4 md:-mx-8 md:px-3">
       class="w-8 h-8 sm:w-11 sm:h-11 md:w-14 md:h-14 lg:w-16 lg:h-16 flex-shrink-0 object-contain rounded-full shadow-xs"
     />
     <div class="min-w-0">
-      <h1 class="text-sm min-[360px]:text-base min-[410px]:text-lg sm:text-2xl md:text-3xl lg:text-4xl font-bold tracking-tight inline-flex items-center flex-wrap gap-x-1 sm:gap-x-1.5">
+      <h1 class="text-sm min-[360px]:text-base min-[410px]:text-lg sm:text-2xl md:text-2xl lg:text-4xl font-bold tracking-tight inline-flex items-center flex-wrap gap-x-1 sm:gap-x-1.5">
         <span class="truncate sm:whitespace-normal hidden sm:inline">
           <span class="hidden md:inline">Polyglot</span> Bible Reader
         </span>
@@ -54,15 +54,16 @@ gap-2 sm:gap-4 -mx-3 px-1 sm:-mx-4 sm:px-4 md:-mx-8 md:px-3">
     </div>
   </div>
 
-  <div class="flex gap-1 sm:gap-2.5 bg-page p-1 sm:p-2.5 md:p-4 rounded shadow-xs sm:shadow items-center flex-shrink-0 break-all" onclick={(e) => e.stopPropagation()}>
+  <!-- svelte-ignore a11y_click_events_have_key_events -->
+  <div id="header-book-chapter-verse-selector" class="flex gap-1 sm:gap-2.5 bg-page p-1 sm:p-2.5  rounded shadow-xs sm:shadow items-center flex-shrink-0 break-all" onclick={(e) => e.stopPropagation()}>
     
     {#if true}
     <!-- Diacritic Controls -->
-     <div class="flex flex-row sm:relative {readerState.gridHeaderExpanded ? 'relative' : 'hidden'}">
+     <div class="sm:flex flex-row flex-nowrap sm:relative {readerState.gridHeaderExpanded ? 'flex' : 'hidden'} ">
      
     {#if true}
       <div class="{readerState.visibleVersions.includes("BHS") ? 'relative' : 'hidden'}">
-        <label class="hidden sm:block text-xs font-bold mb-1 text-center text-ink-soft" for="hebrew-diacritics">Heb</label>
+        <label class="hidden lg:block text-xs font-bold mb-1 text-center text-ink-soft" for="hebrew-diacritics">Heb</label>
         <button
           id="hebrew-diacritics"
           type="button"
@@ -86,7 +87,7 @@ gap-2 sm:gap-4 -mx-3 px-1 sm:-mx-4 sm:px-4 md:-mx-8 md:px-3">
 
     {#if readerState.visibleVersions.includes("LXX") || readerState.visibleVersions.includes("SBLGNT")}
       <div class="relative ml-1">
-        <label class="hidden sm:block text-xs font-bold mb-1 text-center text-ink-soft" for="greek-diacritics">Grk</label>
+        <label class="hidden lg:block text-xs font-bold mb-1 text-center text-ink-soft" for="greek-diacritics">Grk</label>
         <button
           id="greek-diacritics"
           type="button"
@@ -110,7 +111,7 @@ gap-2 sm:gap-4 -mx-3 px-1 sm:-mx-4 sm:px-4 md:-mx-8 md:px-3">
     
     <!-- Version Dropdown -->
     <div class="relative">
-      <label class="hidden sm:block text-sm font-bold mb-1">Version</label>
+      <label class="hidden  text-sm font-bold mb-1 lg:block">Version</label>
       <button 
         aria-label="Select version"
         class="border border-rule rounded p-1 sm:p-2 w-16 sm:w-20 md:w-24 text-xs sm:text-sm text-left bg-page flex justify-between items-center shadow-xs sm:shadow-sm cursor-pointer"
@@ -156,10 +157,10 @@ gap-2 sm:gap-4 -mx-3 px-1 sm:-mx-4 sm:px-4 md:-mx-8 md:px-3">
 
     <!-- Book Selector Button & Modal -->
     <div class="relative">
-      <label class="hidden sm:block text-sm font-bold mb-1">Book</label>
+      <label class="hidden lg:block text-sm font-bold mb-1">Book</label>
       <button 
         aria-label="Select book"
-        class="border border-rule rounded p-1 sm:p-2 w-[4.5rem] sm:w-28 md:w-32 text-xs sm:text-sm text-left bg-page flex justify-between items-center shadow-xs sm:shadow-sm cursor-pointer"
+        class="border border-rule rounded p-1 sm:p-2 w-[4.5rem] sm:w-28 lg:w-32 text-xs sm:text-sm text-left bg-page flex justify-between items-center shadow-xs sm:shadow-sm cursor-pointer"
         onclick={(e) => { e.stopPropagation(); const prev = readerState.bookDropdownOpen; readerState.closeAllPopups(); readerState.bookDropdownOpen = !prev; }}
       >
         <span class="truncate">{readerState.selectedBook}</span>
@@ -187,11 +188,11 @@ gap-2 sm:gap-4 -mx-3 px-1 sm:-mx-4 sm:px-4 md:-mx-8 md:px-3">
 
     <!-- Chapter Selector Button & Modal -->
     <div class="relative">
-      <label class="hidden sm:block text-sm font-bold mb-1" for="chapter">Chapter</label>
+      <label class="hidden lg:block text-sm font-bold mb-1" for="chapter">Chapter</label>
       <button 
         id="chapter"
         aria-label="Select chapter"
-        class="border border-rule rounded p-1 sm:p-2 w-12 sm:w-16 md:w-20 text-xs sm:text-sm text-left bg-page flex justify-between items-center shadow-xs sm:shadow-sm cursor-pointer"
+        class="border border-rule rounded p-1 sm:p-2 w-12 sm:w-15 lg:w-20 text-xs sm:text-sm text-left bg-page flex justify-between items-center shadow-xs sm:shadow-sm cursor-pointer"
         onclick={(e) => { e.stopPropagation(); const prev = readerState.chapterDropdownOpen; readerState.closeAllPopups(); readerState.chapterDropdownOpen = !prev; }}
       >
         <span class="truncate">{readerState.selectedChapter}</span>
@@ -219,11 +220,11 @@ gap-2 sm:gap-4 -mx-3 px-1 sm:-mx-4 sm:px-4 md:-mx-8 md:px-3">
 
     <!-- Verse Selector Button & Modal (Desktop) -->
     <div class="relative hidden sm:block">
-      <label class="hidden sm:block text-sm font-bold mb-1" for="verse">Verse</label>
+      <label class="hidden lg:block text-sm font-bold mb-1" for="verse">Verse</label>
       <button 
         id="verse"
         aria-label="Select verse"
-        class="border border-rule rounded p-1 sm:p-2 w-12 sm:w-16 md:w-20 text-xs sm:text-sm text-left bg-page flex justify-between items-center shadow-xs sm:shadow-sm cursor-pointer"
+        class="border border-rule rounded p-1 sm:p-2 w-6 sm:w-12  text-xs sm:text-sm text-left bg-page flex justify-between items-center shadow-xs sm:shadow-sm cursor-pointer"
         onclick={(e) => { e.stopPropagation(); const prev = readerState.verseDropdownOpen; readerState.closeAllPopups(); readerState.verseDropdownOpen = !prev; }}
       >
         <span class="truncate">v.</span>
@@ -253,7 +254,10 @@ gap-2 sm:gap-4 -mx-3 px-1 sm:-mx-4 sm:px-4 md:-mx-8 md:px-3">
   <!-- Mobile toggle button (< sm:) -->
   <button
     type="button"
-    class="sm:hidden absolute left-1/2 -translate-x-1/2 -bottom-[12px] z-40 flex items-center justify-center w-6 h-6 bg-page border border-rule rounded-full shadow-xs text-[10px] font-bold text-ink-soft hover:text-ink hover:bg-rule cursor-pointer transition-colors"
+    class="absolute left-1/2 -translate-x-1/2 {readerState.gridHeaderExpanded ? '-bottom-6' :'-bottom-3'} z-40 
+    flex items-center justify-center w-6 h-6 bg-page border border-rule rounded-full 
+    shadow-xs text-[10px] font-bold text-ink-soft 
+    hover:text-ink hover:bg-rule cursor-pointer transition-colors"
     onclick={(e) => { e.stopPropagation(); readerState.gridHeaderExpanded = !readerState.gridHeaderExpanded; }}
     title={readerState.gridHeaderExpanded ? "Collapse Layout Options" : "Expand Layout Options"}
     aria-label={readerState.gridHeaderExpanded ? "Collapse Layout Options" : "Expand Layout Options"}

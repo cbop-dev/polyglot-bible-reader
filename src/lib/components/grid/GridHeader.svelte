@@ -4,8 +4,8 @@
 </script>
 
 <div id="grid-header"
-class="{readerState.gridHeaderExpanded ? 'flex' : 'hidden'} sm:flex flex-col gap-2 mb-4 sticky top-5 sm:top-25
-bg-page pt-2 pb-2.5 border-b border-rule z-20 shadow-xs">
+class="{readerState.gridHeaderExpanded ? 'flex pt-5' : 'hidden pt-2'} flex-col gap-2 mb-4 sticky top-10 sm:top-20 md:top-25 lg:top-27
+pb-2.5 border-b border-rule z-20 shadow-xs">
   <div class="flex items-center justify-between px-4 sm:px-5 text-xs font-semibold text-ink-soft">
     <span class="flex items-center gap-1.5">
       <span class="w-2 h-2 rounded-full bg-link inline-block"></span>
@@ -89,3 +89,20 @@ bg-page pt-2 pb-2.5 border-b border-rule z-20 shadow-xs">
     </div>
   {/each}
 </div>
+<style>
+
+
+  :root[data-theme='light'] {
+      --bgblend: black;
+  }
+
+  :root[data-theme='dark'] {
+      --bgblend: white;
+  }
+   #grid-header{ 
+    background-color: color-mix(in srgb, var(--bg-content, white) 100%, var(--bgblend) 15%, transparent 10%); 
+    box-shadow: 2px 2px 10px color-mix(in srgb, var(--bgblend) 30%, transparent 80%);
+    
+  }
+  
+</style>

@@ -22,6 +22,12 @@ const config = {
 	compilerOptions: {
 		runes: ({ filename }) => filename.split(/[/\\]/).includes('node_modules') ? undefined : true
 	},
+	onwarn: (warning, handler) => {
+		// suppress warnings on `vite dev` and `vite build`; but even without this, things still work
+		if (warning.code === "a11y-click-events-have-key-events") return;
+		if (warning.code === "a11y-no-static-element-interactions") return;
+		handler(warning);
+  	},
 	kit: {
 		adapter: adapter({
 			pages: outDir,
