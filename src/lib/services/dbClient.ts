@@ -70,6 +70,17 @@ export interface ConcordanceOccurrence {
 	position: number;
 }
 
+export interface LexiconEntryRow {
+	id: number;
+	dictionary: string;
+	key: string;
+	headword: string;
+	strongs?: string;
+	lsj_index?: string;
+	match_type?: string;
+	definition: string;
+}
+
 // Mapping from UI version acronyms to database work slugs
 export const VERSION_MAP: Record<string, string> = {
 	BHS: 'wlc',
@@ -499,4 +510,51 @@ export async function getConcordance(
 		LIMIT ?
 	`;
 	return query<ConcordanceOccurrence>(sql, [workId, lemma, limit]);
+}
+
+/**
+ * Strips Hebrew niqqud and cantillation marks
+ */
+export function removeHebrewDiacritics(str: string): string {
+	if (!str) return '';
+	return str.replace(/[\u0591-\u05C7]/g, '').trim();
+}
+
+/**
+ * Normalizes polytonic Greek text to plain unaccented lowercase Greek
+ */
+export function normalizeGreek(str: string): string {
+	if (!str) return '';
+	return str
+		.normalize('NFD')
+		.replace(/[\u0300-\u036f\u0313\u0314\u0342\u0345\u0308\u0304\u0305\u0306'⸂⸃⸆⸇⸀⸁⸄⸅⸈⸉⸊⸋\[\]⟦⟧⟨⟩\(\)†‡*0-9\s.,;·:!?\-—]+/gu, '')
+		.toLowerCase()
+		.replace(/ς/g, 'σ')
+		.trim();
+}
+
+/**
+ * Retrieve unabridged lexicon entry (BDB or LSJ) by key or strongs.
+ */
+export async function getLexiconEntry(
+	dictionary: 'bdb' | 'lsj',
+	key: string
+): Promise<LexiconEntryRow | null> {
+	if (!key) return null;
+	const dict = dictionary.toLowerCase() as 'bdb' | 'lsj';
+	let cleanKey = key.trim();
+	if (dict === 'bdb') {
+		cleanKey = removeHebrewDiacritics(cleanKey);
+	} else if (dict === 'lsj') {
+		cleanKey = normalizeGreek(cleanKey);
+	}
+
+	const sql = `
+		SELECT id, dictionary, key, headword, strongs, lsj_index, match_type, definition
+		FROM lexicon_entries
+		WHERE dictionary = ? AND (key = ? OR headword = ? OR strongs = ?)
+		LIMIT 1
+	`;
+	const rows = await query<LexiconEntryRow>(sql, [dict, cleanKey, key, key]);
+	return rows.length > 0 ? rows[0] : null;
 }

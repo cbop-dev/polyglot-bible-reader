@@ -8,6 +8,7 @@ import {
 	getLemma,
 	getWordFrequencyByBook,
 	getConcordance,
+	getLexiconEntry,
 	translateReference,
 	_clearDbClientCache
 } from './dbClient';
@@ -295,6 +296,140 @@ describe('dbClient service', () => {
 			expect(conc).toHaveLength(1);
 			expect(conc[0].display_label).toBe('John 1:1');
 			expect(conc[0].surface).toBe('λόγος');
+		});
+
+		it('looks up BDB and LSJ lexicon entries with normalization', async () => {
+			mockQuery.mockResolvedValueOnce([
+				{
+					id: 1,
+					dictionary: 'bdb',
+					key: 'ברא',
+					headword: 'ברא',
+					strongs: 'H1254',
+					definition: '<div><p><b>H1254. bara</b></p></div>'
+				}
+			]);
+
+			const bdbRes = await getLexiconEntry('bdb', 'בָּרָא');
+			expect(bdbRes).not.toBeNull();
+			expect(bdbRes?.headword).toBe('ברא');
+			expect(mockQuery).toHaveBeenCalledWith(
+				expect.stringContaining('FROM lexicon_entries'),
+				['bdb', 'ברא', 'בָּרָא', 'בָּרָא']
+			);
+
+			mockQuery.mockResolvedValueOnce([
+				{
+					id: 2,
+					dictionary: 'lsj',
+					key: 'ποιεω',
+					headword: 'ποιέω',
+					lsj_index: 'n84234',
+					definition: '<p>ποιέω to make</p>'
+				}
+			]);
+
+			const lsjRes = await getLexiconEntry('lsj', 'ποιέω');
+			expect(lsjRes).not.toBeNull();
+			expect(lsjRes?.key).toBe('ποιεω');
+			expect(mockQuery).toHaveBeenCalledWith(
+				expect.stringContaining('FROM lexicon_entries'),
+				['lsj', 'ποιεω', 'ποιέω', 'ποιέω']
+			);
+		});
+
+		it('loads BHS and LXX Gen 1:1 word tokens and retrieves correct BDB and LSJ entries', async () => {
+			// 1. Mock canonical works resolution for 'Gen'
+			mockQuery.mockResolvedValueOnce([
+				{ id: 1, slug: 'genesis', title: 'Genesis', sbl_abbreviation: 'Gen', book_key: 'genesis', testament: 'ot' }
+			]);
+
+			// 2. Mock verse rows for Gen 1:1 in BHS and LXX
+			mockQuery.mockResolvedValueOnce([
+				{
+					base_cref_id: 1,
+					ord: 1,
+					hierarchy: '1,1',
+					base_label: 'Genesis 1:1',
+					version: 'wlc',
+					work_unit_id: 58765,
+					verse_label: '1:1',
+					body: 'בְּרֵאשִׁ֖ית בָּרָ֣א אֱלֹהִ֑ים אֵ֥ת הַשָּׁמַ֖יִם וְאֵ֥ת הָאָֽרֶץ׃'
+				},
+				{
+					base_cref_id: 1,
+					ord: 1,
+					hierarchy: '1,1',
+					base_label: 'Genesis 1:1',
+					version: 'swete-lxx',
+					work_unit_id: 958890,
+					verse_label: '1:1',
+					body: 'ἐν ἀρχῇ ἐποίησεν ὁ θεὸς τὸν οὐρανὸν καὶ τὴν γῆν'
+				}
+			]);
+
+			// 3. Mock word tokens for work units 58765 and 958890
+			mockQuery.mockResolvedValueOnce([
+				{ id: 1090494, work_id: 2, work_unit_id: 58765, position: 1, surface: 'בְּרֵאשִׁ֖ית', normalized: 'בראשית', strongs_number: '7225', morph_code: 'Prep-b' },
+				{ id: 1090495, work_id: 2, work_unit_id: 58765, position: 2, surface: 'בָּרָ֣א', normalized: 'ברא', strongs_number: '1254', morph_code: 'V-Qal' },
+				{ id: 3395930, work_id: 24, work_unit_id: 958890, position: 1, surface: 'ἐν', normalized: 'ἐν', strongs_number: 'G1722', morph_code: 'PREP' },
+				{ id: 3395931, work_id: 24, work_unit_id: 958890, position: 2, surface: 'ἀρχῇ', normalized: 'ἀρχή', strongs_number: 'G746', morph_code: 'N-DSF' },
+				{ id: 3395932, work_id: 24, work_unit_id: 958890, position: 3, surface: 'ἐποίησεν', normalized: 'ποιέω', strongs_number: 'G4160', morph_code: 'V-AAI' }
+			]);
+
+			const verses = await getChapterVerses('Gen', 1, ['BHS', 'LXX'], true);
+			expect(verses).toHaveLength(2);
+
+			const bhsVerse = verses.find((v) => v.version === 'BHS');
+			const lxxVerse = verses.find((v) => v.version === 'LXX');
+			expect(bhsVerse).toBeDefined();
+			expect(lxxVerse).toBeDefined();
+
+			// Test BHS 2nd word: בָּרָ֣א -> BDB
+			const bhsWord2 = bhsVerse!.words![1];
+			expect(bhsWord2.position).toBe(2);
+			expect(bhsWord2.surface).toBe('בָּרָ֣א');
+			expect(bhsWord2.normalized).toBe('ברא');
+
+			mockQuery.mockResolvedValueOnce([
+				{
+					id: 1152,
+					dictionary: 'bdb',
+					key: 'ברא',
+					headword: 'ברא',
+					strongs: 'H1254',
+					definition: '<div><p><b>H1254. bara</b></p><p>to shape, create</p></div>'
+				}
+			]);
+
+			const bdbEntry = await getLexiconEntry('bdb', bhsWord2.normalized || bhsWord2.surface);
+			expect(bdbEntry).not.toBeNull();
+			expect(bdbEntry?.headword).toBe('ברא');
+			expect(bdbEntry?.strongs).toBe('H1254');
+			expect(bdbEntry?.definition).toContain('bara');
+
+			// Test LXX 3rd word: ἐποίησεν -> LSJ (lemma: ποιέω)
+			const lxxWord3 = lxxVerse!.words![2];
+			expect(lxxWord3.position).toBe(3);
+			expect(lxxWord3.surface).toBe('ἐποίησεν');
+			expect(lxxWord3.normalized).toBe('ποιέω');
+
+			mockQuery.mockResolvedValueOnce([
+				{
+					id: 4025,
+					dictionary: 'lsj',
+					key: 'ποιεω',
+					headword: 'ποιέω',
+					lsj_index: 'n84234',
+					definition: '**ποιέω**, to make, produce, create'
+				}
+			]);
+
+			const lsjEntry = await getLexiconEntry('lsj', lxxWord3.normalized || lxxWord3.surface);
+			expect(lsjEntry).not.toBeNull();
+			expect(lsjEntry?.key).toBe('ποιεω');
+			expect(lsjEntry?.headword).toBe('ποιέω');
+			expect(lsjEntry?.definition).toContain('to make');
 		});
 	});
 });
