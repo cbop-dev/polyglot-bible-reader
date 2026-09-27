@@ -126,7 +126,7 @@ export function _clearDbClientCache() {
  */
 export async function query<T = any>(sql: string, params: any[] = []): Promise<T[]> {
 	const worker = await getDbWorker();
-	mylog(`query db:`, true);
+//	mylog(`query db:`, true);
 	return (worker.db as any).query(sql, params);
 }
 

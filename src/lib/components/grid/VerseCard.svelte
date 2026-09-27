@@ -2,7 +2,7 @@
   import CopyText from '$lib/lemma-ui/components/ui/CopyText.svelte';
   import { readerState } from '$lib/stores/readerState.svelte';
   import { formatVerseText } from '$lib/services/bibleDataLoader';
-
+  import { dataSets, myDataSets } from '$lib/bookMapping';
   let { verseKey }: { verseKey: string } = $props();
 </script>
 
@@ -37,9 +37,9 @@
               <span class="text-sm italic text-ink-soft font-sans" dir="ltr">[Not found in this version.]</span>
             {:else if vData?.verseData?.words}
               {#each vData.verseData.words as w}
-                {#if colVersion === 'WEB' || colVersion === 'Vulgate' || colVersion === 'Brenton'}
+                {#if !myDataSets.lookup(colVersion)?.lemmaInfoEnabled}
                   {@const text = w.word}
-                  <span class="font-sans inline">{text}{w.trailer ?? ' '}</span>
+                  <span class="bible-font inline">{text}{w.trailer ?? ' '}</span>
                 {:else}
                   {@const text = formatVerseText(w.word, colVersion, readerState.hebrewMode, readerState.greekDiacritics)}
                   <button
@@ -66,3 +66,6 @@
     </div>
   {/each}
 </div>
+<style>
+  
+</style>

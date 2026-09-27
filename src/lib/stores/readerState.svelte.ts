@@ -1,7 +1,10 @@
 import { getVersionBooks } from '$lib/config/versions';
+import { mylog } from '$lib/lemma-ui/env/env';
 import { getBookFile, getMappedReference, getBookForVersion } from '$lib/bookMapping.js';
 import type { HebrewDiacriticMode } from '$lib/utils/diacritics';
 import { loadChapterFromDb, loadChaptersForBook } from '$lib/services/bibleDataLoader';
+//import { availableBibles } from '$lib/services/bible-datasets';
+import { availableBibles,dataSets } from '$lib/bookMapping.js';
 import {
 	getLemma,
 	getWorks,
@@ -73,6 +76,68 @@ export class ReaderState {
 		}
 	}
 
+
+  ensureVisibleContainsSelectedVersion(replaceOne=true){
+//    mylog("ensureVisibleContainsSelectedVersion() with " + this.selectedVersion, true);
+    if(!this.visibleVersions.includes(this.selectedVersion)){
+//        mylog(`Selectedversion: '${this.selectedVersion}'`, true);
+//      mylog(`datasets abbrevs: [${dataSets.map((ds)=>ds.abbrev).join(',')}]`, true);
+      const selectedDataset = dataSets.find((ds)=>ds.abbrev.toLocaleLowerCase()==this.selectedVersion.toLocaleLowerCase());
+//      mylog("found seelected dataset: "+selectedDataset?.abbrev, true);
+      const selectedLang = selectedDataset?.language ?? '';
+       
+       
+//       const lang = selectedDataset?.language ?? "not found";
+//      mylog(`didn't find  in display ${this.selectedVersion}(lang:${selectedLang}) in grid!`, true);
+
+      if (selectedLang){
+//        mylog("Find another ", true);
+        if (replaceOne){
+          const matchingLangs=this.visibleVersions.filter((visVer)=>dataSets.find((ds)=>ds.language==selectedLang && ds.abbrev==visVer));
+        
+        
+          if (matchingLangs.length){
+              const versionToReplace = matchingLangs[0];
+            for (let row =0; row < this.versionGrid.length; row++){
+              for (let col =0; col < this.versionGrid[row].length; col++){
+                if (this.versionGrid[row][col]==versionToReplace){
+                  this.versionGrid[row][col]=this.selectedVersion;
+                  break;
+                }
+              }
+            }
+
+          }
+          else {
+            const row = 0; 
+            let  col = 0;
+            if (false && this.versionGrid[row][0]=='BHS' && selectedDataset?.testament=='ot' ){
+              //leave the BHS in left column if it's there--put this and we got an OT version: make left-aligned, to look NICE alongside BHS
+              col = 1;
+
+            }
+            else if(this.versionGrid[row][0]=='LXX' && this.selectedVersion =="Brenton"){
+              //similar for Brenton alongside LXX; the user will be AMAZED out how smart we are! Or they will be annoyed, but we don't care.
+              col = 1;
+            }    
+            
+//            mylog(`gonn replace ${this.versionGrid[row][col]} with ${this.selectedVersion}`, true);
+            this.versionGrid[row][col]=this.selectedVersion
+          }
+
+        }
+        else{
+          this.addColumn(this.selectedVersion);
+        }
+       
+        
+
+      }
+
+
+      
+    }
+  }
 	/**
 	 * Retrieve pre-aligned verse data for a specific verse and version.
 	 */
@@ -178,10 +243,10 @@ export class ReaderState {
 		});
 	}
 
-	addColumn() {
-		const defaults = ['BHS', 'LXX', 'KJV', 'Vulgate', 'WEB', 'Brenton', 'SBLGNT'];
+	addColumn(newVersion='') {
+		
 		const used = new Set(this.versionGrid.flat());
-		const nextVer = defaults.find((d) => !used.has(d)) || 'WEB';
+		const nextVer = newVersion ? newVersion : (availableBibles.find((d) => !used.has(d)) || 'WEB');
 		this.versionGrid = this.versionGrid.map((row) => [...row, nextVer]);
 		this.gridAlignments = this.gridAlignments.map((row) => [...row, null]);
 		this.loadCurrentChapter();
@@ -195,12 +260,12 @@ export class ReaderState {
 
 	addRow() {
 		const cols = this.versionGrid[0]?.length || 2;
-		const defaults = ['KJV', 'Vulgate', 'WEB', 'Brenton', 'BHS', 'LXX', 'SBLGNT'];
+		//const defaults = ['KJV', 'Vulgate', 'WEB', 'Brenton', 'BHS', 'LXX', 'SBLGNT'];
 		const used = new Set(this.versionGrid.flat());
-		const unused = defaults.filter((d) => !used.has(d));
+		const unused = availableBibles.filter((d) => !used.has(d));
 		const newRow: string[] = [];
 		for (let c = 0; c < cols; c++) {
-			newRow.push(unused[c] || defaults[c % defaults.length] || 'WEB');
+			newRow.push(unused[c] || availableBibles[c % availableBibles.length] || 'WEB');
 		}
 		this.versionGrid = [...this.versionGrid, newRow];
 		this.gridAlignments = [...this.gridAlignments, new Array(cols).fill(null)];
@@ -241,6 +306,7 @@ export class ReaderState {
 		const oldVersion = this.selectedVersion;
 		this.selectedVersion = version;
 		this.versionDropdownOpen = false;
+    this.ensureVisibleContainsSelectedVersion();
 
 		const books = getVersionBooks(version);
 		const currentCh = parseInt(this.selectedChapter, 10) || 1;
@@ -379,6 +445,7 @@ export class ReaderState {
 			};
 		}
 	}
+  
 }
 
 export const readerState = new ReaderState();

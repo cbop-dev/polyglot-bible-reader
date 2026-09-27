@@ -1,4 +1,58 @@
 import { bookAbbrevMap } from '$lib/utils/bible-utils.js';
+import { mylog } from './lemma-ui/env/env';
+
+export const biblesByLanguage={
+  english:['KJV', 'Brenton'],
+  greek:['LXX']
+}
+
+export class Dataset{
+  abbrev= '';
+  language='';
+  description='';
+  lemmaInfoEnabled=false;
+  testament=''; //ot, nt, or both
+
+  constructor(abbrev: string, language: string,testament: string,description='', lemmaInfoEnabled=false){
+    this.abbrev=abbrev;
+    this.language=language;
+    this.testament=testament;
+    this.description=description;
+    this.lemmaInfoEnabled=lemmaInfoEnabled;
+  }
+}
+
+
+
+
+export const datasetsDict=
+  {
+  'KJV': {language:'English',testament: 'both', lemmas:false},
+  'Vulgate':{language:'Latin', testament: 'bot', lemmas:false},
+  'WEB':{language:'English',testament: 'both', lemmas:false},
+   'Brenton':{language: 'English', testament: 'ot', lemmas:false},
+   'BHS':{language:'Hebrew', testament: 'ot', lemmas:true},
+   'LXX':{language:'Greek', testament: 'ot', lemmas:true},
+   'SBLGNT':{language:'Greek', testament: 'nt', lemmas:true}
+  };
+
+export const dataSets = Object.entries(datasetsDict).map(([k,v])=>new Dataset(k, v.language,v.testament,'', v.lemmas));
+//mylog(`datasets abbrevs: [${dataSets.map((ds)=>ds.abbrev).join(',')}]`, true);
+
+
+export const myDataSets={
+  dataSets: dataSets,
+  lookup(abbrev:string){
+    return dataSets.find((ds)=>ds.abbrev.toLocaleLowerCase()==abbrev.toLocaleLowerCase());
+  },
+  
+  lang(language:string){
+    return dataSets.filter((ds)=>ds.language.toLocaleLowerCase()==language.toLocaleLowerCase());
+  }
+
+}
+
+export const availableBibles=Object.keys(datasetsDict);
 
 export interface BookDefinition {
 	slug: string; // Exact canonical_works DB slug

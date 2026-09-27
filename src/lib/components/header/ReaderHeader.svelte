@@ -115,7 +115,7 @@ gap-2 sm:gap-4 -mx-3 px-1 sm:-mx-4 sm:px-4 md:-mx-8 md:px-3">
       <button 
         aria-label="Select version"
         class="border border-rule rounded p-1 sm:p-2 w-16 sm:w-20 md:w-24 text-xs sm:text-sm text-left bg-page flex justify-between items-center shadow-xs sm:shadow-sm cursor-pointer"
-        onclick={(e) => { e.stopPropagation(); const prev = readerState.versionDropdownOpen; readerState.closeAllPopups(); readerState.versionDropdownOpen = !prev; }}
+        onclick={(e) => {  e.stopPropagation(); const prev = readerState.versionDropdownOpen; readerState.closeAllPopups(); readerState.versionDropdownOpen = !prev; }}
       >
         <span class="truncate">{readerState.selectedVersion}</span>
         <span class="text-[10px] sm:text-xs text-ink-soft ml-0.5">▼</span>

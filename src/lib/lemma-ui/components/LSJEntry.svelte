@@ -63,7 +63,7 @@
 			else {
 				loading = true;
 				try {
-					mylog(`fecthing lsj entry for ${lemmaText}`, true);
+//					mylog(`fecthing lsj entry for ${lemmaText}`, true);
 					let lexEntry = await getLexiconEntry('lsj', target, targetStrongs);
 					fetchedEntry = lexEntry
 						? {
@@ -176,7 +176,7 @@
 		}
 	});
 	onMount(()=>{
-		mylog('LSJReset()!', true);
+//		mylog('LSJReset()!', true);
 		resetEntry()});
 </script>
 

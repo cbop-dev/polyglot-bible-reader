@@ -114,7 +114,7 @@
 	}
 
 	async function loadConcordance() {
-		mylog("loadConcordance()", true);
+//		mylog("loadConcordance()", true);
 		if (concordanceOccurrences.length > 0 || isFetchingReferences) return;
 		isFetchingReferences = true;
 		try {

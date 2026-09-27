@@ -77,9 +77,10 @@ body {
 }
 
 .font-greek,
-.greek {
+.greek, .bible-font {
   font-family: 'Gentium Plus', 'Charis SIL', 'SBL BibLit', serif;
 }
+
 
 :root[data-theme="dark"] {
   --color-page: rgb(0, 43, 54);
