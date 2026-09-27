@@ -37,7 +37,29 @@
 
 	let bookFrequencies = $state<BookFrequency[]>([]);
 	let concordanceOccurrences = $state<ConcordanceOccurrence[]>([]);
-
+		const currentLemmaData = $derived.by(() => {
+		if (selectedSegment.startsWith('prefix-') && parsedHebrewMorph) {
+			const idx = parseInt(selectedSegment.replace('prefix-', ''), 10);
+			const p = parsedHebrewMorph.prefixes[idx];
+			if (p) {
+				return {
+					lemma: p.headword,
+					headword: p.headword,
+					key: p.key,
+					word: p.prefix,
+					gloss: p.gloss,
+					pos: p.name,
+					strongs: p.strongs,
+					corpus: lemma?.corpus || 'bhs',
+					colVersion: lemma?.colVersion || 'BHS',
+					dictionary: 'bdb',
+					work_id: lemma?.work_id || 2,
+					morph: p.code
+				};
+			}
+		}
+		return lemma;
+	});
 	const isHebrew = $derived(
 		lemma?.corpus === 'bhs' || lemma?.colVersion === 'BHS' || lemma?.dictionary === 'bdb'
 	);
@@ -69,29 +91,7 @@
 		return parseHebrewMorphSegments(lemma.morph);
 	});
 
-	const currentLemmaData = $derived.by(() => {
-		if (selectedSegment.startsWith('prefix-') && parsedHebrewMorph) {
-			const idx = parseInt(selectedSegment.replace('prefix-', ''), 10);
-			const p = parsedHebrewMorph.prefixes[idx];
-			if (p) {
-				return {
-					lemma: p.headword,
-					headword: p.headword,
-					key: p.key,
-					word: p.prefix,
-					gloss: p.gloss,
-					pos: p.name,
-					strongs: p.strongs,
-					corpus: lemma?.corpus || 'bhs',
-					colVersion: lemma?.colVersion || 'BHS',
-					dictionary: 'bdb',
-					work_id: lemma?.work_id || 2,
-					morph: p.code
-				};
-			}
-		}
-		return lemma;
-	});
+
 
 	const totalOccurrences = $derived(
 		bookFrequencies.reduce((sum, f) => sum + f.count, 0) || currentLemmaData?.total || 0
@@ -167,6 +167,12 @@
 			}
 		}
 	}
+
+	/*$effect(()=>{
+		const _ = selectedSegment;
+		
+	})*/
+
 	onMount(()=>{
 		resetLemma();
 	});
@@ -180,6 +186,7 @@
 		<h1 class="text-3xl {isHebrew ? 'hebrew font-hebrew text-4xl' : 'greek font-greek'} font-bold text-ink">
 			{currentLemmaData?.headword || currentLemmaData?.lemma || currentLemmaData?.word || ''}
 		</h1>
+
 		<CopyText copyText={currentLemmaData?.gloss ? `${currentLemmaData.headword || currentLemmaData.lemma || currentLemmaData.word} (${currentLemmaData.gloss})` : (currentLemmaData?.headword || currentLemmaData.lemma || currentLemmaData.word || '')} tooltip="Copy lemma" />
 	</div>
 
@@ -218,7 +225,7 @@
 				<button
 					type="button"
 					class="px-2.5 py-1 text-xs rounded-md transition-colors font-medium flex items-center gap-1.5 cursor-pointer {selectedSegment === 'stem' ? 'bg-link text-white shadow-xs' : 'text-ink hover:bg-rule/40'}"
-					onclick={() => selectedSegment = 'stem'}
+					onclick={() => switchSegment('stem')}
 				>
 					<span class="hebrew font-hebrew text-sm" dir="rtl">{lemma?.headword || lemma?.lemma || lemma?.word}</span>
 					<span class="opacity-90">(Stem)</span>
@@ -228,21 +235,21 @@
 	{/if}
 
 	<!-- 2. Inflected form and parse badges -->
-	{#if lemma?.word || lemma?.morph}
+	{#if currentLemmaData?.word || currentLemmaData?.morph}
 		<div class="max-w-xl w-full mx-auto mb-3 px-3 py-2 rounded-lg border border-rule/70 bg-page shadow-xs text-center flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-3">
-			{#if lemma?.word}
+			{#if currentLemmaData?.word}
 				<div class="flex items-center gap-1.5">
 					<span class="text-xs uppercase tracking-wide text-ink-soft font-semibold">Inflected:</span>
 					<span class="{isHebrew ? 'hebrew font-hebrew text-2xl' : 'greek font-greek text-xl'} font-semibold text-ink">
-						{lemma.word}
+						{currentLemmaData?.word}
 					</span>
 				</div>
 			{/if}
-			{#if lemma?.word && lemma?.morph}
+			{#if currentLemmaData?.word && currentLemmaData?.morph}
 				<span class="hidden sm:inline text-rule opacity-60">•</span>
 			{/if}
-			{#if lemma?.morph}
-				{@const badges = formatMorphBadges(lemma.morph, lang)}
+			{#if currentLemmaData?.morph}
+				{@const badges = formatMorphBadges(currentLemmaData?.morph, lang)}
 				<div class="flex items-center gap-1.5 flex-wrap justify-center">
 					<span class="text-xs uppercase tracking-wide text-ink-soft font-semibold">Parse:</span>
 					{#each badges as badge}
@@ -260,7 +267,7 @@
 		{#if isHebrew}
 			<BDBEntry lemma={currentLemmaData} lang="hebrew" dbAbbrev="bhs" autoOpen={false} />
 		{:else}
-			<LSJEntry lemma={currentLemmaData} lang="greek" dbAbbrev={lemma?.corpus || 'lxx'} autoOpen={false} />
+			<LSJEntry lemma={currentLemmaData} lang="greek" dbAbbrev={currentLemmaData?.corpus || 'lxx'} autoOpen={false} />
 		{/if}
 	</div>
 
@@ -292,7 +299,7 @@
 			{:else}
 				<Icon svg={BookSvg} />
 			{/if}
-			See {lemma.total ?? ''} Occurrences
+			See {currentLemmaData?.total ?? ''} Occurrences
 		</OptionButton>
 	</div>
 
