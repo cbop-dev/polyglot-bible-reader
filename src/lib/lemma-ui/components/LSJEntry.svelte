@@ -1,5 +1,5 @@
 <script>
-	import { lsjProvider, removeDiacritics } from '../engine/LsjProvider.js';
+	import { getLexiconEntry, normalizeGreek } from '$lib/services/dbClient';
 	import { untrack } from 'svelte';
 
 	/**
@@ -20,7 +20,10 @@
 	let hasSearched = $state(false);
 
 	let lemmaText = $derived(
-		typeof lemma === 'string' ? lemma : lemma?.lemma || ''
+		typeof lemma === 'string' ? lemma : lemma?.lemma || lemma?.word || ''
+	);
+	let strongsCode = $derived(
+		typeof lemma === 'object' ? lemma?.strongs || lemma?.strongs_number || '' : ''
 	);
 	let plainText = $derived(
 		typeof lemma === 'object' ? lemma?.plain || '' : ''
@@ -31,9 +34,10 @@
 	 */
 	async function fetchLsj() {
 		const target = lemmaText;
-		const plain = plainText;
+		const targetStrongs = strongsCode;
+		const cacheKey = `${targetStrongs || ''}_${target}`;
 
-		if (lang !== 'greek' || !target) {
+		if (lang !== 'greek' || (!target && !targetStrongs)) {
 			loading = false;
 			entry = null;
 			isProper = false;
@@ -42,17 +46,24 @@
 			return;
 		}
 
-		if (loadedLemma === target && hasSearched) {
+		if (loadedLemma === cacheKey && hasSearched) {
 			return;
 		}
 
 		loading = true;
 		try {
-			const res = await lsjProvider.getEntry(target, plain);
-			entry = res.entry || null;
-			isProper = res.isProper || false;
+			const res = await getLexiconEntry('lsj', target, targetStrongs);
+			entry = res
+				? {
+						headword: res.headword,
+						lsjIndex: res.lsj_index,
+						matchType: res.match_type,
+						def: res.definition
+				  }
+				: null;
+			isProper = false;
 			hasSearched = true;
-			loadedLemma = target;
+			loadedLemma = cacheKey;
 		} catch (err) {
 			console.error('Error loading LSJ entry:', err);
 			entry = null;
@@ -90,6 +101,14 @@
 	function formatLsjMarkdown(raw) {
 		if (!raw) return '';
 
+		// If the content is already formatted HTML (from STEPBible TFLSJ)
+		if (/<[a-z][\s\S]*>/i.test(raw)) {
+			let html = raw;
+			html = html.replace(/<Level[1-4]>/gi, '<span class="lsj-sense-badge font-mono text-xs px-1.5 py-0.5 rounded bg-rule/50 text-ink font-bold mx-0.5 border border-rule">');
+			html = html.replace(/<\/Level[1-4]>/gi, '</span>');
+			return html;
+		}
+
 		let html = raw
 			.replace(/&/g, '&amp;')
 			.replace(/</g, '&lt;')
@@ -108,7 +127,7 @@
 	);
 
 	let cleanHeadword = $derived(
-		entry?.headword ? removeDiacritics(entry.headword) : ''
+		entry?.headword ? normalizeGreek(entry.headword) : ''
 	);
 
 	let logeionUrl = $derived(

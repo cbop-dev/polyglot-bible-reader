@@ -1,5 +1,5 @@
 <script>
-	import { bdbProvider, removeHebrewDiacritics } from '../engine/BdbProvider.js';
+	import { getLexiconEntry } from '$lib/services/dbClient';
 	import { untrack } from 'svelte';
 
 	/**
@@ -19,7 +19,10 @@
 	let hasSearched = $state(false);
 
 	let lemmaText = $derived(
-		typeof lemma === 'string' ? lemma : lemma?.lemma || ''
+		typeof lemma === 'string' ? lemma : lemma?.headword || lemma?.lemma || lemma?.word || ''
+	);
+	let strongsCode = $derived(
+		typeof lemma === 'object' ? lemma?.strongs || lemma?.strongs_number || '' : ''
 	);
 	let plainText = $derived(
 		typeof lemma === 'object' ? lemma?.plain || '' : ''
@@ -30,9 +33,10 @@
 	 */
 	async function fetchBdb() {
 		const target = lemmaText;
-		const plain = plainText;
+		const targetStrongs = strongsCode;
+		const cacheKey = `${targetStrongs || ''}_${target}`;
 
-		if ((lang !== 'hebrew' && dbAbbrev !== 'bhs') || !target) {
+		if ((lang !== 'hebrew' && dbAbbrev !== 'bhs') || (!target && !targetStrongs)) {
 			loading = false;
 			entry = null;
 			hasSearched = false;
@@ -40,16 +44,23 @@
 			return;
 		}
 
-		if (loadedLemma === target && hasSearched) {
+		if (loadedLemma === cacheKey && hasSearched) {
 			return;
 		}
 
 		loading = true;
 		try {
-			const res = await bdbProvider.getEntry(target, plain);
-			entry = res.entry || null;
+			const res = await getLexiconEntry('bdb', target, targetStrongs);
+			entry = res
+				? {
+						headword: res.headword,
+						strongs: res.strongs,
+						matchType: res.match_type,
+						def: res.definition
+				  }
+				: null;
 			hasSearched = true;
-			loadedLemma = target;
+			loadedLemma = cacheKey;
 		} catch (err) {
 			console.error('Error loading BDB entry:', err);
 			entry = null;
@@ -60,19 +71,22 @@
 
 	function handleToggle(e) {
 		isOpen = e.currentTarget.open;
-		if (isOpen && loadedLemma !== lemmaText) {
+		const cacheKey = `${strongsCode || ''}_${lemmaText}`;
+		if (isOpen && loadedLemma !== cacheKey) {
 			fetchBdb();
 		}
 	}
 
-	// If open on mount or when lemma changes
+	// If open on mount or when lemma/strongs changes
 	$effect(() => {
 		const target = lemmaText;
-		if (isOpen && target && target !== loadedLemma) {
+		const targetStrongs = strongsCode;
+		const cacheKey = `${targetStrongs || ''}_${target}`;
+		if (isOpen && (target || targetStrongs) && cacheKey !== loadedLemma) {
 			untrack(() => {
 				fetchBdb();
 			});
-		} else if (target !== loadedLemma) {
+		} else if (cacheKey !== loadedLemma) {
 			hasSearched = false;
 			entry = null;
 			loadedLemma = '';
@@ -151,7 +165,7 @@
 					</div>
 				{:else}
 					<div class="py-4 text-xs text-ink-soft text-center bg-rule/20 rounded-lg border border-rule/40 my-1">
-						<p>No direct BDB entry found for <strong class="hebrew font-hebrew text-base text-ink" dir="rtl">{lemmaText}</strong>.</p>
+						<p>No direct BDB entry found for <strong class="hebrew font-hebrew text-base text-ink" dir="rtl">{lemmaText}</strong>{strongsCode ? ` (${strongsCode})` : ''}.</p>
 					</div>
 				{/if}
 			</div>

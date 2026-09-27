@@ -433,9 +433,31 @@ export async function getWordsForWorkUnits(workUnitIds: number[]): Promise<WordR
  */
 export async function getLemma(
 	corpus: string,
-	identifier: string | number
+	identifier: string | number,
+	strongs?: string
 ): Promise<LexemeRow | null> {
-	if (!identifier) return null;
+	if (!identifier && !strongs) return null;
+
+	// 1. If strongs is provided, check strongs first
+	if (strongs) {
+		const sCode = String(strongs).trim();
+		if (sCode) {
+			const sWithPrefix = corpus === 'bhs'
+				? (sCode.toUpperCase().startsWith('H') ? sCode.toUpperCase() : `H${sCode}`)
+				: (sCode.toUpperCase().startsWith('G') ? sCode.toUpperCase() : `G${sCode}`);
+			const sNumOnly = sCode.replace(/^[HG]/i, '');
+
+			const sql = `
+				SELECT id, corpus, lex_id, lemma, gloss, pos, strongs, beta, plain, total
+				FROM lexemes
+				WHERE corpus = ? AND (strongs = ? OR strongs = ?)
+				LIMIT 1
+			`;
+			const rows = await query<LexemeRow>(sql, [corpus, sWithPrefix, sNumOnly]);
+			if (rows.length > 0) return rows[0];
+		}
+	}
+
 	const isNumeric = typeof identifier === 'number' || /^\d+$/.test(String(identifier));
 	let sql: string;
 	let params: any[];
@@ -534,27 +556,117 @@ export function normalizeGreek(str: string): string {
 }
 
 /**
- * Retrieve unabridged lexicon entry (BDB or LSJ) by key or strongs.
+ * Retrieve unabridged lexicon entry (BDB or LSJ).
+ * For BDB:
+ * 1. Prioritizes Strong's ID (e.g. 'H7225' or '7225')
+ * 2. Direct lookup of headword field (with pointing/vowels)
+ * 3. Strips vowels/diacritics and looks up with key field (consonants only)
+ *
+ * For LSJ:
+ * 1. Prioritizes Strong's ID (e.g. 'G4160') if available
+ * 2. Looks up normalized Greek key, headword, or lsj_index
  */
 export async function getLexiconEntry(
 	dictionary: 'bdb' | 'lsj',
-	key: string
+	key: string,
+	strongs?: string
 ): Promise<LexiconEntryRow | null> {
-	if (!key) return null;
+	if (!key && !strongs) return null;
 	const dict = dictionary.toLowerCase() as 'bdb' | 'lsj';
-	let cleanKey = key.trim();
+
 	if (dict === 'bdb') {
-		cleanKey = removeHebrewDiacritics(cleanKey);
-	} else if (dict === 'lsj') {
-		cleanKey = normalizeGreek(cleanKey);
+		let sId = strongs?.trim() || '';
+		if (!sId && key && /^H?\d+[a-z]?$/i.test(key.trim())) {
+			sId = key.trim();
+		}
+		const trimmedKey = key?.trim() || '';
+		const cleanKey = trimmedKey ? removeHebrewDiacritics(trimmedKey) : '';
+
+		// 1. Prioritize Strong's ID
+		if (sId) {
+			const sCode = sId.toUpperCase().startsWith('H') ? sId.toUpperCase() : `H${sId}`;
+
+			// 1a. Prioritize matching BOTH strongs AND key/headword (prevents cross-reference collisions)
+			if (trimmedKey || cleanKey) {
+				const exactBoth = await query<LexiconEntryRow>(
+					`SELECT id, dictionary, key, headword, strongs, lsj_index, match_type, definition
+					 FROM lexicon_entries
+					 WHERE dictionary = 'bdb' AND strongs = ? AND (headword = ? OR key = ? OR headword = ? OR key = ?)
+					 LIMIT 1`,
+					[sCode, trimmedKey, trimmedKey, cleanKey, cleanKey]
+				);
+				if (exactBoth.length > 0) return exactBoth[0];
+			}
+
+			// 1b. If no exact both match, query by strongs alone
+			const rows = await query<LexiconEntryRow>(
+				`SELECT id, dictionary, key, headword, strongs, lsj_index, match_type, definition
+				 FROM lexicon_entries
+				 WHERE dictionary = 'bdb' AND strongs = ?
+				 LIMIT 1`,
+				[sCode]
+			);
+			if (rows.length > 0) return rows[0];
+		}
+
+		// 2. Direct lookup of headword field (with vowels/pointing)
+		if (trimmedKey) {
+			const headwordRows = await query<LexiconEntryRow>(
+				`SELECT id, dictionary, key, headword, strongs, lsj_index, match_type, definition
+				 FROM lexicon_entries
+				 WHERE dictionary = 'bdb' AND headword = ?
+				 LIMIT 1`,
+				[trimmedKey]
+			);
+			if (headwordRows.length > 0) return headwordRows[0];
+
+			// 3. Strip vowels and lookup with key field (consonants only)
+			if (cleanKey) {
+				const keyRows = await query<LexiconEntryRow>(
+					`SELECT id, dictionary, key, headword, strongs, lsj_index, match_type, definition
+					 FROM lexicon_entries
+					 WHERE dictionary = 'bdb' AND key = ?
+					 LIMIT 1`,
+					[cleanKey]
+				);
+				if (keyRows.length > 0) return keyRows[0];
+			}
+		}
+		return null;
 	}
 
-	const sql = `
-		SELECT id, dictionary, key, headword, strongs, lsj_index, match_type, definition
-		FROM lexicon_entries
-		WHERE dictionary = ? AND (key = ? OR headword = ? OR strongs = ?)
-		LIMIT 1
-	`;
-	const rows = await query<LexiconEntryRow>(sql, [dict, cleanKey, key, key]);
-	return rows.length > 0 ? rows[0] : null;
+	if (dict === 'lsj') {
+		// 1. Strong's ID if provided
+		let sId = strongs?.trim() || '';
+		if (!sId && key && /^G?\d+[a-z]?$/i.test(key.trim())) {
+			sId = key.trim();
+		}
+		if (sId) {
+			const sCode = sId.toUpperCase().startsWith('G') ? sId.toUpperCase() : `G${sId}`;
+			const rows = await query<LexiconEntryRow>(
+				`SELECT id, dictionary, key, headword, strongs, lsj_index, match_type, definition
+				 FROM lexicon_entries
+				 WHERE dictionary = 'lsj' AND strongs = ?
+				 LIMIT 1`,
+				[sCode]
+			);
+			if (rows.length > 0) return rows[0];
+		}
+
+		// 2. Normalized Greek key, headword, or lsj_index
+		if (key && key.trim()) {
+			const cleanKey = normalizeGreek(key);
+			const rows = await query<LexiconEntryRow>(
+				`SELECT id, dictionary, key, headword, strongs, lsj_index, match_type, definition
+				 FROM lexicon_entries
+				 WHERE dictionary = 'lsj' AND (key = ? OR headword = ? OR lsj_index = ?)
+				 LIMIT 1`,
+				[cleanKey, key.trim(), key.trim()]
+			);
+			if (rows.length > 0) return rows[0];
+		}
+		return null;
+	}
+
+	return null;
 }

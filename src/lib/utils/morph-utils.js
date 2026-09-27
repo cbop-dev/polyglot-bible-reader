@@ -102,17 +102,224 @@ export function decodeGreekMorph(code) {
   return [trimmed];
 }
 
+export const HEBREW_PREFIX_MAP = {
+  'Prep-b': {
+    code: 'Prep-b',
+    prefix: 'בְּ',
+    name: 'Preposition',
+    gloss: 'in, with, by',
+    strongs: 'H9003',
+    headword: 'בְּ',
+    key: 'ב'
+  },
+  'Prep-k': {
+    code: 'Prep-k',
+    prefix: 'כְּ',
+    name: 'Preposition',
+    gloss: 'as, like',
+    strongs: 'H9004',
+    headword: 'כְּ',
+    key: 'כ'
+  },
+  'Prep-l': {
+    code: 'Prep-l',
+    prefix: 'לְ',
+    name: 'Preposition',
+    gloss: 'to, for',
+    strongs: 'H9005',
+    headword: 'לְ',
+    key: 'ל'
+  },
+  'Prep-m': {
+    code: 'Prep-m',
+    prefix: 'מִ',
+    name: 'Preposition',
+    gloss: 'from, out of',
+    strongs: 'H4480',
+    headword: 'מִן',
+    key: 'מן'
+  },
+  'Conj-w': {
+    code: 'Conj-w',
+    prefix: 'וְ',
+    name: 'Conjunction',
+    gloss: 'and, but, then',
+    strongs: 'H9000',
+    headword: 'וְ',
+    key: 'ו'
+  },
+  'Art': {
+    code: 'Art',
+    prefix: 'הַ',
+    name: 'Definite Article',
+    gloss: 'the',
+    strongs: 'H9009',
+    headword: 'הַ',
+    key: 'ה'
+  },
+  'Interrog': {
+    code: 'Interrog',
+    prefix: 'הֲ',
+    name: 'Interrogative Particle',
+    gloss: 'whether, if',
+    strongs: 'H9008',
+    headword: 'הֲ',
+    key: 'ה'
+  },
+  'Rel': {
+    code: 'Rel',
+    prefix: 'שֶׁ',
+    name: 'Relative Particle',
+    gloss: 'who, which, that',
+    strongs: 'H7945',
+    headword: 'שֶׁ',
+    key: 'ש'
+  },
+  'Pro-r': {
+    code: 'Pro-r',
+    prefix: 'שֶׁ',
+    name: 'Relative Particle',
+    gloss: 'who, which, that',
+    strongs: 'H7945',
+    headword: 'שֶׁ',
+    key: 'ש'
+  },
+  'DirObjM': {
+    code: 'DirObjM',
+    prefix: 'אֵת',
+    name: 'Direct Object Marker',
+    gloss: '[direct object]',
+    strongs: 'H853',
+    headword: 'אֵת',
+    key: 'את'
+  }
+};
+
 /**
- * Decodes Hebrew morphological codes (ETCBC BHSA / eliranwong format).
- * E.g. "4c.verb.qal.perf.p3.m.sg", "4c.subs.f.sg.a"
+ * Splits Hebrew compound morphology into prefix segments and stem segment.
+ * E.g. "Prep-b | N-fs" -> { prefixes: [ { code: 'Prep-b', prefix: 'בְּ', ... } ], stem: 'N-fs' }
+ * "Conj-w, Art | N-fs" -> { prefixes: [ Conj-w, Art ], stem: 'N-fs' }
+ * @param {string} morphCode
+ */
+export function parseHebrewMorphSegments(morphCode) {
+  if (!morphCode) return { prefixes: [], stem: '' };
+  const str = morphCode.trim();
+  if (!str.includes('|')) {
+    if (HEBREW_PREFIX_MAP[str]) {
+      return { prefixes: [HEBREW_PREFIX_MAP[str]], stem: '' };
+    }
+    return { prefixes: [], stem: str };
+  }
+
+  const parts = str.split('|').map((p) => p.trim());
+  const prefixStr = parts[0];
+  const stemStr = parts.slice(1).join(' | ');
+
+  const prefixCodes = prefixStr.split(',').map((c) => c.trim()).filter(Boolean);
+  const prefixes = prefixCodes.map((c) => {
+    return HEBREW_PREFIX_MAP[c] || {
+      code: c,
+      prefix: c,
+      name: c,
+      gloss: '',
+      strongs: '',
+      headword: c,
+      key: c
+    };
+  });
+
+  return { prefixes, stem: stemStr };
+}
+
+const HEB_STEM_MAP = {
+  'q': 'Qal', 'n': 'Nif‘al', 'p': 'Pi‘el', 'P': 'Pu‘al', 'h': 'Hif‘il', 'H': 'Hof‘al', 't': 'Hitpa“el',
+  'o': 'Polel', 'O': 'Polal', 'r': 'Hitpolel', 'm': 'Poel', 'M': 'Poal', 'k': 'Palel', 'K': 'Pulal'
+};
+
+const HEB_ASPECT_MAP = {
+  'p': 'Perfect', 'i': 'Imperfect', 'w': 'Wayyiqtol', 'v': 'Imperative',
+  'c': 'Infinitive Construct', 'a': 'Infinitive Absolute', 'r': 'Participle Active', 's': 'Participle Passive'
+};
+
+const HEB_PERSON_MAP = { '1': '1st Person', '2': '2nd Person', '3': '3rd Person' };
+const HEB_GENDER_MAP = { 'm': 'Masculine', 'f': 'Feminine', 'c': 'Common' };
+const HEB_NUMBER_MAP = { 's': 'Singular', 'p': 'Plural', 'd': 'Dual' };
+const HEB_STATE_MAP = { 'a': 'Absolute', 'c': 'Construct', 'e': 'Emphatic' };
+
+function decodeHebrewStemCode(rawStem) {
+  if (!rawStem) return [];
+  const trimmed = rawStem.trim();
+
+  // Verbs: V-qp3ms, V-qc, etc.
+  if (trimmed.startsWith('V-')) {
+    const badges = ['Verb'];
+    const rest = trimmed.slice(2);
+    if (rest.length >= 2) {
+      const stemLetter = rest[0];
+      const aspectLetter = rest[1];
+      const stemName = HEB_STEM_MAP[stemLetter] || '';
+      const aspectName = HEB_ASPECT_MAP[aspectLetter] || '';
+      const sa = [stemName, aspectName].filter(Boolean).join(' ');
+      if (sa) badges.push(sa);
+
+      const p = rest[2] ? HEB_PERSON_MAP[rest[2]] || '' : '';
+      const g = rest[3] ? HEB_GENDER_MAP[rest[3]] || '' : '';
+      const n = rest[4] ? HEB_NUMBER_MAP[rest[4]] || '' : '';
+      const pgn = [p, g, n].filter(Boolean).join(' ');
+      if (pgn) badges.push(pgn);
+    }
+    return badges;
+  }
+
+  // Nouns / Adjectives: N-fs, N-mp, A-ms, etc.
+  if (trimmed.startsWith('N-') || trimmed.startsWith('A-')) {
+    const badges = [trimmed.startsWith('N-') ? 'Noun' : 'Adjective'];
+    const rest = trimmed.slice(2);
+    let g = '', n = '', st = '';
+    for (const char of rest) {
+      if (HEB_GENDER_MAP[char]) g = HEB_GENDER_MAP[char];
+      else if (HEB_NUMBER_MAP[char]) n = HEB_NUMBER_MAP[char];
+      else if (HEB_STATE_MAP[char]) st = HEB_STATE_MAP[char];
+    }
+    const gns = [g, n, st].filter(Boolean).join(' ');
+    if (gns) badges.push(gns);
+    return badges;
+  }
+
+  if (trimmed.startsWith('Pp')) return ['Personal Pronoun'];
+  if (trimmed.startsWith('Pd')) return ['Demonstrative Pronoun'];
+  if (trimmed.startsWith('Pr')) return ['Relative Pronoun'];
+  if (trimmed === 'DirObjM') return ['Direct Object Marker'];
+  if (trimmed === 'Interrog') return ['Interrogative Particle'];
+
+  return [];
+}
+
+/**
+ * Decodes Hebrew morphological codes (ETCBC BHSA / eliranwong format and Open Scriptures format).
+ * E.g. "Prep-b | N-fs", "V-qp3ms", "4c.verb.qal.perf.p3.m.sg", "4c.subs.f.sg.a"
  * @param {string} code 
  * @returns {string[]} Array of human-readable grammatical breakdown badges
  */
 export function decodeHebrewMorph(code) {
   if (!code) return [];
   const trimmed = code.trim();
-  const desc = hebrewDict[trimmed];
 
+  // If compound morphology (e.g. "Prep-b | N-fs", "Conj-w, Art | N-fs")
+  if (trimmed.includes('|')) {
+    const { prefixes, stem } = parseHebrewMorphSegments(trimmed);
+    const badges = [];
+    for (const p of prefixes) {
+      badges.push(`${p.name} ${p.prefix}`.trim());
+    }
+    if (stem) {
+      const stemBadges = decodeHebrewMorph(stem);
+      badges.push(...stemBadges);
+    }
+    return badges;
+  }
+
+  const desc = hebrewDict[trimmed];
   if (desc) {
     const parts = desc.split(',').map((p) => p.trim());
     const badges = [];
@@ -139,6 +346,12 @@ export function decodeHebrewMorph(code) {
       badges.push(`Suffix: ${suffixParts.join(' ')}`);
     }
     return badges;
+  }
+
+  // Try Open Scriptures stem parser
+  const openScripturesBadges = decodeHebrewStemCode(trimmed);
+  if (openScripturesBadges && openScripturesBadges.length > 0) {
+    return openScripturesBadges;
   }
 
   // Fallback: parse dot-separated components
@@ -168,7 +381,7 @@ export function decodeHebrewMorph(code) {
  */
 export function formatMorphBadges(morph, lang = 'greek') {
   if (!morph) return [];
-  if (lang === 'hebrew' || morph.startsWith('4c.')) {
+  if (lang === 'hebrew' || morph.includes('|') || morph.startsWith('Prep-') || morph.startsWith('Conj-') || morph.startsWith('V-') || morph.startsWith('N-') || morph.startsWith('4c.')) {
     return decodeHebrewMorph(morph);
   } else {
     return decodeGreekMorph(morph);

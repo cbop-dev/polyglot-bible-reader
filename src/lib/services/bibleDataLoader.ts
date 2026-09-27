@@ -42,6 +42,8 @@ export async function loadChapterFromDb(
 				word: w.surface,
 				trailer: ' ',
 				id: w.id,
+				work_id: w.work_id,
+				position: w.position,
 				normalized: w.normalized,
 				strongs: w.strongs_number,
 				morph: w.morph_code

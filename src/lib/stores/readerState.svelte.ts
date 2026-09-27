@@ -2,7 +2,14 @@ import { getVersionBooks } from '$lib/config/versions';
 import { getBookFile } from '$lib/bookMapping.js';
 import type { HebrewDiacriticMode } from '$lib/utils/diacritics';
 import { loadChapterFromDb, loadChaptersForBook } from '$lib/services/bibleDataLoader';
-import { getLemma, getWorks, translateReference, type WorkRow } from '$lib/services/dbClient';
+import {
+	getLemma,
+	getWorks,
+	translateReference,
+	getLexiconEntry,
+	type WorkRow,
+	type LexiconEntryRow
+} from '$lib/services/dbClient';
 
 export interface VerseDataItem {
 	exists: boolean;
@@ -304,34 +311,64 @@ export class ReaderState {
 	async inspectWord(wordObj: any, colVersion: string) {
 		if (!wordObj) return;
 		const corpus = colVersion.toLowerCase();
-		this.activeWord = { ...wordObj, isLoading: true, corpus };
+		const workId =
+			wordObj.work_id ||
+			(colVersion === 'BHS' ? 2 : colVersion === 'LXX' ? 24 : colVersion === 'SBLGNT' ? 25 : 0);
+		const dictionary = colVersion === 'BHS' ? 'bdb' : 'lsj';
+
+		this.activeWord = {
+			...wordObj,
+			isLoading: true,
+			corpus,
+			colVersion,
+			work_id: workId,
+			dictionary
+		};
 		this.showLemmaModal = true;
 
 		try {
-			// Query lexemes table directly
+			// Query lexemes table directly, prioritizing strongs when available
 			const lookupKey = wordObj.normalized || wordObj.word || wordObj.id;
-			const lexData = await getLemma(corpus, lookupKey);
-			if (lexData) {
-				this.activeWord = {
-					...wordObj,
-					...lexData,
-					corpus,
-					lemma: lexData.lemma,
-					gloss: lexData.gloss,
-					strongs: lexData.strongs,
-					isLoading: false
-				};
-			} else {
-				this.activeWord = {
-					...wordObj,
-					corpus,
-					lemma: wordObj.normalized || wordObj.word,
-					isLoading: false
-				};
+			const lexData = await getLemma(corpus, lookupKey, wordObj.strongs);
+
+			// Query lexicon entry (BDB or LSJ) to get the true dictionary headword
+			let lexiconRow: LexiconEntryRow | null = null;
+			try {
+				lexiconRow = await getLexiconEntry(dictionary, lookupKey, wordObj.strongs);
+			} catch (e) {
+				console.warn('[ReaderState] Error fetching lexicon entry in inspectWord:', e);
 			}
+
+			const primaryHeadword = lexiconRow?.headword || lexData?.lemma || wordObj.normalized || wordObj.word;
+			const primaryStrongs = lexiconRow?.strongs || lexData?.strongs || wordObj.strongs;
+
+			this.activeWord = {
+				...wordObj,
+				...(lexData || {}),
+				corpus,
+				colVersion,
+				work_id: workId,
+				dictionary,
+				lemma: primaryHeadword,
+				headword: primaryHeadword,
+				gloss: lexData?.gloss || '',
+				strongs: primaryStrongs,
+				morph: wordObj.morph,
+				word: wordObj.word,
+				isLoading: false
+			};
 		} catch (err) {
 			console.warn('[ReaderState] Error inspecting word:', err);
-			this.activeWord = { ...wordObj, corpus, isLoading: false };
+			this.activeWord = {
+				...wordObj,
+				corpus,
+				colVersion,
+				work_id: workId,
+				dictionary,
+				lemma: wordObj.normalized || wordObj.word,
+				headword: wordObj.normalized || wordObj.word,
+				isLoading: false
+			};
 		}
 	}
 }

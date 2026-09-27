@@ -298,29 +298,73 @@ describe('dbClient service', () => {
 			expect(conc[0].surface).toBe('λόγος');
 		});
 
-		it('looks up BDB and LSJ lexicon entries with normalization', async () => {
+		it('looks up BDB with Strongs priority, headword, and stripped key fallbacks', async () => {
+			// Case 1: Strongs priority lookup (exact both match)
 			mockQuery.mockResolvedValueOnce([
 				{
 					id: 1,
 					dictionary: 'bdb',
+					key: 'בראשית',
+					headword: 'בְּרֵאשִׁית',
+					strongs: 'H7225',
+					definition: '<div><p><b>H7225. reshith</b></p><p>beginning, chief</p></div>'
+				}
+			]);
+
+			const bdbStrongsRes = await getLexiconEntry('bdb', 'בְּרֵאשִׁית', '7225');
+			expect(bdbStrongsRes).not.toBeNull();
+			expect(bdbStrongsRes?.strongs).toBe('H7225');
+			expect(mockQuery).toHaveBeenCalledWith(
+				expect.stringContaining("WHERE dictionary = 'bdb' AND strongs = ? AND (headword = ? OR key = ?"),
+				['H7225', 'בְּרֵאשִׁית', 'בְּרֵאשִׁית', 'בראשית', 'בראשית']
+			);
+
+			// Case 2: Direct headword lookup (when no strongs supplied)
+			mockQuery.mockResolvedValueOnce([
+				{
+					id: 2,
+					dictionary: 'bdb',
 					key: 'ברא',
-					headword: 'ברא',
+					headword: 'בָּרָא',
 					strongs: 'H1254',
 					definition: '<div><p><b>H1254. bara</b></p></div>'
 				}
 			]);
 
-			const bdbRes = await getLexiconEntry('bdb', 'בָּרָא');
-			expect(bdbRes).not.toBeNull();
-			expect(bdbRes?.headword).toBe('ברא');
+			const bdbHeadwordRes = await getLexiconEntry('bdb', 'בָּרָא');
+			expect(bdbHeadwordRes).not.toBeNull();
+			expect(bdbHeadwordRes?.headword).toBe('בָּרָא');
 			expect(mockQuery).toHaveBeenCalledWith(
-				expect.stringContaining('FROM lexicon_entries'),
-				['bdb', 'ברא', 'בָּרָא', 'בָּרָא']
+				expect.stringContaining("WHERE dictionary = 'bdb' AND headword = ?"),
+				['בָּרָא']
 			);
 
+			// Case 3: Stripped key fallback when headword not matched
+			mockQuery
+				.mockResolvedValueOnce([]) // headword query returns empty
+				.mockResolvedValueOnce([   // key query returns match
+					{
+						id: 3,
+						dictionary: 'bdb',
+						key: 'ברא',
+						headword: 'ברא',
+						strongs: 'H1254',
+						definition: '<div><p><b>H1254. bara</b></p></div>'
+					}
+				]);
+
+			const bdbKeyRes = await getLexiconEntry('bdb', 'בָּרָא');
+			expect(bdbKeyRes).not.toBeNull();
+			expect(bdbKeyRes?.key).toBe('ברא');
+			expect(mockQuery).toHaveBeenCalledWith(
+				expect.stringContaining("WHERE dictionary = 'bdb' AND key = ?"),
+				['ברא']
+			);
+
+			// Case 4: LSJ lookup with Greek normalization
 			mockQuery.mockResolvedValueOnce([
 				{
-					id: 2,
+					id: 4,
 					dictionary: 'lsj',
 					key: 'ποιεω',
 					headword: 'ποιέω',
@@ -333,8 +377,8 @@ describe('dbClient service', () => {
 			expect(lsjRes).not.toBeNull();
 			expect(lsjRes?.key).toBe('ποιεω');
 			expect(mockQuery).toHaveBeenCalledWith(
-				expect.stringContaining('FROM lexicon_entries'),
-				['lsj', 'ποιεω', 'ποιέω', 'ποιέω']
+				expect.stringContaining("WHERE dictionary = 'lsj' AND (key = ? OR headword = ? OR lsj_index = ?)"),
+				['ποιεω', 'ποιέω', 'ποιέω']
 			);
 		});
 
@@ -370,8 +414,8 @@ describe('dbClient service', () => {
 
 			// 3. Mock word tokens for work units 58765 and 958890
 			mockQuery.mockResolvedValueOnce([
-				{ id: 1090494, work_id: 2, work_unit_id: 58765, position: 1, surface: 'בְּרֵאשִׁ֖ית', normalized: 'בראשית', strongs_number: '7225', morph_code: 'Prep-b' },
-				{ id: 1090495, work_id: 2, work_unit_id: 58765, position: 2, surface: 'בָּרָ֣א', normalized: 'ברא', strongs_number: '1254', morph_code: 'V-Qal' },
+				{ id: 1090494, work_id: 2, work_unit_id: 58765, position: 1, surface: 'בְּרֵאשִׁ֖ית', normalized: 'בראשית', strongs_number: '7225', morph_code: 'Prep-b | N-fs' },
+				{ id: 1090495, work_id: 2, work_unit_id: 58765, position: 2, surface: 'בָּרָ֣א', normalized: 'ברא', strongs_number: '1254', morph_code: 'V-qp3ms' },
 				{ id: 3395930, work_id: 24, work_unit_id: 958890, position: 1, surface: 'ἐν', normalized: 'ἐν', strongs_number: 'G1722', morph_code: 'PREP' },
 				{ id: 3395931, work_id: 24, work_unit_id: 958890, position: 2, surface: 'ἀρχῇ', normalized: 'ἀρχή', strongs_number: 'G746', morph_code: 'N-DSF' },
 				{ id: 3395932, work_id: 24, work_unit_id: 958890, position: 3, surface: 'ἐποίησεν', normalized: 'ποιέω', strongs_number: 'G4160', morph_code: 'V-AAI' }
@@ -385,7 +429,30 @@ describe('dbClient service', () => {
 			expect(bhsVerse).toBeDefined();
 			expect(lxxVerse).toBeDefined();
 
-			// Test BHS 2nd word: בָּרָ֣א -> BDB
+			// Test BHS 1st word: בְּרֵאשִׁ֖ית with Strong's 7225 -> exactBoth fails, strongs fallback finds BDB H7225
+			const bhsWord1 = bhsVerse!.words![0];
+			expect(bhsWord1.surface).toBe('בְּרֵאשִׁ֖ית');
+			expect(bhsWord1.strongs_number).toBe('7225');
+
+			mockQuery
+				.mockResolvedValueOnce([]) // exactBoth returns empty
+				.mockResolvedValueOnce([   // strongs alone returns match
+					{
+						id: 7225,
+						dictionary: 'bdb',
+						key: 'ראשית',
+						headword: 'רֵאשִׁית',
+						strongs: 'H7225',
+						definition: '<div><p><b>H7225. reshith</b></p><p>beginning</p></div>'
+					}
+				]);
+
+			const bdbEntry1 = await getLexiconEntry('bdb', bhsWord1.normalized || bhsWord1.surface, bhsWord1.strongs_number);
+			expect(bdbEntry1).not.toBeNull();
+			expect(bdbEntry1?.strongs).toBe('H7225');
+			expect(bdbEntry1?.definition).toContain('reshith');
+
+			// Test BHS 2nd word: בָּרָ֣א -> BDB H1254
 			const bhsWord2 = bhsVerse!.words![1];
 			expect(bhsWord2.position).toBe(2);
 			expect(bhsWord2.surface).toBe('בָּרָ֣א');
@@ -402,11 +469,11 @@ describe('dbClient service', () => {
 				}
 			]);
 
-			const bdbEntry = await getLexiconEntry('bdb', bhsWord2.normalized || bhsWord2.surface);
-			expect(bdbEntry).not.toBeNull();
-			expect(bdbEntry?.headword).toBe('ברא');
-			expect(bdbEntry?.strongs).toBe('H1254');
-			expect(bdbEntry?.definition).toContain('bara');
+			const bdbEntry2 = await getLexiconEntry('bdb', bhsWord2.normalized || bhsWord2.surface, bhsWord2.strongs_number);
+			expect(bdbEntry2).not.toBeNull();
+			expect(bdbEntry2?.headword).toBe('ברא');
+			expect(bdbEntry2?.strongs).toBe('H1254');
+			expect(bdbEntry2?.definition).toContain('bara');
 
 			// Test LXX 3rd word: ἐποίησεν -> LSJ (lemma: ποιέω)
 			const lxxWord3 = lxxVerse!.words![2];
@@ -425,7 +492,7 @@ describe('dbClient service', () => {
 				}
 			]);
 
-			const lsjEntry = await getLexiconEntry('lsj', lxxWord3.normalized || lxxWord3.surface);
+			const lsjEntry = await getLexiconEntry('lsj', lxxWord3.normalized || lxxWord3.surface, lxxWord3.strongs_number);
 			expect(lsjEntry).not.toBeNull();
 			expect(lsjEntry?.key).toBe('ποιεω');
 			expect(lsjEntry?.headword).toBe('ποιέω');

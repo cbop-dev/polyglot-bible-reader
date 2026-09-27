@@ -54,6 +54,15 @@ def ingest():
                 plain_key = strip_hebrew(key)
                 headword = val.get('headword', key)
                 strongs = val.get('strongs')
+                # Protect particle strongs from corrupt cross-references in legacy JSON files
+                if strongs == 'H9003' and plain_key != 'ב':
+                    strongs = None
+                elif strongs == 'H9000' and plain_key != 'ו':
+                    strongs = None
+                elif strongs == 'H9005' and plain_key != 'ל':
+                    strongs = None
+                elif strongs == 'H9004' and plain_key != 'כ':
+                    strongs = None
                 match_type = val.get('matchType')
                 definition = val.get('def', '')
                 bdb_rows.append(('bdb', plain_key, headword, strongs, None, match_type, definition))
