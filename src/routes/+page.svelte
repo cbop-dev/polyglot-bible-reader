@@ -30,13 +30,13 @@
 
     {#key readerState.selectedBook &&  readerState.selectedChapter && readerState.activeVersions }
     <GridHeader/>
-    {/key}
+   
 
     <!-- Dynamic Grid Verse Cards -->
     <div class="flex flex-col gap-5 max-w-full mx-auto">
-      {#if readerState.verseKeys.length === 0}
+      {#if readerState.isLoading }
        <span class="inline self-center w-8 h-8 border-4 border-link border-t-transparent rounded-full animate-spin m-3"></span>
-        <p class="text-center text-ink-soft py-10">Loading Reader and Chapter...</p>
+        <p class="text-center text-ink-soft py-10">Loading Book and Chapter...</p>
       {:else}
       
         {#each readerState.verseKeys as v (v)}
@@ -44,7 +44,7 @@
         {/each}
       {/if}
     </div>
-
+  {/key}
     <!-- Open Source & Licensing Banner -->
     <div class="mt-12 mb-8 mx-auto max-w-3xl border border-rule bg-page p-6 text-center rounded-lg shadow-sm sm:p-8">
       <h3 class="mb-2 text-lg font-bold">Open Source &amp; Open Data</h3>
