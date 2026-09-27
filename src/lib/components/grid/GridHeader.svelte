@@ -1,6 +1,8 @@
 <script lang="ts">
   import { versionGroups, formatVersionLabel } from '$lib/config/versions';
   import { readerState } from '$lib/stores/readerState.svelte';
+    import { onMount } from 'svelte';
+  onMount(()=>{readerState.loadCurrentChapter()});
 </script>
 
 <div id="grid-header"

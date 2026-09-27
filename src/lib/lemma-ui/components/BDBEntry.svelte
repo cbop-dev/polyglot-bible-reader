@@ -1,6 +1,10 @@
+
 <script>
+/**
+ * NB: this component should probably be re-drawn when lemma info changes, i.e., surrounded in {#key lemma}..{/key}
+*/
 	import { getLexiconEntry } from '$lib/services/dbClient';
-	import { untrack } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 
 	/**
 	 * @typedef BDBEntryProps
@@ -72,7 +76,7 @@
 	}
 
 	// When lemma/strongs changes, reset state
-	$effect(() => {
+	function resetEntry(){
 		const target = lemmaText;
 		const targetStrongs = strongsCode;
 		const wordKey = `${targetStrongs || ''}_${target}`;
@@ -88,11 +92,13 @@
 				});
 			}
 		}
-	});
+	};
 
 	let formattedDef = $derived(
 		entry?.def ? entry.def : ''
 	);
+
+	onMount(()=>{resetEntry()});
 </script>
 
 {#if lang === 'hebrew' || dbAbbrev === 'bhs'}

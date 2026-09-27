@@ -1,6 +1,6 @@
 <script>
 	import { getLexiconEntry, normalizeGreek } from '$lib/services/dbClient';
-	import { untrack } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 
 	/**
 	 * @typedef LSJEntryProps
@@ -75,7 +75,7 @@
 	}
 
 	// When lemma/strongs changes, reset state
-	$effect(() => {
+	function resetEntry(){
 		const target = lemmaText;
 		const targetStrongs = strongsCode;
 		const wordKey = `${targetStrongs || ''}_${target}`;
@@ -91,7 +91,7 @@
 				});
 			}
 		}
-	});
+	};
 
 	/**
 	 * Formats markdown from LSJ CEX edition into readable HTML
@@ -151,6 +151,7 @@
 				return '';
 		}
 	});
+	onMount(()=>{resetEntry()});
 </script>
 
 {#if lang === 'greek'}

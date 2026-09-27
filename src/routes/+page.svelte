@@ -10,15 +10,14 @@
 
   onMount(() => {
     readerState.initStaticData();
+    reloadChapter();
   });
 
-  $effect(() => {
-    // Explicitly track book, chapter, and active versions to reactively reload when modified
-    const _book = readerState.selectedBook;
-    const _chapter = readerState.selectedChapter;
-    const _versions = readerState.activeVersions;
+  function reloadChapter(){
+    
+    
     readerState.loadCurrentChapter();
-  });
+  };
 </script>
 
 <div
@@ -28,7 +27,10 @@
   <ReaderHeader />
 
   <main>
-    <GridHeader />
+
+    {#key readerState.selectedBook &&  readerState.selectedChapter && readerState.activeVersions }
+    <GridHeader/>
+    {/key}
 
     <!-- Dynamic Grid Verse Cards -->
     <div class="flex flex-col gap-5 max-w-full mx-auto">
@@ -69,8 +71,11 @@
     <VerseNavPill verses={readerState.verseKeys} />
   </main>
 </div>
-
+{#if readerState.activeWord}
+{#key  readerState }
 <LemmaModal />
+{/key}
+{/if}
 
 <style>
   @media (max-width: 639px) {
