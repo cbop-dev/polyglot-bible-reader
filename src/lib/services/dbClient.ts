@@ -64,10 +64,11 @@ export interface BookFrequency {
 export interface ConcordanceOccurrence {
 	work_unit_id: number;
 	display_label: string;
-	verse_label: string;
-	body: string;
-	surface: string;
-	position: number;
+	ref_label?: string;
+	verse_label?: string;
+	body?: string;
+	surface?: string;
+	position?: number;
 }
 
 export interface LexiconEntryRow {
@@ -103,6 +104,14 @@ export const SLUG_TO_VERSION: Record<string, string> = {
 	'brenton-lxx': 'Brenton'
 };
 
+// Versions that have word-level tokens in the words table
+export const VERSIONS_WITH_WORDS = new Set<string>([
+	'BHS', 'wlc',
+	'LXX', 'swete-lxx',
+	'SBLGNT', 'sblgnt',
+	'KJV', 'kjv'
+]);
+
 // Cached canonical works
 let canonicalWorksCache: CanonicalWorkRow[] | null = null;
 
@@ -116,6 +125,11 @@ export function _clearDbClientCache() {
 export async function query<T = any>(sql: string, params: any[] = []): Promise<T[]> {
 	const worker = await getDbWorker();
 	return (worker.db as any).query(sql, params);
+}
+
+export async function queryOne<T = any>(sql: string, params: any[] = []): Promise<T | null> {
+	const rows = await query<T>(sql, params);
+	return rows.length > 0 ? rows[0] : null;
 }
 
 /**
@@ -397,7 +411,9 @@ export async function getChapterVerses(
 	}
 
 	if (includeWords && rows.length > 0) {
-		const wuIds = rows.map((r) => r.work_unit_id);
+		// Only fetch word tokens for versions that actually have word tokens in the words table
+		const targetRows = rows.filter((r) => VERSIONS_WITH_WORDS.has(r.version));
+		const wuIds = targetRows.map((r) => r.work_unit_id);
 		const words = await getWordsForWorkUnits(wuIds);
 		const wordsByUnit = new Map<number, WordRow[]>();
 		for (const w of words) {
@@ -415,17 +431,66 @@ export async function getChapterVerses(
 
 /**
  * Fetch word tokens with morphology and Strong's IDs for given work unit IDs.
+ * Groups contiguous work unit IDs into range scans (BETWEEN min AND max) combined
+ * with UNION ALL so that SQLite executes fast sequential index range scans instead of
+ * dozens of scattered point probes.
  */
 export async function getWordsForWorkUnits(workUnitIds: number[]): Promise<WordRow[]> {
 	if (!workUnitIds || workUnitIds.length === 0) return [];
-	const placeholders = workUnitIds.map(() => '?').join(',');
+
+	// Deduplicate and sort IDs
+	const uniqueIds = Array.from(new Set(workUnitIds)).sort((a, b) => a - b);
+	if (uniqueIds.length === 0) return [];
+
+	// Group contiguous IDs into [start, end] ranges
+	const ranges: [number, number][] = [];
+	let rangeStart = uniqueIds[0];
+	let rangeEnd = uniqueIds[0];
+
+	for (let i = 1; i < uniqueIds.length; i++) {
+		const id = uniqueIds[i];
+		if (id === rangeEnd + 1) {
+			rangeEnd = id;
+		} else {
+			ranges.push([rangeStart, rangeEnd]);
+			rangeStart = id;
+			rangeEnd = id;
+		}
+	}
+	ranges.push([rangeStart, rangeEnd]);
+
+	// For a compact number of ranges (e.g. <= 12, typical for chapters across 1-4 versions),
+	// use UNION ALL of range queries for sequential index range scans
+	if (ranges.length <= 12) {
+		const selectParts = ranges.map(([start, end]) => {
+			if (start === end) {
+				return `SELECT id, work_id, work_unit_id, position, surface, normalized, strongs_number, morph_code FROM words WHERE work_unit_id = ?`;
+			}
+			return `SELECT id, work_id, work_unit_id, position, surface, normalized, strongs_number, morph_code FROM words WHERE work_unit_id BETWEEN ? AND ?`;
+		});
+
+		const params: number[] = [];
+		for (const [start, end] of ranges) {
+			if (start === end) {
+				params.push(start);
+			} else {
+				params.push(start, end);
+			}
+		}
+
+		const sql = `${selectParts.join('\nUNION ALL\n')}\nORDER BY work_unit_id, position;`;
+		return query<WordRow>(sql, params);
+	}
+
+	// Fallback for fragmented, scattered IDs
+	const placeholders = uniqueIds.map(() => '?').join(',');
 	const sql = `
 		SELECT id, work_id, work_unit_id, position, surface, normalized, strongs_number, morph_code
 		FROM words
 		WHERE work_unit_id IN (${placeholders})
 		ORDER BY work_unit_id, position
 	`;
-	return query<WordRow>(sql, workUnitIds);
+	return query<WordRow>(sql, uniqueIds);
 }
 
 /**
@@ -487,10 +552,78 @@ export async function getLemma(
 /**
  * Retrieve frequency distribution of a lemma grouped by canonical biblical book.
  */
+/**
+ * Retrieve frequency distribution of a lemma grouped by canonical biblical book.
+ * First queries the pre-computed lemma_stats table for instant O(1) response.
+ * Falls back to dynamic query if not found.
+ */
 export async function getWordFrequencyByBook(
 	workId: number,
-	lemma: string
+	lemma: string,
+	strongs?: string
 ): Promise<BookFrequency[]> {
+	if (!workId) return [];
+
+	// 1. Check pre-computed lemma_stats by strongs first
+	if (strongs) {
+		const sNorm = strongs.trim().toUpperCase();
+		const statRow = await queryOne<{ book_counts_json: string; total_count: number }>(`
+			SELECT book_counts_json, total_count
+			FROM lemma_stats
+			WHERE work_id = ? AND strongs = ?
+			LIMIT 1
+		`, [workId, sNorm]);
+		if (statRow?.book_counts_json) {
+			try {
+				return JSON.parse(statRow.book_counts_json);
+			} catch {}
+		}
+	}
+
+	// 2. Check pre-computed lemma_stats by lemma (including pseudo-strongs WORD:<lemma>)
+	if (lemma) {
+		const lTrim = lemma.trim();
+		const lNFC = lTrim.normalize('NFC');
+		const pseudoStrongs = `WORD:${lTrim}`;
+		const statRow = await queryOne<{ book_counts_json: string; total_count: number }>(`
+			SELECT book_counts_json, total_count
+			FROM lemma_stats
+			WHERE work_id = ? AND (lemma = ? OR lemma = ? OR strongs = ?)
+			LIMIT 1
+		`, [workId, lTrim, lNFC, pseudoStrongs]);
+		if (statRow?.book_counts_json) {
+			try {
+				return JSON.parse(statRow.book_counts_json);
+			} catch {}
+		}
+	}
+
+	// 3. Fallback: aggregate from indexed concordance_refs (fast indexed lookup)
+	if (lemma || strongs) {
+		try {
+			const occs = await getConcordance(workId, lemma, 0, strongs);
+			if (occs && occs.length > 0) {
+				const bookCounts: { [book: string]: number } = {};
+				for (const o of occs) {
+					const ref = o.ref_label || o.display_label || '';
+					const bookMatch = ref.match(/^([1-3]?[A-Za-z]+)/);
+					const book = bookMatch ? bookMatch[1] : (ref.split(/\s+/)[0] || 'Unknown');
+					bookCounts[book] = (bookCounts[book] || 0) + 1;
+				}
+				return Object.entries(bookCounts).map(([abbrev, count]) => ({
+					title: abbrev,
+					sbl_abbreviation: abbrev,
+					count
+				}));
+			}
+		} catch (err) {
+			console.warn('[dbClient] Failed to aggregate from concordance_refs:', err);
+		}
+	}
+
+	// 4. Ultimate fallback: query words table using indexed normalized column
+	const cleanLemma = lemma?.trim() || '';
+	if (!cleanLemma) return [];
 	const sql = `
 		SELECT 
 			COALESCE(cw_parent.title, cw.title) AS title, 
@@ -505,21 +638,87 @@ export async function getWordFrequencyByBook(
 		GROUP BY COALESCE(cw_parent.id, cw.id)
 		ORDER BY COALESCE(cw_parent.id, cw.id)
 	`;
-	return query<BookFrequency>(sql, [workId, lemma]);
+	return query<BookFrequency>(sql, [workId, cleanLemma]);
 }
 
 /**
- * Retrieve sample concordance verses containing a specific lemma.
+ * Retrieve sample concordance occurrences containing a specific lemma or Strong's ID.
+ * First queries the pre-indexed concordance_refs table for instant 1-request response.
+ * Falls back to dynamic query across words if not present.
  */
 export async function getConcordance(
 	workId: number,
 	lemma: string,
-	limit: number = 25
+	limit: number = 0,
+	strongs?: string
 ): Promise<ConcordanceOccurrence[]> {
+	if (!workId) return [];
+
+	const hasLimit = typeof limit === 'number' && limit > 0;
+	const limitSql = hasLimit ? `LIMIT ?` : '';
+	const limitParams = hasLimit ? [limit] : [];
+
+	// 1. Try pre-indexed concordance_refs by strongs
+	if (strongs) {
+		const sNorm = strongs.trim().toUpperCase();
+		const sCode = sNorm.startsWith('H') || sNorm.startsWith('G')
+			? sNorm
+			: (workId === 2 ? `H${sNorm}` : `G${sNorm}`);
+
+		const rows = await query<ConcordanceOccurrence>(`
+			SELECT ref_label, ref_label AS display_label, work_unit_id
+			FROM concordance_refs
+			WHERE work_id = ? AND strongs = ?
+			ORDER BY work_unit_id
+			${limitSql}
+		`, [workId, sCode, ...limitParams]);
+
+		if (rows.length > 0) return rows;
+	}
+
+	// 2. Try pre-indexed concordance_refs by lemma
+	if (lemma && lemma.trim()) {
+		const cleanLemma = lemma.trim();
+		const pseudoStrongs = `WORD:${cleanLemma}`;
+		// Check if lemma matches in concordance_refs directly (by lemma or pseudo-strongs)
+		const rows = await query<ConcordanceOccurrence>(`
+			SELECT ref_label, ref_label AS display_label, work_unit_id
+			FROM concordance_refs
+			WHERE work_id = ? AND (lemma = ? OR strongs = ?)
+			ORDER BY work_unit_id
+			${limitSql}
+		`, [workId, cleanLemma, pseudoStrongs, ...limitParams]);
+
+		if (rows.length > 0) return rows;
+
+		// Check if we can find Strong's from lemma_stats
+		const stat = await queryOne<{ strongs: string }>(`
+			SELECT strongs FROM lemma_stats
+			WHERE work_id = ? AND lemma = ?
+			LIMIT 1
+		`, [workId, cleanLemma]);
+
+		if (stat?.strongs) {
+			const sRows = await query<ConcordanceOccurrence>(`
+				SELECT ref_label, ref_label AS display_label, work_unit_id
+				FROM concordance_refs
+				WHERE work_id = ? AND strongs = ?
+				ORDER BY work_unit_id
+				${limitSql}
+			`, [workId, stat.strongs, ...limitParams]);
+
+			if (sRows.length > 0) return sRows;
+		}
+	}
+
+	// 3. Fallback: dynamic query across words table using indexed normalized column
+	const cleanLemma = lemma?.trim() || '';
+	if (!cleanLemma) return [];
 	const sql = `
 		SELECT 
 			wu.id AS work_unit_id,
 			cr.display_label,
+			cr.sbl_citation AS ref_label,
 			wu.label AS verse_label,
 			wu.body,
 			wd.surface,
@@ -529,9 +728,21 @@ export async function getConcordance(
 		JOIN canonical_refs cr ON wu.canonical_ref_id = cr.id
 		WHERE wd.work_id = ? AND wd.normalized = ?
 		ORDER BY cr.ord
-		LIMIT ?
+		${limitSql}
 	`;
-	return query<ConcordanceOccurrence>(sql, [workId, lemma, limit]);
+	return query<ConcordanceOccurrence>(sql, [workId, cleanLemma, ...limitParams]);
+}
+
+/**
+ * Fetch the verse body text for a single work unit ID on demand.
+ */
+export async function getVerseText(workUnitId: number): Promise<string | null> {
+	if (!workUnitId) return null;
+	const row = await queryOne<{ body: string }>(
+		'SELECT body FROM work_units WHERE id = ? LIMIT 1',
+		[workUnitId]
+	);
+	return row ? row.body : null;
 }
 
 /**

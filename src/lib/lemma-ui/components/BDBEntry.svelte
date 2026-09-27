@@ -14,9 +14,10 @@
 
 	let isOpen = $state(autoOpen);
 	let loading = $state(false);
-	let loadedLemma = $state('');
+	/** @type {{ headword?: string, strongs?: string, matchType?: string, def?: string } | null} */
 	let entry = $state(null);
 	let hasSearched = $state(false);
+	let prevWordKey = $state('');
 
 	let lemmaText = $derived(
 		typeof lemma === 'string' ? lemma : lemma?.headword || lemma?.lemma || lemma?.word || ''
@@ -34,17 +35,11 @@
 	async function fetchBdb() {
 		const target = lemmaText;
 		const targetStrongs = strongsCode;
-		const cacheKey = `${targetStrongs || ''}_${target}`;
 
 		if ((lang !== 'hebrew' && dbAbbrev !== 'bhs') || (!target && !targetStrongs)) {
 			loading = false;
 			entry = null;
 			hasSearched = false;
-			loadedLemma = '';
-			return;
-		}
-
-		if (loadedLemma === cacheKey && hasSearched) {
 			return;
 		}
 
@@ -60,10 +55,10 @@
 				  }
 				: null;
 			hasSearched = true;
-			loadedLemma = cacheKey;
 		} catch (err) {
 			console.error('Error loading BDB entry:', err);
 			entry = null;
+			hasSearched = true;
 		} finally {
 			loading = false;
 		}
@@ -71,25 +66,27 @@
 
 	function handleToggle(e) {
 		isOpen = e.currentTarget.open;
-		const cacheKey = `${strongsCode || ''}_${lemmaText}`;
-		if (isOpen && loadedLemma !== cacheKey) {
+		if (isOpen && !entry && !loading && !hasSearched) {
 			fetchBdb();
 		}
 	}
 
-	// If open on mount or when lemma/strongs changes
+	// When lemma/strongs changes, reset state
 	$effect(() => {
 		const target = lemmaText;
 		const targetStrongs = strongsCode;
-		const cacheKey = `${targetStrongs || ''}_${target}`;
-		if (isOpen && (target || targetStrongs) && cacheKey !== loadedLemma) {
-			untrack(() => {
-				fetchBdb();
-			});
-		} else if (cacheKey !== loadedLemma) {
+		const wordKey = `${targetStrongs || ''}_${target}`;
+		if (wordKey !== prevWordKey) {
+			prevWordKey = wordKey;
+			isOpen = autoOpen;
 			hasSearched = false;
 			entry = null;
-			loadedLemma = '';
+			loading = false;
+			if (isOpen && (target || targetStrongs)) {
+				untrack(() => {
+					fetchBdb();
+				});
+			}
 		}
 	});
 

@@ -14,10 +14,11 @@
 
 	let isOpen = $state(autoOpen);
 	let loading = $state(false);
-	let loadedLemma = $state('');
+	/** @type {{ headword?: string, lsjIndex?: string, matchType?: string, def?: string } | null} */
 	let entry = $state(null);
 	let isProper = $state(false);
 	let hasSearched = $state(false);
+	let prevWordKey = $state('');
 
 	let lemmaText = $derived(
 		typeof lemma === 'string' ? lemma : lemma?.lemma || lemma?.word || ''
@@ -35,18 +36,12 @@
 	async function fetchLsj() {
 		const target = lemmaText;
 		const targetStrongs = strongsCode;
-		const cacheKey = `${targetStrongs || ''}_${target}`;
 
 		if (lang !== 'greek' || (!target && !targetStrongs)) {
 			loading = false;
 			entry = null;
 			isProper = false;
 			hasSearched = false;
-			loadedLemma = '';
-			return;
-		}
-
-		if (loadedLemma === cacheKey && hasSearched) {
 			return;
 		}
 
@@ -63,10 +58,10 @@
 				: null;
 			isProper = false;
 			hasSearched = true;
-			loadedLemma = cacheKey;
 		} catch (err) {
 			console.error('Error loading LSJ entry:', err);
 			entry = null;
+			hasSearched = true;
 		} finally {
 			loading = false;
 		}
@@ -74,22 +69,27 @@
 
 	function handleToggle(e) {
 		isOpen = e.currentTarget.open;
-		if (isOpen && loadedLemma !== lemmaText) {
+		if (isOpen && !entry && !loading && !hasSearched) {
 			fetchLsj();
 		}
 	}
 
-	// If open on mount or when lemma changes
+	// When lemma/strongs changes, reset state
 	$effect(() => {
 		const target = lemmaText;
-		if (isOpen && target && target !== loadedLemma) {
-			untrack(() => {
-				fetchLsj();
-			});
-		} else if (target !== loadedLemma) {
+		const targetStrongs = strongsCode;
+		const wordKey = `${targetStrongs || ''}_${target}`;
+		if (wordKey !== prevWordKey) {
+			prevWordKey = wordKey;
+			isOpen = autoOpen;
 			hasSearched = false;
 			entry = null;
-			loadedLemma = '';
+			loading = false;
+			if (isOpen && (target || targetStrongs)) {
+				untrack(() => {
+					fetchLsj();
+				});
+			}
 		}
 	});
 

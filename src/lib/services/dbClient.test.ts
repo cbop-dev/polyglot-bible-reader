@@ -5,9 +5,11 @@ import {
 	resolveCanonicalWorkId,
 	getWorks,
 	getChapterVerses,
+	getWordsForWorkUnits,
 	getLemma,
 	getWordFrequencyByBook,
 	getConcordance,
+	getVerseText,
 	getLexiconEntry,
 	translateReference,
 	_clearDbClientCache
@@ -245,6 +247,39 @@ describe('dbClient service', () => {
 			expect(verses[1].verse_label).toBe('38:1');
 		});
 
+		it('consolidates contiguous workUnitIds into BETWEEN range scans with UNION ALL', async () => {
+			mockQuery.mockResolvedValueOnce([
+				{
+					id: 1,
+					work_id: 2,
+					work_unit_id: 101,
+					position: 1,
+					surface: 'בְּרֵאשִׁ֖ית',
+					normalized: 'בראשית',
+					strongs_number: 'H7225',
+					morph_code: 'Ncfsa'
+				},
+				{
+					id: 2,
+					work_id: 24,
+					work_unit_id: 201,
+					position: 1,
+					surface: 'ἐν',
+					normalized: 'εν',
+					strongs_number: 'G1722',
+					morph_code: 'PREP'
+				}
+			]);
+
+			// Pass two contiguous blocks: [101, 102, 103] and [201, 202]
+			const words = await getWordsForWorkUnits([101, 102, 103, 201, 202]);
+			expect(words).toHaveLength(2);
+			expect(mockQuery).toHaveBeenCalledWith(
+				expect.stringContaining('work_unit_id BETWEEN ? AND ?\nUNION ALL\nSELECT id, work_id, work_unit_id, position, surface, normalized, strongs_number, morph_code FROM words WHERE work_unit_id BETWEEN ? AND ?'),
+				[101, 103, 201, 202]
+			);
+		});
+
 		it('retrieves lemma information by lemma or lex_id', async () => {
 			mockQuery.mockResolvedValueOnce([
 				{
@@ -270,14 +305,39 @@ describe('dbClient service', () => {
 
 		it('retrieves word frequency by book', async () => {
 			mockQuery.mockResolvedValueOnce([
-				{ title: 'Matthew', sbl_abbreviation: 'Matt', count: 33 },
-				{ title: 'John', sbl_abbreviation: 'John', count: 40 }
+				{
+					book_counts_json: JSON.stringify([
+						{ title: 'Matthew', sbl_abbreviation: 'Matt', count: 33 },
+						{ title: 'John', sbl_abbreviation: 'John', count: 40 }
+					]),
+					total_count: 73
+				}
 			]);
 
 			const freqs = await getWordFrequencyByBook(25, 'λόγος');
 			expect(freqs).toHaveLength(2);
 			expect(freqs[0].title).toBe('Matthew');
 			expect(freqs[1].count).toBe(40);
+		});
+
+		it('retrieves word frequencies for lemmas without Strongs number (pseudo-strongs)', async () => {
+			mockQuery.mockResolvedValueOnce([
+				{
+					book_counts_json: JSON.stringify([
+						{ title: 'Genesis', sbl_abbreviation: 'Gen', count: 1 }
+					]),
+					total_count: 1
+				}
+			]);
+
+			const freqs = await getWordFrequencyByBook(24, 'ἀκατασκεύαστος');
+			expect(freqs).toHaveLength(1);
+			expect(freqs[0].title).toBe('Genesis');
+			expect(freqs[0].count).toBe(1);
+			expect(mockQuery).toHaveBeenCalledWith(
+				expect.stringContaining('FROM lemma_stats'),
+				expect.arrayContaining([24, 'ἀκατασκεύαστος', 'ἀκατασκεύαστος', 'WORD:ἀκατασκεύαστος'])
+			);
 		});
 
 		it('retrieves concordance occurrences', async () => {
@@ -296,6 +356,45 @@ describe('dbClient service', () => {
 			expect(conc).toHaveLength(1);
 			expect(conc[0].display_label).toBe('John 1:1');
 			expect(conc[0].surface).toBe('λόγος');
+		});
+
+		it('queries pre-indexed concordance_refs with Strongs number priority', async () => {
+			mockQuery.mockResolvedValueOnce([
+				{
+					ref_label: 'Gen 1:1',
+					display_label: 'Gen 1:1',
+					work_unit_id: 58765
+				},
+				{
+					ref_label: 'Gen 10:10',
+					display_label: 'Gen 10:10',
+					work_unit_id: 59000
+				}
+			]);
+
+			const conc = await getConcordance(2, 'ראשית', 10, 'H7225');
+			expect(conc).toHaveLength(2);
+			expect(conc[0].ref_label).toBe('Gen 1:1');
+			expect(conc[0].work_unit_id).toBe(58765);
+			expect(mockQuery).toHaveBeenCalledWith(
+				expect.stringContaining('FROM concordance_refs'),
+				[2, 'H7225', 10]
+			);
+		});
+
+		it('fetches on-demand verse text via getVerseText', async () => {
+			mockQuery.mockResolvedValueOnce([
+				{
+					body: 'בְּרֵאשִׁ֖ית בָּרָ֣א אֱלֹהִ֑ים אֵ֥ת הַשָּׁמַ֖יִם וְאֵ֥ת הָאָֽרֶץ׃'
+				}
+			]);
+
+			const body = await getVerseText(58765);
+			expect(body).toContain('בְּרֵאשִׁ֖ית');
+			expect(mockQuery).toHaveBeenCalledWith(
+				expect.stringContaining('SELECT body FROM work_units WHERE id = ?'),
+				[58765]
+			);
 		});
 
 		it('looks up BDB with Strongs priority, headword, and stripped key fallbacks', async () => {

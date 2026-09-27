@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 	import * as StringUtils from '$lib/utils/string-utils.js';
 	import Icon from './ui/icons/Icon.svelte';
 	import BarsSvg from './ui/icons/colorful-bar-chart.svg';
@@ -12,6 +12,7 @@
 	import Grid from 'gridjs-svelte';
 	import LSJEntry from './LSJEntry.svelte';
 	import BDBEntry from './BDBEntry.svelte';
+	import TextsDisplay from './TextsDisplay.svelte';
 	import CopyText from './ui/CopyText.svelte';
 	import { formatMorphBadges, parseHebrewMorphSegments } from '$lib/utils/morph-utils.js';
 	import {
@@ -21,6 +22,7 @@
 		type ConcordanceOccurrence
 	} from '$lib/services/dbClient';
 	import { readerState } from '$lib/stores/readerState.svelte';
+    import { mylog } from '../env/env';
 
 	let { lemma }: { lemma: any } = $props();
 
@@ -44,11 +46,23 @@
 		lemma?.colVersion || (isHebrew ? 'BHS' : lemma?.corpus === 'sblgnt' ? 'SBLGNT' : 'LXX')
 	);
 
-	// Reset segment to stem when active word changes
-	$effect(() => {
-		const _ = lemma?.word || lemma?.lemma || lemma?.id;
+	// Reset segment and stats when active word changes
+	function resetLemma() {
+		
 		selectedSegment = 'stem';
-	});
+		bookFrequencies = [];
+		concordanceOccurrences = [];
+	}
+
+	function switchSegment(segmentId: string){
+		selectedSegment = segmentId;
+			// Reset stats when switching between prefix and stem segments
+		bookFrequencies = [];
+		showReferences=false;
+		concordanceOccurrences = [];
+		showStats=false;
+	}
+
 
 	const parsedHebrewMorph = $derived.by(() => {
 		if (!isHebrew || !lemma?.morph) return null;
@@ -89,7 +103,8 @@
 		if (bookFrequencies.length > 0 || isFetchingStats) return;
 		isFetchingStats = true;
 		try {
-			const freqs = await getWordFrequencyByBook(lemma.work_id, lookupKey);
+			const workId = currentLemmaData?.work_id || lemma?.work_id;
+			const freqs = await getWordFrequencyByBook(workId, lookupKey, currentLemmaData?.strongs);
 			bookFrequencies = freqs;
 		} catch (err) {
 			console.warn('[LemmaInfo] Error loading frequencies:', err);
@@ -99,10 +114,12 @@
 	}
 
 	async function loadConcordance() {
+		mylog("loadConcordance()", true);
 		if (concordanceOccurrences.length > 0 || isFetchingReferences) return;
 		isFetchingReferences = true;
 		try {
-			const occs = await getConcordance(lemma.work_id, lookupKey, 50);
+			const workId = currentLemmaData?.work_id || lemma?.work_id;
+			const occs = await getConcordance(workId, lookupKey, 0, currentLemmaData?.strongs);
 			concordanceOccurrences = occs;
 		} catch (err) {
 			console.warn('[LemmaInfo] Error loading concordance:', err);
@@ -150,6 +167,11 @@
 			}
 		}
 	}
+	onMount(()=>{
+		resetLemma();
+	});
+
+	$inspect('lemma', lemma)
 </script>
 
 <div class="items-center text-center">
@@ -187,7 +209,7 @@
 					<button
 						type="button"
 						class="px-2.5 py-1 text-xs rounded-md transition-colors font-medium flex items-center gap-1.5 cursor-pointer {isSelected ? 'bg-link text-white shadow-xs' : 'text-ink hover:bg-rule/40'}"
-						onclick={() => selectedSegment = `prefix-${pIdx}`}
+						onclick={() => {switchSegment(`prefix-${pIdx}`)}}
 					>
 						<span class="hebrew font-hebrew text-sm" dir="rtl">{prefix.prefix}</span>
 						<span class="opacity-90">({prefix.name})</span>
@@ -236,9 +258,9 @@
 	<!-- 3. Unabridged Dictionary Entry (BDB or LSJ) -->
 	<div class="max-w-xl mx-auto px-2">
 		{#if isHebrew}
-			<BDBEntry lemma={currentLemmaData} lang="hebrew" dbAbbrev="bhs" autoOpen={true} />
+			<BDBEntry lemma={currentLemmaData} lang="hebrew" dbAbbrev="bhs" autoOpen={false} />
 		{:else}
-			<LSJEntry lemma={currentLemmaData} lang="greek" dbAbbrev={lemma?.corpus || 'lxx'} autoOpen={true} />
+			<LSJEntry lemma={currentLemmaData} lang="greek" dbAbbrev={lemma?.corpus || 'lxx'} autoOpen={false} />
 		{/if}
 	</div>
 
@@ -249,7 +271,7 @@
 			buttonText=""
 			customClickHandler={() => {
 				showReferences = false;
-				if (!showStats) loadStats();
+				if (showStats) loadStats();
 			}}
 		>
 			<Icon svg={BarsSvg} />Stats & Charts
@@ -260,7 +282,7 @@
 			buttonText=""
 			customClickHandler={() => {
 				showStats = false;
-				if (!showReferences) loadConcordance();
+				if (showReferences) loadConcordance();
 			}}
 		>
 			{#if isFetchingReferences}
@@ -270,14 +292,14 @@
 			{:else}
 				<Icon svg={BookSvg} />
 			{/if}
-			Concordance Occurrences
+			See {lemma.total ?? ''} Occurrences
 		</OptionButton>
 	</div>
 
 	<!-- 5. Stats & Charts Panel -->
 	{#if showStats}
 		<hr class="my-4 border-rule opacity-60" />
-		<div class="max-w-2xl mx-auto text-left">
+		<div class="max-w-2xl mx-auto text-center">
 			<h2 class="text-xl font-bold pb-1 text-ink text-center">Frequency Distribution</h2>
 
 			<Tabs headings={statsTabs} bind:selectedTabIndex={selectedStatsTab} classes={['my-2']} />
@@ -349,41 +371,30 @@
 	{#if showReferences}
 		<hr class="my-4 border-rule opacity-60" />
 		<div class="max-w-2xl mx-auto text-left">
-			<div class="flex items-center justify-between mb-2">
+			<div class="flex items-center justify-between mb-3">
 				<h2 class="text-xl font-bold text-ink">Concordance Instances</h2>
-				<span class="text-xs font-medium text-ink-soft">Showing up to 50 occurrences</span>
+				<span class="text-xs font-medium text-ink-soft">
+					{concordanceOccurrences.length} verse references loaded
+				</span>
 			</div>
 
 			{#if isFetchingReferences}
 				<div class="py-8 text-center flex flex-col items-center justify-center gap-2">
 					<span class="inline-block w-8 h-8 border-4 border-link border-t-transparent rounded-full animate-spin"></span>
-					<span class="text-sm text-ink-soft font-medium">Querying SQLite for concordance verses...</span>
+					<span class="text-sm text-ink-soft font-medium">Querying SQLite for concordance references...</span>
 				</div>
 			{:else if concordanceOccurrences.length === 0}
 				<div class="py-6 text-center text-sm text-ink-soft">
 					No verse occurrences found for this lemma.
 				</div>
 			{:else}
-				<div class="flex flex-col gap-2 max-h-[380px] overflow-y-auto pr-1">
-					{#each concordanceOccurrences as occ}
-						<div class="p-3 rounded-lg border border-rule bg-page shadow-xs hover:border-link/40 transition-colors">
-							<div class="flex items-center justify-between mb-1">
-								<button
-									type="button"
-									class="text-xs font-bold text-link hover:underline cursor-pointer"
-									onclick={() => navigateToOccurrence(occ.display_label)}
-									title="Jump to {occ.display_label}"
-								>
-									{occ.display_label}
-								</button>
-								<span class="text-[11px] font-mono text-ink-soft opacity-75">#{occ.position}</span>
-							</div>
-							<p class="{isHebrew ? 'font-hebrew text-lg' : 'font-greek text-base'} text-ink leading-relaxed" dir={isHebrew ? 'rtl' : 'ltr'}>
-								{occ.body}
-							</p>
-						</div>
-					{/each}
-				</div>
+				{#key concordanceOccurrences}
+				<TextsDisplay
+					occurrences={concordanceOccurrences}
+					lang={lang}
+					dbAbbrev={isHebrew ? 'bhs' : 'lxx'}
+				/>
+				{/key}
 			{/if}
 		</div>
 	{/if}

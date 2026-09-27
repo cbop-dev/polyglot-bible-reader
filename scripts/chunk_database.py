@@ -26,19 +26,29 @@ def rechunk():
     chunks = sorted([f for f in os.listdir(OUTPUT_DIR) if f.startswith('polyglot.db.')])
     print(f'Created {len(chunks)} chunks ({chunks[0]} .. {chunks[-1]}).')
 
+    import sqlite3
+    conn = sqlite3.connect(DB_PATH)
+    cur = conn.cursor()
+    cur.execute("PRAGMA page_size;")
+    page_size = cur.fetchone()[0]
+    conn.close()
+    print(f'Detected SQLite page_size: {page_size} bytes.')
+
     # Update config.json
+    import time
     config = {
         "serverMode": "chunked",
-        "requestChunkSize": 4096,
+        "requestChunkSize": page_size,
         "urlPrefix": "polyglot.db.",
         "serverChunkSize": CHUNK_SIZE,
         "databaseLengthBytes": total_bytes,
-        "suffixLength": 2
+        "suffixLength": 2,
+        "cacheBust": f"v{int(time.time())}"
     }
     config_path = os.path.join(OUTPUT_DIR, 'config.json')
     with open(config_path, 'w', encoding='utf-8') as f:
         json.dump(config, f, indent=2)
-    print(f'Updated config.json with length {total_bytes:,} bytes.')
+    print(f'Updated config.json (requestChunkSize: {page_size}) with length {total_bytes:,} bytes.')
 
     # Verify sha256 checksum of reassembled chunks
     orig_hasher = hashlib.sha256()
