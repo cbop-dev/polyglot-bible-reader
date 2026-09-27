@@ -216,7 +216,7 @@
 	:global(.bdb-text .hebrew) {
 		direction: rtl;
 		display: inline-block;
-		font-family: "Ezra SIL", "SBL Hebrew", "SBL BibLit", serif;
+		font-family: "Ezra SIL", serif;
 		font-size: 1.18em;
 		color: var(--color-ink);
 	}

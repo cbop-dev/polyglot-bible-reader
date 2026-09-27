@@ -10,7 +10,7 @@ node_modules
 # OS
 .DS_Store
 Thumbs.db
-
+/build2
 # Env
 .env
 .env.*
@@ -28,3 +28,7 @@ src/.unused/
 scripts/__pycache__/
 
 .archive/
+
+build2/www/404.html
+
+build2/www/sqlite/

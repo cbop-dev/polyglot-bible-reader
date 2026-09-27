@@ -1,6 +1,7 @@
 <script>
 	import { getLexiconEntry, normalizeGreek } from '$lib/services/dbClient';
 	import { onMount, untrack } from 'svelte';
+    import { mylog } from '../env/env';
 
 	/**
 	 * @typedef LSJEntryProps
@@ -12,10 +13,13 @@
 	/** @type {LSJEntryProps} */
 	let { lemma, lang = 'greek', dbAbbrev = 'lxx', autoOpen = false } = $props();
 
+	$effect(()=>{
+		//const _ = lemma;
+		//resetEntry();
+	})
 	let isOpen = $state(autoOpen);
 	let loading = $state(false);
-	/** @type {{ headword?: string, lsjIndex?: string, matchType?: string, def?: string } | null} */
-	let entry = $state(null);
+	
 	let isProper = $state(false);
 	let hasSearched = $state(false);
 	let prevWordKey = $state('');
@@ -30,41 +34,60 @@
 		typeof lemma === 'object' ? lemma?.plain || '' : ''
 	);
 
+	/** @type {{ headword?: string, lsjIndex?: string, matchType?: string, def?: string } | null} */
+	let fetchedEntry = $state(null);
+
+	//let entry = $state(null);
+	/** @type {{ headword?: string, lsjIndex?: string, matchType?: string, def?: string } | null} entry
+	*/
+	let entry = $derived(isOpen && fetchedEntry ? fetchedEntry : null);
+
 	/**
 	 * Asynchronously fetch the LSJ entry without blocking the main thread or modal render
+	 * @returns  {Promise<{ headword?: string, lsjIndex?: string, matchType?: string, def?: string } | null>}
 	 */
 	async function fetchLsj() {
-		const target = lemmaText;
-		const targetStrongs = strongsCode;
+		
+		if (!fetchedEntry || normalizeGreek(entry?.headword ?? '') != normalizeGreek(lemmaText)){
 
-		if (lang !== 'greek' || (!target && !targetStrongs)) {
-			loading = false;
-			entry = null;
-			isProper = false;
-			hasSearched = false;
-			return;
-		}
+			const target = lemmaText;
+			const targetStrongs = strongsCode;
 
-		loading = true;
-		try {
-			const res = await getLexiconEntry('lsj', target, targetStrongs);
-			entry = res
-				? {
-						headword: res.headword,
-						lsjIndex: res.lsj_index,
-						matchType: res.match_type,
-						def: res.definition
-				  }
-				: null;
-			isProper = false;
-			hasSearched = true;
-		} catch (err) {
-			console.error('Error loading LSJ entry:', err);
-			entry = null;
-			hasSearched = true;
-		} finally {
-			loading = false;
+			if (lang !== 'greek' || (!target && !targetStrongs)) {
+				loading = false;
+				
+				isProper = false;
+				hasSearched = false;
+				
+			}
+			else {
+				loading = true;
+				try {
+					mylog(`fecthing lsj entry for ${lemmaText}`, true);
+					let lexEntry = await getLexiconEntry('lsj', target, targetStrongs);
+					fetchedEntry = lexEntry
+						? {
+								headword: lexEntry.headword,
+								lsjIndex: lexEntry.lsj_index,
+								matchType: lexEntry.match_type,
+								def: lexEntry.definition
+						}
+						: null;
+					isProper = false;
+					hasSearched = true;
+
+					
+				} catch (err) {
+					console.error('Error loading LSJ entry:', err);
+					
+					hasSearched = true;
+				} finally {
+					loading = false;
+					//fetchedEntry=null;
+				}
+			}
 		}
+		
 	}
 
 	function handleToggle(e) {
@@ -76,6 +99,7 @@
 
 	// When lemma/strongs changes, reset state
 	function resetEntry(){
+		fetchedEntry=null;
 		const target = lemmaText;
 		const targetStrongs = strongsCode;
 		const wordKey = `${targetStrongs || ''}_${target}`;
@@ -87,7 +111,7 @@
 			loading = false;
 			if (isOpen && (target || targetStrongs)) {
 				untrack(() => {
-					fetchLsj();
+					//fetchLsj();
 				});
 			}
 		}
@@ -151,7 +175,9 @@
 				return '';
 		}
 	});
-	onMount(()=>{resetEntry()});
+	onMount(()=>{
+		mylog('LSJReset()!', true);
+		resetEntry()});
 </script>
 
 {#if lang === 'greek'}

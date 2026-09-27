@@ -1,4 +1,5 @@
 import { getDbWorker } from './dbWorker';
+import { mylog } from '$lib/lemma-ui/env/env';
 import { normalizeBookName, getMappedReference } from '$lib/bookMapping.js';
 
 export interface WorkRow {
@@ -125,6 +126,7 @@ export function _clearDbClientCache() {
  */
 export async function query<T = any>(sql: string, params: any[] = []): Promise<T[]> {
 	const worker = await getDbWorker();
+	mylog(`query db:`, true);
 	return (worker.db as any).query(sql, params);
 }
 

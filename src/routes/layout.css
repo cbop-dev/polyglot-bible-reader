@@ -53,7 +53,7 @@ body {
   font-style: normal;
   font-display: swap;
 }
-
+/*
 @font-face {
   font-family: 'SBL Hebrew';
   src: url('/fonts/SBL_Hbrw.ttf') format('truetype');
@@ -69,10 +69,10 @@ body {
   font-style: normal;
   font-display: swap;
 }
-
+*/
 .font-hebrew,
 .hebrew {
-  font-family: 'Ezra SIL', 'SBL Hebrew', serif;
+  font-family: 'Ezra SIL', serif;
   direction: rtl;
 }
 
