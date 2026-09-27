@@ -35,6 +35,8 @@ export var bookAbbrevMap =
     'Neh': ['Nehemiah'],
     'Tob': ['Tobit'],
     'Jdt': ['Judith'],
+    '1Esdr':['1 Esdras','1 Esdr', 'EsdrA', 'EsdrasA','Esdras A'],
+    '2Esdr':['2 Esdras','2 Esdr', 'EsdrB', 'EsdrasB','Esdras B'],
     'Esth': ['Esther', 'Est'],
     '1 Macc': ['1 Maccabees', '1 Macc', '1 Mac', '1 Maccab', 'I Macc', 'I Mac', 'I Maccab'],
     '2 Macc': ['2 Maccabees', '2 Macc', '2 Mac', '2 Maccab', 'II Macc', 'II Mac', 'II Maccab'],
@@ -112,7 +114,7 @@ for (const [key, aliases] of Object.entries(bookAbbrevMap)) {
 
 
 /**
- * @description - returns true if one NT reference is contained within another, e.g., refIncludes("Matt 1:1,3-10", "Matt 1:4") and  
+ * @description - returns true if one biblical reference is contained within another, e.g., refIncludes("Matt 1:1,3-10", "Matt 1:4") and  
  *                  refIncludes("Rev", "Rev 2") each return true, because the last parameter is contained in the first;
  *                 but refIncludes("Mark 1", "Mark 2:2"), refIncludes("Luke 1:4", "Luke 1:7"), and  refIncludes("Luke 16", "Mark 16:2")
  *                  each return false, because the later are not contained in the former.

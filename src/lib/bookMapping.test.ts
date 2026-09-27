@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getBookFile, getMappedReference } from './bookMapping.js';
+import { getBookFile, getMappedReference, normalizeBookName, getCanonicalSlug } from './bookMapping.js';
 
 describe('bookMapping', () => {
   describe('getBookFile', () => {
@@ -77,11 +77,37 @@ describe('bookMapping', () => {
   });
 
   describe('getMappedReference', () => {
+    it('should map BHS Ezra 1:1 to LXX 2Esdr 1:1', () => {
+      const ref = getMappedReference('LXX', 'Ezra', '1', '1');
+      expect(ref.mappedBook).toBe('2Esdr');
+      expect(ref.mappedChapter).toBe('1');
+      expect(ref.mappedVerse).toBe('1');
+    });
+
     it('should map BHS Neh 1:1 to LXX 2Esdr 11:1', () => {
       const ref = getMappedReference('LXX', 'Neh', '1', '1');
       expect(ref.mappedBook).toBe('2Esdr');
       expect(ref.mappedChapter).toBe('11');
       expect(ref.mappedVerse).toBe('1');
+    });
+
+    it('should map LXX 2Esdr 1:1 to BHS Ezra 1:1', () => {
+      const ref = getMappedReference('BHS', '2Esdr', '1', '1');
+      expect(ref.mappedBook).toBe('Ezra');
+      expect(ref.mappedChapter).toBe('1');
+      expect(ref.mappedVerse).toBe('1');
+    });
+
+    it('should map LXX 2Esdr 11:1 to BHS Neh 1:1', () => {
+      const ref = getMappedReference('BHS', '2Esdr', '11', '1');
+      expect(ref.mappedBook).toBe('Neh');
+      expect(ref.mappedChapter).toBe('1');
+      expect(ref.mappedVerse).toBe('1');
+    });
+
+    it('should indicate LXX 1Esdr is omitted in BHS', () => {
+      const ref = getMappedReference('BHS', '1Esdr', '1', '1');
+      expect(ref.omitted).toBe(true);
     });
 
     it('should map BHS Ps 22:1 to LXX Ps 21:1', () => {
@@ -171,6 +197,37 @@ describe('bookMapping', () => {
         const fileName = getBookFile(tc.version, tc.book);
         expect(fileName).toBe(tc.expected);
       }
+    });
+  });
+
+  describe('normalizeBookName and getCanonicalSlug', () => {
+    it('should normalize various aliases to the canonical DB slug', () => {
+      expect(getCanonicalSlug('Ezra')).toBe('ezra');
+      expect(getCanonicalSlug('Neh')).toBe('nehemiah');
+      expect(getCanonicalSlug('Nehemiah')).toBe('nehemiah');
+      expect(getCanonicalSlug('2Esdr')).toBe('2-esdras');
+      expect(getCanonicalSlug('2 Esdras')).toBe('2-esdras');
+      expect(getCanonicalSlug('1Esdr')).toBe('1-esdras');
+      expect(getCanonicalSlug('Qoh')).toBe('ecclesiastes');
+      expect(getCanonicalSlug('Qoheleth')).toBe('ecclesiastes');
+      expect(getCanonicalSlug('Eccl')).toBe('ecclesiastes');
+      expect(getCanonicalSlug('Cant')).toBe('song-of-solomon');
+      expect(getCanonicalSlug('Song of Songs')).toBe('song-of-solomon');
+      expect(getCanonicalSlug('1_Cor')).toBe('1-corinthians');
+      expect(getCanonicalSlug('1 Cor')).toBe('1-corinthians');
+      expect(getCanonicalSlug('1Cor')).toBe('1-corinthians');
+      expect(getCanonicalSlug('1 Sam')).toBe('1-samuel');
+      expect(getCanonicalSlug('1 Kingdoms')).toBe('1-samuel');
+    });
+
+    it('should return the full BookDefinition with metadata', () => {
+      const def = normalizeBookName('Qoh');
+      expect(def).not.toBeNull();
+      expect(def?.slug).toBe('ecclesiastes');
+      expect(def?.title).toBe('Ecclesiastes');
+      expect(def?.standardAbbrev).toBe('Eccl');
+      expect(def?.versionBooks?.BHS).toBe('Qoh');
+      expect(def?.versionBooks?.KJV).toBe('Eccl');
     });
   });
 });

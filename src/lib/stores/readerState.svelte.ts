@@ -1,5 +1,5 @@
 import { getVersionBooks } from '$lib/config/versions';
-import { getBookFile } from '$lib/bookMapping.js';
+import { getBookFile, getMappedReference, getBookForVersion } from '$lib/bookMapping.js';
 import type { HebrewDiacriticMode } from '$lib/utils/diacritics';
 import { loadChapterFromDb, loadChaptersForBook } from '$lib/services/bibleDataLoader';
 import {
@@ -83,7 +83,7 @@ export class ReaderState {
 		return {
 			exists: false,
 			omitted: true,
-			label: `${this.selectedBook} ${this.selectedChapter}:${verseKey}`,
+			label: `${getBookForVersion(this.selectedBook,this.selectedVersion)} ${this.selectedChapter}:${verseKey}`,
 			isDivergent: false,
 			verseData: undefined
 		};
@@ -243,10 +243,19 @@ export class ReaderState {
 		this.versionDropdownOpen = false;
 
 		const books = getVersionBooks(version);
+		const currentCh = parseInt(this.selectedChapter, 10) || 1;
 
-		// If current book is available in new version, attempt reference translation (Option B)
+		// 1. Check reference translation using getMappedReference first
+		const mapped = getMappedReference(version, this.selectedBook, currentCh, 1);
+		if (mapped && !mapped.omitted && books.includes(mapped.mappedBook)) {
+			this.selectedBook = mapped.mappedBook;
+			this.selectedChapter = String(mapped.mappedChapter);
+			this.loadCurrentChapter();
+			return;
+		}
+
+		// 2. If current book is available in new version, attempt reference translation
 		if (books.includes(this.selectedBook)) {
-			const currentCh = parseInt(this.selectedChapter, 10) || 1;
 			try {
 				const translated = await translateReference(this.selectedBook, currentCh, 1, oldVersion, version);
 				if (translated && translated.chapter) {
@@ -259,13 +268,12 @@ export class ReaderState {
 			return;
 		}
 
-		// Try mapped book
-		const targetBook = getBookFile(version, this.selectedBook);
+		// 3. Try mapped book via getBookForVersion
+		const targetBook = getBookForVersion(this.selectedBook, version, currentCh);
 		if (books.includes(targetBook)) {
 			this.selectedBook = targetBook;
-			const currentCh = parseInt(this.selectedChapter, 10) || 1;
 			try {
-				const translated = await translateReference(targetBook, currentCh, 1, oldVersion, version);
+				const translated = await translateReference(this.selectedBook, currentCh, 1, oldVersion, version);
 				if (translated && translated.chapter) {
 					this.selectedChapter = String(translated.chapter);
 				}

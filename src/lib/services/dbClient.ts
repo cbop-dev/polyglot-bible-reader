@@ -1,4 +1,5 @@
 import { getDbWorker } from './dbWorker';
+import { normalizeBookName, getMappedReference } from '$lib/bookMapping.js';
 
 export interface WorkRow {
 	id: number;
@@ -204,11 +205,16 @@ export async function resolveCanonicalWorkId(
 	if (!bookIdentifier) return null;
 	const books = await getCanonicalWorks();
 	const norm = cleanNorm(bookIdentifier);
-	let targetSlug = cleanNorm(BOOK_ALIASES[norm] || norm);
+	const canonical = normalizeBookName(bookIdentifier);
+	let targetSlug = canonical ? cleanNorm(canonical.slug) : cleanNorm(BOOK_ALIASES[norm] || norm);
 
 	const isLxx = version === 'LXX' || version === 'Brenton' || version === 'swete-lxx' || version === 'brenton-lxx';
-	if (isLxx && LXX_VARIANT_BOOKS[targetSlug]) {
-		targetSlug = cleanNorm(LXX_VARIANT_BOOKS[targetSlug]);
+	if (isLxx) {
+		if (LXX_VARIANT_BOOKS[targetSlug]) {
+			targetSlug = cleanNorm(LXX_VARIANT_BOOKS[targetSlug]);
+		} else if (targetSlug === 'ezra' || targetSlug === 'nehemiah') {
+			targetSlug = '2-esdras';
+		}
 	}
 
 	// Exact slug match (e.g. '1-corinthians' -> '1corinthians')
@@ -276,6 +282,17 @@ export async function translateReference(
 	toVersion: string
 ): Promise<TranslatedReference | null> {
 	if (!book) return null;
+
+	// 1. Check declarative cross-tradition alignment rules first
+	const inMem = getMappedReference(toVersion, book, chapter, verse);
+	if (inMem && !inMem.omitted && (inMem.mappedBook !== book || inMem.mappedChapter !== String(chapter))) {
+		return {
+			book: inMem.mappedBook,
+			chapter: parseInt(inMem.mappedChapter, 10),
+			verse: parseInt(inMem.mappedVerse, 10) || 1
+		};
+	}
+
 	const fromCwId = await resolveCanonicalWorkId(book, fromVersion);
 	const toCwId = await resolveCanonicalWorkId(book, toVersion);
 
@@ -379,27 +396,45 @@ export async function getChapterVerses(
 			)
 		),
 		aligned_refs AS (
-			SELECT id AS target_cref_id, id AS aligned_cref_id FROM target_refs
+			SELECT id AS target_cref_id, id AS aligned_cref_id, 0 AS priority FROM target_refs
 			UNION
-			SELECT * FROM mapped_refs
+			SELECT target_cref_id, aligned_cref_id, 1 AS priority FROM mapped_refs
 			UNION
-			SELECT * FROM variant_identity_refs
+			SELECT target_cref_id, aligned_cref_id, 2 AS priority FROM variant_identity_refs
+		),
+		candidate_verses AS (
+			SELECT 
+				tr.id AS base_cref_id,
+				tr.ord,
+				tr.hierarchy,
+				tr.display_label AS base_label,
+				w.slug AS version,
+				w.id AS work_id,
+				wu.id AS work_unit_id,
+				wu.label AS verse_label,
+				wu.body,
+				ROW_NUMBER() OVER (
+					PARTITION BY tr.id, w.id 
+					ORDER BY ar.priority, wu.id
+				) AS rn
+			FROM target_refs tr
+			JOIN aligned_refs ar ON ar.target_cref_id = tr.id
+			JOIN work_units wu ON wu.canonical_ref_id = ar.aligned_cref_id
+			JOIN works w ON wu.work_id = w.id
+			WHERE w.slug IN (${slugPlaceholders})
 		)
 		SELECT 
-			tr.id AS base_cref_id,
-			tr.ord,
-			tr.hierarchy,
-			tr.display_label AS base_label,
-			w.slug AS version,
-			wu.id AS work_unit_id,
-			wu.label AS verse_label,
-			wu.body
-		FROM target_refs tr
-		JOIN aligned_refs ar ON ar.target_cref_id = tr.id
-		JOIN work_units wu ON wu.canonical_ref_id = ar.aligned_cref_id
-		JOIN works w ON wu.work_id = w.id
-		WHERE w.slug IN (${slugPlaceholders})
-		ORDER BY tr.ord, w.id;
+			base_cref_id,
+			ord,
+			hierarchy,
+			base_label,
+			version,
+			work_unit_id,
+			verse_label,
+			body
+		FROM candidate_verses
+		WHERE rn = 1
+		ORDER BY ord, work_id;
 	`;
 
 	const params = [cwId, String(chapter), `${chapter},%`, cwId, ...workSlugs];

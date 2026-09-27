@@ -1,4 +1,5 @@
 import { formatHebrew, formatGreek, type HebrewDiacriticMode } from '$lib/utils/diacritics';
+import { getBookForVersion } from '$lib/bookMapping';
 import {
 	getChapterVerses,
 	getBookChapters,
@@ -52,7 +53,7 @@ export async function loadChapterFromDb(
 			chapterDataByVerse[vKey][v.version] = {
 				exists: true,
 				omitted: false,
-				label: v.verse_label ? `${book} ${v.verse_label}` : v.base_label,
+				label: v.verse_label ? `${getBookForVersion(book,v.version)} ${v.verse_label}` : v.base_label,
 				isDivergent: v.verse_label ? v.verse_label !== `${chapter}:${vKey}` : false,
 				verseData: {
 					id: v.work_unit_id,
