@@ -111,7 +111,7 @@ export class ReaderState {
           else {
             const row = 0; 
             let  col = 0;
-            if (false && this.versionGrid[row][0]=='BHS' && selectedDataset?.testament=='ot' ){
+            if (this.versionGrid[row][0]=='BHS' && selectedDataset?.testament=='ot' ){
               //leave the BHS in left column if it's there--put this and we got an OT version: make left-aligned, to look NICE alongside BHS
               col = 1;
 
