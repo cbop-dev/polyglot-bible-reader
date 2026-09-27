@@ -33,7 +33,8 @@
     <!-- Dynamic Grid Verse Cards -->
     <div class="flex flex-col gap-5 max-w-full mx-auto">
       {#if readerState.verseKeys.length === 0}
-        <p class="text-center text-ink-soft py-10">Loading or chapter not found.</p>
+       <span class="inline-block w-8 h-8 border-4 border-link border-t-transparent rounded-full animate-spin"></span>
+        <p class="text-center text-ink-soft py-10">Loading...</p>
       {/if}
 
       {#each readerState.verseKeys as v (v)}

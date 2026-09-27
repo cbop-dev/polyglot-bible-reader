@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 
-if (fs.existsSync('./static/data')) {
-  console.log('✓ static/data verified.');
+if (fs.existsSync('./static/db/config.json')) {
+  console.log('✓ static/db SQLite database configuration verified.');
 } else {
-  console.warn('⚠ static/data directory not found.');
+  console.warn('⚠ static/db/config.json not found.');
 }

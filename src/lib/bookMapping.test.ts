@@ -138,40 +138,38 @@ describe('bookMapping', () => {
       expect(ref2.mappedVerse).toBe('1');
     });
 
-    it('should verify that all getBookFile results for 1-4 Maccabees, Qoh, Cant, Tob exist on disk', async () => {
-      const fs = await import('fs');
-      const testCases: { version: string; book: string }[] = [
-        { version: 'LXX', book: '1Mac' },
-        { version: 'LXX', book: '2Mac' },
-        { version: 'LXX', book: '3Mac' },
-        { version: 'LXX', book: '4Mac' },
-        { version: 'WEB', book: '1Mac' },
-        { version: 'WEB', book: '2Mac' },
-        { version: 'Vulgate', book: '1Mac' },
-        { version: 'Vulgate', book: '2Mac' },
-        { version: 'KJV', book: '1Mac' },
-        { version: 'KJV', book: '2Mac' },
-        { version: 'Brenton', book: '1Mac' },
-        { version: 'Brenton', book: '2Mac' },
-        { version: 'Brenton', book: '3Mac' },
-        { version: 'Brenton', book: '4Mac' },
-        { version: 'Brenton', book: '2Esdr' },
-        { version: 'KJV', book: 'Qoh' },
-        { version: 'KJV', book: 'Cant' },
-        { version: 'KJV', book: 'TobBA' },
-        { version: 'WEB', book: 'Qoh' },
-        { version: 'WEB', book: 'Cant' },
-        { version: 'Vulgate', book: 'Qoh' },
-        { version: 'Vulgate', book: 'Cant' },
-        { version: 'Brenton', book: 'Qoh' },
-        { version: 'Brenton', book: 'Cant' },
-        { version: 'Brenton', book: 'Esth' }
+    it('should map book identifiers correctly for 1-4 Maccabees, Qoh, Cant, Tob', () => {
+      const testCases: { version: string; book: string; expected: string }[] = [
+        { version: 'LXX', book: '1Mac', expected: '1Mac' },
+        { version: 'LXX', book: '2Mac', expected: '2Mac' },
+        { version: 'LXX', book: '3Mac', expected: '3Mac' },
+        { version: 'LXX', book: '4Mac', expected: '4Mac' },
+        { version: 'WEB', book: '1Mac', expected: '1Mac' },
+        { version: 'WEB', book: '2Mac', expected: '2Mac' },
+        { version: 'Vulgate', book: '1Mac', expected: '1Mac' },
+        { version: 'Vulgate', book: '2Mac', expected: '2Mac' },
+        { version: 'KJV', book: '1Mac', expected: '1Mac' },
+        { version: 'KJV', book: '2Mac', expected: '2Mac' },
+        { version: 'Brenton', book: '1Mac', expected: '1Mac' },
+        { version: 'Brenton', book: '2Mac', expected: '2Mac' },
+        { version: 'Brenton', book: '3Mac', expected: '3Mac' },
+        { version: 'Brenton', book: '4Mac', expected: '4Mac' },
+        { version: 'Brenton', book: '2Esdr', expected: '2Esdr' },
+        { version: 'KJV', book: 'Qoh', expected: 'Eccl' },
+        { version: 'KJV', book: 'Cant', expected: 'Song' },
+        { version: 'KJV', book: 'TobBA', expected: 'Tob' },
+        { version: 'WEB', book: 'Qoh', expected: 'Eccl' },
+        { version: 'WEB', book: 'Cant', expected: 'Song' },
+        { version: 'Vulgate', book: 'Qoh', expected: 'Eccl' },
+        { version: 'Vulgate', book: 'Cant', expected: 'Song' },
+        { version: 'Brenton', book: 'Qoh', expected: 'Eccl' },
+        { version: 'Brenton', book: 'Cant', expected: 'Song' },
+        { version: 'Brenton', book: 'Esth', expected: 'AddEsth' }
       ];
 
       for (const tc of testCases) {
         const fileName = getBookFile(tc.version, tc.book);
-        const filePath = `static/data/${tc.version.toLowerCase()}/books/${fileName}.json`;
-        expect(fs.existsSync(filePath), `File should exist: ${filePath}`).toBe(true);
+        expect(fileName).toBe(tc.expected);
       }
     });
   });

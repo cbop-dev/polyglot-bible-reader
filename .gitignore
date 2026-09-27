@@ -26,3 +26,5 @@ vite.config.ts.timestamp-*
 src/.unused/
 
 scripts/__pycache__/
+
+.archive/
