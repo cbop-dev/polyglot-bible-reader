@@ -141,7 +141,7 @@ gap-2 sm:gap-4 -mx-3 px-1 sm:-mx-4 sm:px-4 md:-mx-8 md:px-3">
               <button 
                 type="button"
                 class="w-full text-left px-3 py-1.5 text-xs sm:text-sm hover:bg-rule flex items-center justify-between cursor-pointer {v === readerState.selectedVersion ? 'bg-blue-500 text-white hover:bg-blue-600 font-semibold' : 'text-ink'}"
-                onclick={() => readerState.handleVersionSelect(v)}
+                onclick={() => readerState.selectVersion(v)}
                 title={formatVersionLabel(v)}
               >
                 <span>{v}</span>

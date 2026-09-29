@@ -1,10 +1,10 @@
 import { getVersionBooks } from '$lib/config/versions';
 import { mylog } from '$lib/lemma-ui/env/env';
-import { getBookFile, getMappedReference, getBookForVersion } from '$lib/bookMapping.js';
+import { getBookFile, getMappedReference, getBookForVersion, getCorrectVersionName } from '$lib/bookMapping.js';
 import type { HebrewDiacriticMode } from '$lib/utils/diacritics';
 import { loadChapterFromDb, loadChaptersForBook } from '$lib/services/bibleDataLoader';
 //import { availableBibles } from '$lib/services/bible-datasets';
-import { availableBibles,dataSets } from '$lib/bookMapping.js';
+import { isValidVersion, availableBibles,dataSets } from '$lib/bookMapping.js';
 import {
 	getLemma,
 	getWorks,
@@ -243,6 +243,29 @@ export class ReaderState {
 		});
 	}
 
+	async setDisplayGrid(grid: string[][], reload=true): Promise<boolean>{
+		let changed = false;
+		const newGrid :string[][]= [];
+		grid.forEach((row)=>{
+			const theRow: string[]=[];
+			row.forEach((col)=>{
+				const versionToAdd=getCorrectVersionName(col.trim());
+				if (versionToAdd){
+					theRow.push(versionToAdd);
+				}
+			});
+			if (theRow.length)
+				newGrid.push(theRow);
+		});
+		
+		if (newGrid.length){
+			this.versionGrid=newGrid;
+			changed = true;
+			if (reload)
+				this.loadCurrentChapter();
+		}
+		return changed;
+	}
 	addColumn(newVersion='') {
 		
 		const used = new Set(this.versionGrid.flat());
@@ -302,73 +325,121 @@ export class ReaderState {
 		this.greekDiacritics = !this.greekDiacritics;
 	}
 
-	async handleVersionSelect(version: string) {
+	
+
+	async selectVersionBookChapter(version: string, book:string, chapter: string): Promise<boolean> {
+		let changed = false;
+		if (await this.selectVersion(version, false))
+		 	if (await this.selectBook(book, false))
+		 		changed = await this.selectChapter(chapter);
+		
+		return changed;
+	}
+
+	/**
+	 * 
+	 * @param version 
+	 * @param reload 
+	 * @returns {Promise<boolean>} true if a valid version was given and selectedVersion was changed.
+	 */
+	async selectVersion(version: string, reload=true): Promise<boolean> {
+		let ret = false;
 		const oldVersion = this.selectedVersion;
-		this.selectedVersion = version;
-		this.versionDropdownOpen = false;
-    this.ensureVisibleContainsSelectedVersion();
+		const matchingVersion = availableBibles.find((ver)=>ver.toLocaleLowerCase() == version.toLocaleLowerCase());
+		if (matchingVersion) {
+			this.selectedVersion = matchingVersion;
+			
+			this.versionDropdownOpen = false;
+			this.ensureVisibleContainsSelectedVersion();
 
-		const books = getVersionBooks(version);
-		const currentCh = parseInt(this.selectedChapter, 10) || 1;
+			const books = getVersionBooks(matchingVersion);
+			const currentCh = parseInt(this.selectedChapter, 10) || 1;
+			const targetBook = getBookForVersion(this.selectedBook, matchingVersion, currentCh);
 
-		// 1. Check reference translation using getMappedReference first
-		const mapped = getMappedReference(version, this.selectedBook, currentCh, 1);
-		if (mapped && !mapped.omitted && books.includes(mapped.mappedBook)) {
-			this.selectedBook = mapped.mappedBook;
-			this.selectedChapter = String(mapped.mappedChapter);
-			this.loadCurrentChapter();
-			return;
-		}
-
-		// 2. If current book is available in new version, attempt reference translation
-		if (books.includes(this.selectedBook)) {
-			try {
-				const translated = await translateReference(this.selectedBook, currentCh, 1, oldVersion, version);
-				if (translated && translated.chapter) {
-					this.selectedChapter = String(translated.chapter);
-				}
-			} catch (e) {
-				console.warn('[ReaderState] Reference translation error:', e);
+			// 1. Check reference translation using getMappedReference first
+			const mapped = getMappedReference(matchingVersion, this.selectedBook, currentCh, 1);
+			if (mapped && !mapped.omitted && books.includes(mapped.mappedBook)) {
+				this.selectedBook = mapped.mappedBook;
+				this.selectedChapter = String(mapped.mappedChapter);
+				//if (reload) this.loadCurrentChapter();
+				ret = true;			
+				mylog("selectVersion: one!", true);
 			}
-			this.loadCurrentChapter();
-			return;
-		}
 
-		// 3. Try mapped book via getBookForVersion
-		const targetBook = getBookForVersion(this.selectedBook, version, currentCh);
-		if (books.includes(targetBook)) {
-			this.selectedBook = targetBook;
-			try {
-				const translated = await translateReference(this.selectedBook, currentCh, 1, oldVersion, version);
-				if (translated && translated.chapter) {
-					this.selectedChapter = String(translated.chapter);
+			// 2. If current book is available in new version, attempt reference translation
+			else if (books.includes(this.selectedBook)) {
+				try {
+					const translated = await translateReference(this.selectedBook, currentCh, 1, oldVersion, matchingVersion);
+					if (translated && translated.chapter) {
+						this.selectedChapter = String(translated.chapter);
+						ret = true;
+					}
+				} catch (e) {
+					console.warn('[ReaderState] Reference translation error:', e);					
+					//return ret;
 				}
-			} catch (e) {
-				console.warn('[ReaderState] Reference translation error:', e);
+				//if (reload) this.loadCurrentChapter();
+				mylog("selectVersion: two!", true);
+				//return ret;
 			}
-			this.loadCurrentChapter();
-			return;
-		}
 
-		this.selectedBook = books[0] || 'Gen';
-		this.selectedChapter = '1';
-		this.loadCurrentChapter();
+			// 3. Try mapped book via getBookForVersion
+			
+			else if (books.includes(targetBook)) {
+				this.selectedBook = targetBook;
+				try {
+					const translated = await translateReference(this.selectedBook, currentCh, 1, oldVersion, matchingVersion);
+					if (translated && translated.chapter) {
+						this.selectedChapter = String(translated.chapter);
+					}
+				} catch (e) {
+					console.warn('[ReaderState] Reference translation error:', e);
+				}
+				//if (reload) this.loadCurrentChapter();
+				ret = true;
+				mylog("selectVersion: three!", true);
+				//return ret ;
+			}
+			else {
+				this.selectedBook = books[0] || 'Gen';
+				this.selectedChapter = '1';
+				//if (reload) this.loadCurrentChapter();
+				ret = true;
+				mylog("selectVersion: four!", true);
+				//return ret;
+			}
+
+		}
+		if (ret && reload)
+			this.loadCurrentChapter();
+		return ret;
 	}
 
-	selectBook(book: string) {
-		this.selectedBook = book;
-		this.selectedChapter = '1';
-		this.bookDropdownOpen = false;
-		this.loadCurrentChapter();
+	async selectBook(book: string, reload=true): Promise<boolean> {
+		let ret = false;
+		const validBook = getVersionBooks(this.selectedVersion).find((b)=>b.toLocaleLowerCase==book.trim().toLocaleLowerCase) ? true : false;
+		mylog(`found book '${book}' in version '${this.selectedVersion}!`, true);
+		if (validBook){	
+			this.selectedBook = book;
+			this.selectedChapter = '1';
+			this.bookDropdownOpen = false;
+			ret = true;
+			if (reload) this.loadCurrentChapter();
+		}
+		return ret;
 	}
 
-	selectChapter(chapter: string) {
+	
+	async selectChapter(chapter: string, reload=true): Promise<boolean> {
+		let ret = false;
 		this.selectedChapter = chapter;
+		ret = true;
 		this.chapterDropdownOpen = false;
-		this.loadCurrentChapter();
+		if (reload) this.loadCurrentChapter();
+		return ret;
 	}
 
-	scrollToVerse(verseKey: string) {
+	async scrollToVerse(verseKey: string) {
 		if (typeof document === 'undefined') return;
 		const el = document.getElementById(`verse-${verseKey}`);
 		if (el) {

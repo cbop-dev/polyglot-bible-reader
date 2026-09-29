@@ -142,7 +142,7 @@ This document outlines the SQLite query and storage optimizations implemented fo
    - Ran `VACUUM; ANALYZE;` and re-chunked into 72 parts (`polyglot.db.00`–`71`) with cache-bust hash updated.
 3. **Application Integration**:
    - [`dbClient.ts`](file:///home/cbrannan/dev/2-tmp/polyglot-bible-reader/src/lib/services/dbClient.ts): `resolveCanonicalWorkId()` uses `normalizeBookName()` and maps Ezra/Neh to `2-esdras` when querying Greek LXX. `translateReference()` uses `getMappedReference()` for instant cross-tradition navigation.
-   - [`readerState.svelte.ts`](file:///home/cbrannan/dev/2-tmp/polyglot-bible-reader/src/lib/stores/readerState.svelte.ts): `handleVersionSelect()` translates book and chapter numbers accurately (e.g. BHS Neh 1 $\rightarrow$ LXX 2Esdr 11, and LXX 2Esdr 11 $\rightarrow$ BHS Neh 1).
+   - [`readerState.svelte.ts`](file:///home/cbrannan/dev/2-tmp/polyglot-bible-reader/src/lib/stores/readerState.svelte.ts): `selectVersion()` translates book and chapter numbers accurately (e.g. BHS Neh 1 $\rightarrow$ LXX 2Esdr 11, and LXX 2Esdr 11 $\rightarrow$ BHS Neh 1).
 
 ### Validation
 - Tested Ezra 1: BHS shows Ezra 1:1–11, aligned LXX shows 2Esdr 1:1–11.

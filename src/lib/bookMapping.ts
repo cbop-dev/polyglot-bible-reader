@@ -54,6 +54,23 @@ export const myDataSets={
 
 export const availableBibles=Object.keys(datasetsDict);
 
+export function getCorrectVersionName(fuzzyName: string){
+	return availableBibles.find((ver)=>ver.toLocaleLowerCase() == fuzzyName.toLocaleLowerCase());
+}
+
+export function isValidVersion(versionName: string, caseSensitive=false): boolean{
+
+	let ret = false;
+
+	return availableBibles.find((ver)=>{
+		if (caseSensitive){
+			return isValidVersion(ver) ? true : false;
+		}
+		else{
+			return ver == versionName;
+		}
+	})? true: false;
+}
 export interface BookDefinition {
 	slug: string; // Exact canonical_works DB slug
 	standardAbbrev: string; // Standard UI abbreviation
@@ -389,7 +406,13 @@ export const CROSS_TRADITION_RULES: TraditionAlignmentRule[] = [
 		targetVersion: 'BHS',
 		targetBook: () => null,
 		omitted: true
-	}
+	},
+  {
+    fromCanonical: 'esther-greek',
+    targetVersion:'BHS',
+    targetBook:'esther',
+    
+  }
 ];
 
 /**
@@ -418,7 +441,7 @@ export function getBookForVersion(bookIdentifier: string, version: string, chapt
 	if (canonical.versionBooks && canonical.versionBooks[version]) {
 		return canonical.versionBooks[version]!;
 	}
-
+/*
 	// Special version overrides
 	if (version === 'Brenton') {
 		if (canonical.slug === 'esther' || canonical.slug === 'esther-greek') return 'AddEsth';
@@ -427,7 +450,7 @@ export function getBookForVersion(bookIdentifier: string, version: string, chapt
 	if (version === 'LXX') {
 		if (canonical.slug === 'esther-greek') return 'Esth';
 	}
-
+*/
 	return canonical.standardAbbrev;
 }
 
