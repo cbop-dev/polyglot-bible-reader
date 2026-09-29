@@ -33,10 +33,30 @@ pb-2.5 border-b border-rule z-20 shadow-xs">
     </div>
   </div>
 
+  {#if readerState.versionGrid[0].length > 1}
+    {@const row1 = readerState.versionGrid[0]}
+     <div class="grid gap-6 verse-grid" style="grid-template-columns: repeat({row1.length > 0 ? row1.length : 1}, minmax(0, 1fr))">
+        {#each row1 as colVersion, cIdx}
+        <div class="relative flex gap-0">
+              <button 
+                type="button"
+                class="text-ink-soft self-center center text-center
+                 hover:text-red-500 text-xs group-hover:opacity-100 
+                 transition-opacity m-auto p-0.5 rounded hover:bg-red-50 my-0 dark:hover:bg-red-950/30"
+                onclick={() => readerState.removeColumn(cIdx)}
+                title="Remove column {cIdx + 1}"
+                aria-label="Remove column {cIdx + 1}"
+              >✕ Remove column</button>
+            </div>
+        {/each}
+     </div>     
+        {/if}
   {#each readerState.versionGrid as row, rIdx}
     <div class="px-4 sm:px-5 border-x border-transparent">
       {#if readerState.versionGrid.length > 1}
+      
         <div class="flex items-center justify-between text-[11px] font-semibold text-ink-soft mb-1 px-0.5">
+        
           <span>Row {rIdx + 1}</span>
           <button 
             type="button"
@@ -50,9 +70,12 @@ pb-2.5 border-b border-rule z-20 shadow-xs">
         </div>
       {/if}
       <div class="grid gap-6 verse-grid" style="grid-template-columns: repeat({row.length > 0 ? row.length : 1}, minmax(0, 1fr))">
+        
         {#each row as cellVersion, cIdx}
           {@const align = readerState.getCellAlign(rIdx, cIdx)}
+          
           <div class="relative flex items-center justify-center gap-1.5 bg-page border border-rule/60 rounded-md px-3 py-1.5 group hover:border-link transition-colors shadow-xs">
+           
             <select 
               class="font-bold text-sm bg-transparent cursor-pointer appearance-none text-center focus:outline-none text-ink truncate"
               value={cellVersion}
@@ -76,15 +99,7 @@ pb-2.5 border-b border-rule z-20 shadow-xs">
             >
               {align === 'right' ? 'R' : 'L'}
             </button>
-            {#if rIdx === 0 && row.length > 1}
-              <button 
-                type="button"
-                class="text-ink-soft hover:text-red-500 text-xs opacity-0 group-hover:opacity-100 transition-opacity absolute right-1.5 p-0.5 rounded hover:bg-red-50 dark:hover:bg-red-950/30"
-                onclick={() => readerState.removeColumn(cIdx)}
-                title="Remove column {cIdx + 1}"
-                aria-label="Remove column {cIdx + 1}"
-              >✕</button>
-            {/if}
+            
           </div>
         {/each}
       </div>

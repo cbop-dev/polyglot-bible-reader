@@ -3,15 +3,16 @@
   import { readerState } from '$lib/stores/readerState.svelte';
   import { formatVerseText } from '$lib/services/bibleDataLoader';
   import { dataSets, myDataSets } from '$lib/bookMapping';
+  import { size,theme } from '$lib/stores/ThemeObserver.svelte';
   let { verseKey }: { verseKey: string } = $props();
 </script>
 
-<div id="verse-{verseKey}" class="flex flex-col gap-4 bg-page p-4 sm:p-5 rounded-lg shadow-sm border border-rule transition-colors hover:shadow-md">
+<div id="verse-{verseKey}" class="verse-card bg-page border-rule border-t-rule border-t-2 border-b-rule border-b-2">
   {#each readerState.versionGrid as row, rIdx}
     {#if rIdx > 0}
-      <div class="border-t border-rule/50 my-1"></div>
+     <hr class="verse-separator-hr"/>
     {/if}
-    <div class="grid gap-6 verse-grid" style="grid-template-columns: repeat({row.length > 0 ? row.length : 1}, minmax(0, 1fr))">
+    <div class="grid gap-6 verse-grid {rIdx>0 && false ? 'border-t-1 border-rule' :''} grid-cols-{row.length}">
       {#each row as colVersion, cIdx}
         {@const align = readerState.getCellAlign(rIdx, cIdx)}
         {@const vData = readerState.getVerseData(verseKey, colVersion)}
@@ -27,7 +28,8 @@
           readerState.greekDiacritics
         )}
 
-        <div class="flex flex-col {cIdx !== 0 ? 'border-t border-rule/40 pt-3.5 sm:border-0 sm:pt-0' : ''} {align === 'right' ? 'items-end text-right' : 'items-start text-left'}">
+        <div class="flex flex-col px-1.5 pt-1  {align === 'right' ? 'items-end text-right' : 'items-start text-left'} 
+        {row.length > 1 && size.current !='base' ? (align=='right' && cIdx==0)  ?'pr-0': cIdx==row.length-1 ? 'pl-0': '': ''} ">
           <div class="text-xs font-bold mb-1.5 flex items-center gap-1.5 {align === 'right' ? 'self-end text-right' : 'self-start text-left'} {vData?.isDivergent ? 'text-amber-600 dark:text-amber-400' : 'text-ink-soft'}">
             <span>{vData?.label}</span>
             <span class="px-1.5 py-0.2 rounded text-[10px] bg-rule/50 font-medium">({colVersion})</span>
@@ -67,5 +69,25 @@
   {/each}
 </div>
 <style>
+  @reference 'tailwindcss';
   
+  :root[data-theme='dark'] .verse-card {
+       --tw-shadow-color: rgba(255,255,255, 40%);
+  }
+
+    :root[data-theme='light'] .verse-card {
+       --tw-shadow-color: rgba(0,0,0, 40%);
+  }
+  .verse-card{
+    /*--tw-shadow-color: blue; /*rgba(blue, 100%);*/
+    @apply flex flex-col gap-4  pb-1 pt-2  sm:pt-3 rounded-lg shadow-[3px_3px_5px]  transition-colors hover:drop-shadow-2xl ;
+  }
+
+  .verse-separator-hr {
+    
+    
+    border-color: color-mix(in srgb, var(--color-ink-soft) 20%, transparent 50%);
+    
+    @apply w-2/3  m-auto;
+  }
 </style>

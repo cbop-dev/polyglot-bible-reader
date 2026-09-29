@@ -4,7 +4,9 @@
   import VersionButton from '$lib/components/ui/VersionButton.svelte';
   import { versionGroups, formatVersionLabel } from '$lib/config/versions';
   import { readerState } from '$lib/stores/readerState.svelte';
-    import { expandRefs } from '$lib/utils/bible-utils';
+  //import gridIcon from '$env/static/public'
+  import { expandRefs } from '$lib/utils/bible-utils';
+  import GridButtonReactive from '../ui/grid-button-reactive.svelte';
      $inspect('readerState.visibleVersions',readerState.visibleVersions);
 </script>
 
@@ -256,12 +258,11 @@ gap-2 sm:gap-4 -mx-3 px-1 sm:-mx-4 sm:px-4 md:-mx-8 md:px-3">
     type="button"
     class="absolute left-1/2 -translate-x-1/2 {readerState.gridHeaderExpanded ? '-bottom-6' :'-bottom-3'} z-40 
     flex items-center justify-center w-6 h-6 bg-page border border-rule rounded-full 
-    shadow-xs text-[10px] font-bold text-ink-soft 
-    hover:text-ink hover:bg-rule cursor-pointer transition-colors"
+    shadow-xs font-bold text-ink hover:text-gray-500  transition-colors hover:cursor-pointer"
     onclick={(e) => { e.stopPropagation(); readerState.gridHeaderExpanded = !readerState.gridHeaderExpanded; }}
     title={readerState.gridHeaderExpanded ? "Collapse Layout Options" : "Expand Layout Options"}
     aria-label={readerState.gridHeaderExpanded ? "Collapse Layout Options" : "Expand Layout Options"}
   >
-    {readerState.gridHeaderExpanded ? '▲' : '▼'}
+    {#if readerState.gridHeaderExpanded}<span class="text-xl">▲</span>{:else}<GridButtonReactive />{/if}
   </button>
 </header>
