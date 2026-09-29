@@ -8,6 +8,7 @@
   import Icon from '../ui/Icon.svelte';
   import shareSvg from '$lib/assets/share-this.svg';
   import linkSvg from '$lib/assets/link-336.svg';
+  import LinkIcon from '$lib/lemma-ui/components/ui/icons/LinkIcon.svelte';
     import { get } from 'svelte/store';
   let { verseKey }: { verseKey: string } = $props();
   function getTopMostVerse():string{
@@ -27,11 +28,7 @@
 </script>
 
 <div id="verse-{verseKey}" class="relative verse-card bg-page border-rule border-t-rule border-t-2 border-b-rule border-b-2 text-xs ">
-  <div class="absolute right-1 top-1"><CopyText svgIcon={linkSvg} height={20}
-  tooltip="Copy URL to share this page!"
-  btnCssClass={(theme.value=='dark' ? 'bg-white/40 hover:bg-white': 'bg-gray-500/30 hover:bg-blue-500/30')+" "} 
   
-  getTextFunc={()=>{return getURL(verseKey)}} /></div>
   {#each readerState.versionGrid as row, rIdx}
     {#if rIdx > 0}
      <hr class="verse-separator-hr"/>
@@ -87,7 +84,12 @@
               <span class="text-sm italic text-ink-soft font-sans">[Verse text not available]</span>
             {/if}
             {#if vData?.verseData?.text}
-              <span dir="ltr"><CopyText linkText="" copyText={formattedVerseText} /></span>
+              <span dir="ltr"><CopyText linkText="" copyText={formattedVerseText} /> <CopyText  height={10}
+  tooltip="Copy URL to share this verse on this page's view!"
+  btnCssClass={(theme.value=='dark' ? 'bg-white/10 hover:bg-white/60': 'bg-gray-500/10 hover:bg-blue-500/30')+" "} 
+  
+  getTextFunc={()=>{return getURL(verseKey)}}>
+  <LinkIcon --strokecolor={theme.value=='dark'?'rgba(255,255,255,0.6)' : 'rgba(0,0,0,0.6)'} height={16} width={16} /></CopyText></span>
             {/if}
           </div>
         </div>
