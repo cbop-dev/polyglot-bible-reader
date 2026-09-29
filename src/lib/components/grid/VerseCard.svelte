@@ -4,10 +4,34 @@
   import { formatVerseText } from '$lib/services/bibleDataLoader';
   import { dataSets, myDataSets } from '$lib/bookMapping';
   import { size,theme } from '$lib/stores/ThemeObserver.svelte';
+  import { findTopmostDiv } from '$lib/utils/ui-utils';
+  import Icon from '../ui/Icon.svelte';
+  import shareSvg from '$lib/assets/share-this.svg';
+  import linkSvg from '$lib/assets/link-336.svg';
+    import { get } from 'svelte/store';
   let { verseKey }: { verseKey: string } = $props();
+  function getTopMostVerse():string{
+    const topDiv = findTopmostDiv(".verse-card");
+    let verse = "1";
+    if (topDiv && topDiv.id){
+        const idNum = topDiv.id.replace("verse-","");
+        if (typeof Number(idNum)==='number')
+          verse = String(idNum);
+    }
+    return verse;
+  }
+
+  function getURL(verse="1"){
+    return readerState.generatePageStateURL(verse);
+  }
 </script>
 
-<div id="verse-{verseKey}" class="verse-card bg-page border-rule border-t-rule border-t-2 border-b-rule border-b-2">
+<div id="verse-{verseKey}" class="relative verse-card bg-page border-rule border-t-rule border-t-2 border-b-rule border-b-2 text-xs ">
+  <div class="absolute right-1 top-1"><CopyText svgIcon={linkSvg} height={20}
+  tooltip="Copy URL to share this page!"
+  btnCssClass={(theme.value=='dark' ? 'bg-white/40 hover:bg-white': 'bg-gray-500/30 hover:bg-blue-500/30')+" "} 
+  
+  getTextFunc={()=>{return getURL(verseKey)}} /></div>
   {#each readerState.versionGrid as row, rIdx}
     {#if rIdx > 0}
      <hr class="verse-separator-hr"/>

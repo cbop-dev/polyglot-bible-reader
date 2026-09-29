@@ -5,6 +5,8 @@ import type { HebrewDiacriticMode } from '$lib/utils/diacritics';
 import { loadChapterFromDb, loadChaptersForBook } from '$lib/services/bibleDataLoader';
 //import { availableBibles } from '$lib/services/bible-datasets';
 import { isValidVersion, availableBibles,dataSets } from '$lib/bookMapping.js';
+import {page} from "$app/state";
+import { getBaseurl } from '$lib/utils/ui-utils';
 import {
 	getLemma,
 	getWorks,
@@ -520,6 +522,21 @@ export class ReaderState {
 		}
 	}
   
+	
+
+	
+	generatePageStateURL(verse="1"){
+		const base = getBaseurl();
+		const params = {
+			'version': this.selectedVersion,
+			'chapter':this.selectedChapter,
+			'book':this.selectedBook,
+			'grid':this.versionGrid.map((row)=>row.join(',')).join("|"),
+			'verse':verse
+		}
+
+		return base+'?'+Object.entries(params).map(([k,v])=>`${k}=${v}`).join("&");
+	}
 }
 
 export const readerState = new ReaderState();

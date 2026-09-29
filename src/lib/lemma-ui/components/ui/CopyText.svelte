@@ -1,4 +1,6 @@
-<script>
+<script lang='ts'>
+    import { mylog } from "$lib/lemma-ui/env/env";
+    import Icon from "./icons/Icon.svelte";
     let {
         copyText = '',
         getTextFunc = null,
@@ -6,9 +8,10 @@
         linkText = '',
         showButton = true,
         btnSizeCssClass = 'px-2 py-0.5 text-xs',
-        btnCssClass = '',
+        btnCssClass= '',
         width = 14,
-        height = 14
+        height = 14,
+        svgIcon=null
     } = $props();
 
     let copied = $state(false);
@@ -20,13 +23,16 @@
         }
         let theText = copyText;
         if (getTextFunc) {
+//            mylog(`gonna call getTextfun()_...`, true);
             try {
                 theText = typeof getTextFunc === 'function' ? getTextFunc() : getTextFunc;
+                mylog(`called getTextfun->'${theText}'`)
             } catch (err) {
+//                mylog("HMMM. error!", true);
                 console.error("Error evaluating getTextFunc:", err);
             }
         }
-        if (!theText && theText !== 0) return;
+        if (!theText && Number(theText) !== 0) return;
         theText = String(theText);
 
         try {
@@ -67,11 +73,14 @@
         {#if linkText}
             <span>{linkText}</span>
         {/if}
-        {#if showButton}
+        {#if showButton &&!svgIcon}
             <svg class="w-3.5 h-3.5 stroke-current opacity-80" viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
                 <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
             </svg>
+        
+        {:else}
+        <Icon svg={svgIcon} {width} {height}/>
         {/if}
     {/if}
 </button>
