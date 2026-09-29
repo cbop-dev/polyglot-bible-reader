@@ -5,7 +5,8 @@
         scale=1.0,
         svg,
         style='',
-        classes=[]
+        classes=[],
+        opacity=1
 
     } = $props();
 
@@ -19,5 +20,6 @@
 
     }
 </style>
-<img width={theWidth} height={theHeight} src={svg} {style} class={classes} alt="icon" 
+<img width={theWidth} height={theHeight} src={svg} {style} 
+ class={[...classes, 'to-transparent']} alt="icon" 
 />

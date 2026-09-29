@@ -12,7 +12,10 @@
     {#if rIdx > 0}
      <hr class="verse-separator-hr"/>
     {/if}
-    <div class="grid gap-6 verse-grid {rIdx>0 && false ? 'border-t-1 border-rule' :''} grid-cols-{row.length}">
+    
+    <div class="grid gap-6 verse-grid {rIdx>0 && false ? 'border-t-1 border-rule' :''}"
+    style="grid-template-columns: repeat({row.length > 0 ? row.length : 1}, minmax(0, 1fr))"
+    >
       {#each row as colVersion, cIdx}
         {@const align = readerState.getCellAlign(rIdx, cIdx)}
         {@const vData = readerState.getVerseData(verseKey, colVersion)}
@@ -89,5 +92,9 @@
     border-color: color-mix(in srgb, var(--color-ink-soft) 20%, transparent 50%);
     
     @apply w-2/3  m-auto;
+  }
+
+  .verse-grid span{
+    font-family: 'Ezra SIL', 'Charis SIL', "Gentium Plus", serif;
   }
 </style>

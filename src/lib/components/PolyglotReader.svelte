@@ -35,7 +35,7 @@ onMount(()=>{
     }
     if(grid.length){
         readerState.setDisplayGrid(grid);
-        mylog(`PolyglotReader, got/set grid array! [${grid.flat().join(',')}]`, true);
+//        mylog(`PolyglotReader, got/set grid array! [${grid.flat().join(',')}]`, true);
         if(!readerState.visibleVersions.includes(readerState.selectedVersion)){
             readerState.selectVersion(readerState.visibleVersions[0]);
         }
@@ -123,7 +123,7 @@ onclick={() => readerState.closeAllPopups()}
 
 <style>
 @media (max-width: 639px) {
-:global(.verse-grid) {
+:global(.verse-grid)  {
     grid-template-columns: 1fr !important;
 }
 }

@@ -19,7 +19,7 @@ if (grid){
         const cols = row.trim().split(',');
         gridArray.push(cols);
     });
-    mylog(`site, got a grid! param='${grid}'; gridArray=[${gridArray.flat().join(",")}]`, true);
+//    mylog(`site, got a grid! param='${grid}'; gridArray=[${gridArray.flat().join(",")}]`, true);
   }
 </script>
 <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions (because of reasons) -->

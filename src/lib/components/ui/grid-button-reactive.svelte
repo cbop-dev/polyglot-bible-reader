@@ -20,9 +20,9 @@ let isDark=$derived(theme.value=='dark');
 //console.log("Reactive button1!");
 </script>
 
-<div class="inline"><Icon svg={isDark? gridButtonWhite :  gridButtonBlack } 
+<div class="inline {isDark? 'bg-gray-800': 'bg-gray-200'} opacity-70 hover:opacity-100" ><Icon svg={isDark? gridButtonWhite :  gridButtonBlack } 
 scale={size.current=='base'? 0.6:1}
-classes={[ theme.value=='dark'? 'hover:bg-gray-500': 'hover:bg-gray-300']}
+classes={[ (theme.value=='dark'? 'hover:bg-black': 'hover:bg-white')]}
 /></div>
 <!--<div class="inline sm:hidden"><Icon svg={isDark? gridButtonWhite :  gridButtonBlack} scale={0.6}/></div>-->
 

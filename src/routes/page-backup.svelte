@@ -29,7 +29,7 @@
     const chapter = page.params?.chapter ? page.params.chapter : '';
     const verse = page.params?.verse ? page.params.verse : '';*/
 
-    mylog(`page onMount params: ${Object.values(myParams).join(',')}`, true);
+//    mylog(`page onMount params: ${Object.values(myParams).join(',')}`, true);
     readerState.closeAllPopups();
     if (myParams.book) readerState.selectBook(myParams.book);
     if (myParams.chapter) readerState.selectChapter(myParams.chapter);

@@ -363,7 +363,7 @@ export class ReaderState {
 				this.selectedChapter = String(mapped.mappedChapter);
 				//if (reload) this.loadCurrentChapter();
 				ret = true;			
-				mylog("selectVersion: one!", true);
+//				mylog("selectVersion: one!", true);
 			}
 
 			// 2. If current book is available in new version, attempt reference translation
@@ -379,7 +379,7 @@ export class ReaderState {
 					//return ret;
 				}
 				//if (reload) this.loadCurrentChapter();
-				mylog("selectVersion: two!", true);
+//				mylog("selectVersion: two!", true);
 				//return ret;
 			}
 
@@ -397,7 +397,7 @@ export class ReaderState {
 				}
 				//if (reload) this.loadCurrentChapter();
 				ret = true;
-				mylog("selectVersion: three!", true);
+//				mylog("selectVersion: three!", true);
 				//return ret ;
 			}
 			else {
@@ -405,7 +405,7 @@ export class ReaderState {
 				this.selectedChapter = '1';
 				//if (reload) this.loadCurrentChapter();
 				ret = true;
-				mylog("selectVersion: four!", true);
+//				mylog("selectVersion: four!", true);
 				//return ret;
 			}
 
@@ -418,7 +418,7 @@ export class ReaderState {
 	async selectBook(book: string, reload=true): Promise<boolean> {
 		let ret = false;
 		const validBook = getVersionBooks(this.selectedVersion).find((b)=>b.toLocaleLowerCase==book.trim().toLocaleLowerCase) ? true : false;
-		mylog(`found book '${book}' in version '${this.selectedVersion}!  Version books=[${getVersionBooks(this.selectedVersion).join(',')}]`, true);
+//		mylog(`found book '${book}' in version '${this.selectedVersion}!  Version books=[${getVersionBooks(this.selectedVersion).join(',')}]`, true);
 		if (validBook){	
 			this.selectedBook = book;
 			this.selectedChapter = '1';
@@ -427,7 +427,7 @@ export class ReaderState {
 			if (reload) this.loadCurrentChapter();
 		}
 		else{
-			mylog(`Did NOT find book '${book}' in version '${this.selectedVersion}! Version books=[${getVersionBooks(this.selectedVersion).join(',')}]`, true);
+//			mylog(`Did NOT find book '${book}' in version '${this.selectedVersion}! Version books=[${getVersionBooks(this.selectedVersion).join(',')}]`, true);
 		}
 		return ret;
 	}
