@@ -410,9 +410,15 @@ export const CROSS_TRADITION_RULES: TraditionAlignmentRule[] = [
   {
     fromCanonical: 'esther-greek',
     targetVersion:'BHS',
-    targetBook:'esther',
+    targetBook:'Esth',
     
-  }
+  },
+    {
+    fromCanonical: 'esther',
+    targetVersion:'LXX',
+    targetBook:'Esth',
+    
+  },
 ];
 
 /**
@@ -441,7 +447,7 @@ export function getBookForVersion(bookIdentifier: string, version: string, chapt
 	if (canonical.versionBooks && canonical.versionBooks[version]) {
 		return canonical.versionBooks[version]!;
 	}
-/*
+
 	// Special version overrides
 	if (version === 'Brenton') {
 		if (canonical.slug === 'esther' || canonical.slug === 'esther-greek') return 'AddEsth';
@@ -450,7 +456,7 @@ export function getBookForVersion(bookIdentifier: string, version: string, chapt
 	if (version === 'LXX') {
 		if (canonical.slug === 'esther-greek') return 'Esth';
 	}
-*/
+
 	return canonical.standardAbbrev;
 }
 

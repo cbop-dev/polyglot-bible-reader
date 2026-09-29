@@ -418,13 +418,16 @@ export class ReaderState {
 	async selectBook(book: string, reload=true): Promise<boolean> {
 		let ret = false;
 		const validBook = getVersionBooks(this.selectedVersion).find((b)=>b.toLocaleLowerCase==book.trim().toLocaleLowerCase) ? true : false;
-		mylog(`found book '${book}' in version '${this.selectedVersion}!`, true);
+		mylog(`found book '${book}' in version '${this.selectedVersion}!  Version books=[${getVersionBooks(this.selectedVersion).join(',')}]`, true);
 		if (validBook){	
 			this.selectedBook = book;
 			this.selectedChapter = '1';
 			this.bookDropdownOpen = false;
 			ret = true;
 			if (reload) this.loadCurrentChapter();
+		}
+		else{
+			mylog(`Did NOT find book '${book}' in version '${this.selectedVersion}! Version books=[${getVersionBooks(this.selectedVersion).join(',')}]`, true);
 		}
 		return ret;
 	}

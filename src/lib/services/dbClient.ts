@@ -152,6 +152,7 @@ export async function getCanonicalWorks(): Promise<CanonicalWorkRow[]> {
 	const rows = await query<CanonicalWorkRow>(
 		'SELECT id, slug, title, book_key, testament, sbl_abbreviation FROM canonical_works ORDER BY id'
 	);
+	mylog(`dbClient.getCanonicalWorks(): [${rows.map((w)=>w.id+"="+w.slug).join(',')}]`,true);
 	canonicalWorksCache = rows;
 	return rows;
 }
@@ -192,7 +193,8 @@ export const BOOK_ALIASES: Record<string, string> = {
 export const LXX_VARIANT_BOOKS: Record<string, string> = {
 	psalms: 'psalms-lxx',
 	jeremiah: 'jeremiah-lxx',
-	job: 'job-lxx'
+	job: 'job-lxx',
+	esther:'esther-greek'
 };
 
 /**
@@ -257,6 +259,7 @@ export async function resolveCanonicalWorkId(
  */
 export async function getBookChapters(bookIdentifier: string, version?: string): Promise<number[]> {
 	const cwId = await resolveCanonicalWorkId(bookIdentifier, version);
+	mylog(`getBookChapters(${version??''}.${bookIdentifier}): cwId=${cwId}`, true);
 	if (!cwId) return [];
 	const rows = await query<{ chapter: number }>(`
 		SELECT DISTINCT CAST(substr(hierarchy, 1, instr(hierarchy, ',') - 1) AS INTEGER) AS chapter
@@ -359,6 +362,7 @@ export async function getChapterVerses(
 	primaryVersion?: string
 ): Promise<VerseResult[]> {
 	const cwId = await resolveCanonicalWorkId(bookIdentifier, primaryVersion);
+	
 	if (!cwId) {
 		console.warn(`[DB] Book not found for identifier: ${bookIdentifier} (version: ${primaryVersion})`);
 		return [];
@@ -366,6 +370,7 @@ export async function getChapterVerses(
 
 	// Translate UI versions (e.g. 'BHS', 'LXX') to database work slugs (e.g. 'wlc', 'swete-lxx')
 	const workSlugs = versions.map((v) => VERSION_MAP[v] || v);
+	//mylog(`getChapterVerses.workSlugs:[${workSlugs.join(',')}]`, true);
 	const slugPlaceholders = workSlugs.map(() => '?').join(',');
 
 	const sql = `
@@ -389,6 +394,7 @@ export async function getChapterVerses(
 			JOIN canonical_works cw_main ON cw_main.id = ?
 			JOIN canonical_works cw_alt ON (
 				cw_alt.slug = cw_main.slug || '-lxx' OR cw_main.slug = cw_alt.slug || '-lxx'
+				OR cw_alt.slug = cw_main.slug || '-greek' OR cw_main.slug = cw_alt.slug || '-greek'
 			)
 			JOIN canonical_refs cr_alt ON cr_alt.canonical_work_id = cw_alt.id AND cr_alt.hierarchy = tr.hierarchy
 			WHERE NOT EXISTS (
