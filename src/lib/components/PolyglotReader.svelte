@@ -156,6 +156,6 @@ onclick={() => readerState.closeAllPopups()}
 }
 
 #polyglot-reader-container.meditate{
-    @apply sm:max-w-3/4 md:max-w-1/2 text-center m-auto;
+    @apply sm:max-w-3/4 md:max-w-2/3 lg:max-w-1/2 text-center m-auto;
 }
 </style>
