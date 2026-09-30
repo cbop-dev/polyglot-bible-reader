@@ -696,14 +696,15 @@ export class ReaderState {
 	
 
 	
-	generatePageStateURL(verse="1"){
+	generatePageStateURL(verse="1", meditate=this.meditationMode){
 		const base = getBaseurl();
 		const params = {
 			'version': this.selectedVersion,
 			'chapter':this.selectedChapter,
 			'book':this.selectedBook,
 			'grid':this.versionGrid.map((row)=>row.join(',')).join("|"),
-			'verse':verse
+			'verse':verse,
+			'meditate':meditate
 		}
 
 		return base+'?'+Object.entries(params).map(([k,v])=>`${k}=${v}`).join("&");

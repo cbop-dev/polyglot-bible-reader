@@ -74,7 +74,7 @@
             {#if vData?.omitted}
               <span class="text-sm italic text-ink-soft font-sans" dir="ltr">[Not found in this version.]</span>
             {:else if vData?.verseData?.words || vData?.verseData?.text}
-              {#if readerState.meditationMode}<span class="text-xs font-greek align-super">{verseKey} </span>{/if}
+              {#if readerState.meditationMode}<CopyText tooltip={"Copy URL to this verse/view for sharing/bookmarking."} btnCssClass={''} btnSizeCssClass='' showButton={false} supressCopiedMsg={true} copyText={readerState.generatePageStateURL(verseKey)}><span class="text-xs font-greek align-super">{verseKey} </span></CopyText>{/if}
               {#if vData?.verseData?.words}
               
                 {#each vData.verseData.words as w}

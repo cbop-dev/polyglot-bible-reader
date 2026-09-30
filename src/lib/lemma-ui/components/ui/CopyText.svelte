@@ -12,7 +12,8 @@
         width = 14,
         height = 14,
         svgIcon=null,
-        children=null
+        children=null,
+        supressCopiedMsg=false
     } = $props();
 
     let copied = $state(false);
@@ -65,7 +66,7 @@
     onclick={copyToClipboard} 
     class="inline-flex items-center gap-1 rounded-md font-sans transition-colors cursor-pointer border border-rule/50 bg-rule/30 hover:bg-rule/70 text-ink {btnSizeCssClass} {btnCssClass}"
 >
-    {#if copied}
+    {#if copied && !supressCopiedMsg}
         <svg class="w-3.5 h-3.5 text-green-600 stroke-current" viewBox="0 0 24 24" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="20 6 9 17 4 12" />
         </svg>
