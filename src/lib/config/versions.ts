@@ -22,6 +22,10 @@ export const versionGroups: VersionGroup[] = [
   }
 ];
 
+export function getVersionLanguage(version:string){
+  return versionGroups.find((vg)=>vg.versions.map((v)=>v.toLocaleLowerCase()).includes (version.toLocaleLowerCase()))?.language ?? '';
+}
+
 export const allVersions: string[] = versionGroups.flatMap((g) => g.versions);
 
 export function formatVersionLabel(opt: string): string {

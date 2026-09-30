@@ -3,7 +3,7 @@
 	import '../app.css';
 	import favicon from '$lib/assets/favicon.png';
 	import Footer from '$lib/components/ui/Footer.svelte';
-
+	import { readerState } from '$lib/stores/readerState.svelte';
 	let { children } = $props();
 </script>
 
@@ -17,5 +17,7 @@
 	<main class="flex-grow">
 		{@render children()}
 	</main>
+	{#if !readerState.meditationMode}
 	<Footer />
+	{/if}
 </div>

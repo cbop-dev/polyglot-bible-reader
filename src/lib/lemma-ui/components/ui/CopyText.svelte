@@ -12,7 +12,7 @@
         width = 14,
         height = 14,
         svgIcon=null,
-        children
+        children=null
     } = $props();
 
     let copied = $state(false);

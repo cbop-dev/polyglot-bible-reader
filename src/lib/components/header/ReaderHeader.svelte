@@ -1,25 +1,44 @@
 <script lang="ts">
   import { base } from '$app/paths';
+  
   import siteLogo from '$lib/assets/logo.png';
+  import prayerWhiteSvg from '$lib/assets/prayer-white.svg';
+  import prayerBlackSvg from '$lib/assets/prayer-black.svg';
+  import prayerOutlineSvg from '$lib/assets/prayer-outline.svg';
   import VersionButton from '$lib/components/ui/VersionButton.svelte';
-  import { versionGroups, formatVersionLabel } from '$lib/config/versions';
+  import { versionGroups, formatVersionLabel,getVersionLanguage } from '$lib/config/versions';
   import { readerState } from '$lib/stores/readerState.svelte';
   //import gridIcon from '$env/static/public'
   import { expandRefs } from '$lib/utils/bible-utils';
   import GridButtonReactive from '../ui/grid-button-reactive.svelte';
-     $inspect('readerState.visibleVersions',readerState.visibleVersions);
+  import Icon from '../ui/Icon.svelte';
+  import { theme,size } from '$lib/stores/ThemeObserver.svelte';
+  let displayedLanguages: string[]=$derived(Array.from(new Set(readerState.visibleVersions.map((v)=>getVersionLanguage(v)))));
+  $inspect('readerState.visibleVersions',readerState.visibleVersions);
+
+  $inspect('reader.showGridHeader', readerState.showGridHeader);
+  $effect(()=>{
+    if (readerState.meditationMode){
+      readerState.gridHeaderExpanded=false;
+    }
+  })
 </script>
 
 <header id="site-header" 
 class="sticky top-0 z-30 bg-page pt-1 pt-0 sm:pt-1 md:pt-4 mb-3 sm:mb-5 border-b border-rule pb-1 sm:pb-2 flex 
 flex-wrap sm:flex-nowrap sm:flex-row justify-between items-center 
 gap-2 sm:gap-4 -mx-3 px-1 sm:-mx-4 sm:px-4 md:-mx-8 md:px-3">
-  <div class="flex items-center gap-2 sm:gap-3 md:gap-4 min-w-0">
+
+
+  
+  <!-- top left of header: Logo/title, version, info-->
+  <div class="float-left flex items-center gap-2 sm:gap-3 md:gap-4 min-w-0">
     <img
       src={siteLogo}
       alt="Polyglot Bible Reader logo"
       class="w-8 h-8 sm:w-11 sm:h-11 md:w-14 md:h-14 lg:w-16 lg:h-16 flex-shrink-0 object-contain rounded-full shadow-xs"
     />
+    {#if !readerState.meditationMode}
     <div class="min-w-0">
       <h1 class="text-sm min-[360px]:text-base min-[410px]:text-lg sm:text-2xl md:text-2xl lg:text-4xl font-bold tracking-tight inline-flex items-center flex-wrap gap-x-1 sm:gap-x-1.5">
         <span class="truncate sm:whitespace-normal hidden sm:inline">
@@ -54,16 +73,49 @@ gap-2 sm:gap-4 -mx-3 px-1 sm:-mx-4 sm:px-4 md:-mx-8 md:px-3">
         </span>
       </h1>
     </div>
+     {/if}
+  </div>
+ 
+
+      
+    <!--Meditation Mode!-->
+  <div class="{readerState.meditationMode ? 'absolute left-1/2 -translate-x-1/2 -translate-y-1 sm:-translate-y-3':''}">
+      <div class="relative ml-1">
+      <label class="hidden lg:block text-xs font-bold mb-1 text-center text-ink-soft" for="meditation-mode-button">Med.</label>
+      <button
+        id="meditation-mode-button"
+        type="button"
+        class=" h-[26px] min-w-[28px] sm:h-[38px] sm:min-w-[38px] px-1 sm:px-2 rounded border text-sm sm:text-lg flex items-center justify-center cursor-pointer transition-colors duration-150 focus:outline-none focus:ring-1 focus:ring-blue-500 
+        {readerState.meditationMode
+          ? 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700 shadow-xs font-bold'
+          : 'bg-page text-ink-soft border-rule hover:bg-rule hover:text-ink font-normal'}"
+        onclick={() => readerState.meditationMode =  !readerState.meditationMode}
+        title={readerState.meditationMode
+          ? 'Meditation Mode: On (click to disable)'
+          : 'Meditation Mode: Off (click to enable)'}
+        aria-label="Toggle Meditation Mode"
+      >
+        <Icon svg={readerState.meditationMode || theme.value == 'dark' ? prayerWhiteSvg :  prayerOutlineSvg } width={20} classes={[]}/>
+      </button>
+    </div>
   </div>
 
-  <!-- svelte-ignore a11y_click_events_have_key_events -->
-  <div id="header-book-chapter-verse-selector" class="flex gap-1 sm:gap-2.5 bg-page p-1 sm:p-2.5  rounded shadow-xs sm:shadow items-center flex-shrink-0 break-all" onclick={(e) => e.stopPropagation()}>
+<!-- show book / chapter in meditation mode-->
+{#if readerState.meditationMode}
+<div class="absolute right-1"><h2 class="text-lg sm:text-xl font-bold">{readerState.selectedBook} {readerState.selectedChapter}</h2>
+  {#if size.current!='base'} <i>({readerState.visibleVersions.join('/') })</i>{/if}
+</div>
+{/if}
+  <!-- Right side: diacritics, version, book, chapter, and verse buttson-->
+  <div id="header-book-chapter-verse-selector" class="{readerState.meditationMode ? '':'flex gap-1'} sm:gap-2.5 bg-page p-1 sm:p-2.5  rounded shadow-xs sm:shadow items-center flex-shrink-0 break-all" onclick={(e) => e.stopPropagation()}>
     
-    {#if true}
+
+    {#if !readerState.meditationMode}
     <!-- Diacritic Controls -->
-     <div class="sm:flex flex-row flex-nowrap sm:relative {readerState.gridHeaderExpanded ? 'flex' : 'hidden'} ">
+     <div class="sm:flex flex-row flex-nowrap sm:relative {readerState.showGridHeader ? 'flex' : 'hidden'} ">
      
-    {#if true}
+    
+      {#if displayedLanguages.includes("Hebrew")}
       <div class="{readerState.visibleVersions.includes("BHS") ? 'relative' : 'hidden'}">
         <label class="hidden lg:block text-xs font-bold mb-1 text-center text-ink-soft" for="hebrew-diacritics">Heb</label>
         <button
@@ -85,9 +137,10 @@ gap-2 sm:gap-4 -mx-3 px-1 sm:-mx-4 sm:px-4 md:-mx-8 md:px-3">
           <span>{readerState.hebrewMode === 'all' ? 'אֶ֔' : readerState.hebrewMode === 'vowels' ? 'אָ' : 'א'}</span>
         </button>
       </div>
-    {/if}
+      {/if}
+    
 
-    {#if readerState.visibleVersions.includes("LXX") || readerState.visibleVersions.includes("SBLGNT")}
+      {#if displayedLanguages.includes("Greek")}
       <div class="relative ml-1">
         <label class="hidden lg:block text-xs font-bold mb-1 text-center text-ink-soft" for="greek-diacritics">Grk</label>
         <button
@@ -105,11 +158,12 @@ gap-2 sm:gap-4 -mx-3 px-1 sm:-mx-4 sm:px-4 md:-mx-8 md:px-3">
           <span>{readerState.greekDiacritics ? 'ἀ' : 'α'}</span>
         </button>
       </div>
-    {/if}
-
-      <div class="relativeh-6 sm:h-8 w-px bg-rule mx-0.5 sm:mx-1 self-end mb-1 hidden sm:inline"></div>
+      {/if}
+      {#if displayedLanguages.includes("Hebrew") ||displayedLanguages.includes("Greek") }
+        <div class="relativeh-6 sm:h-8 w-px bg-rule mx-0.5 sm:mx-1 self-end mb-1 hidden sm:inline"></div>
+      {/if}
       </div>
-    {/if}
+    
     
     <!-- Version Dropdown -->
     <div class="relative">
@@ -251,18 +305,22 @@ gap-2 sm:gap-4 -mx-3 px-1 sm:-mx-4 sm:px-4 md:-mx-8 md:px-3">
         </div>
       {/if}
     </div>
+    {/if}
   </div>
-
-  <!-- Mobile toggle button (< sm:) -->
+  
+  <!-- Expand header button-->
+   
   <button
     type="button"
-    class="absolute left-1/2 -translate-x-1/2 {readerState.gridHeaderExpanded ? '-bottom-6' :'-bottom-3'} z-40 
+    class="absolute left-1/2 -translate-x-1/2 {readerState.showGridHeader ? '-bottom-6' :'-bottom-3'} z-40 
     flex items-center justify-center w-6 h-6 bg-page border border-rule rounded-full 
      font-bold hover:text-ink text-gray-500  transition-colors hover:cursor-pointer "
-    onclick={(e) => { e.stopPropagation(); readerState.gridHeaderExpanded = !readerState.gridHeaderExpanded; }}
-    title={readerState.gridHeaderExpanded ? "Collapse Layout Options" : "Expand Layout Options"}
-    aria-label={readerState.gridHeaderExpanded ? "Collapse Layout Options" : "Expand Layout Options"}
+    onclick={(e) => { /*e.stopPropagation();*/ readerState.gridHeaderExpanded = !readerState.gridHeaderExpanded; }}
+    title={readerState.showGridHeader ? "Collapse Layout Options" : "Expand Layout Options"}
+    aria-label={readerState.showGridHeader ? "Collapse Layout Options" : "Expand Layout Options"}
   >
-    {#if readerState.gridHeaderExpanded}<span class="text-xl">▲</span>{:else}<GridButtonReactive />{/if}
+  
+    {#if readerState.gridHeaderExpanded}<span class="text-xl">▲</span>{:else }<GridButtonReactive />{/if}
   </button>
+  
 </header>

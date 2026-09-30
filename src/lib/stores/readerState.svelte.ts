@@ -39,13 +39,14 @@ export class ReaderState {
 	hebrewMode = $state<HebrewDiacriticMode>('all');
 	greekDiacritics = $state<boolean>(true);
 	gridHeaderExpanded = $state<boolean>(false);
-
+	
 	loadedBooks = $state<Record<string, any>>({});
 	chapterDataByVerse = $state<Record<string, Record<string, VerseDataItem>>>({});
 	chapterVerseKeys = $state<string[]>([]);
 	bookChapters = $state<number[]>([]);
 	isLoading = $state<boolean>(false);
-
+	meditationMode=$state<boolean>(false); //like "Zen" mode, but better
+	showGridHeader=$derived(this.gridHeaderExpanded && !this.meditationMode);
 	// Modal / popup toggles
 	versionDropdownOpen = $state<boolean>(false);
 	bookDropdownOpen = $state<boolean>(false);
@@ -53,7 +54,7 @@ export class ReaderState {
 	verseDropdownOpen = $state<boolean>(false);
 	showLemmaModal = $state<boolean>(false);
 	activeWord = $state<any>(null);
-
+	hotkeysEnabled=$state(true);
 	visibleVersions = $derived<string[]>(
 		Array.from(new Set(this.versionGrid.flat()))
 	);
