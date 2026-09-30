@@ -150,7 +150,7 @@ onclick={() => readerState.closeAllPopups()}
 <style>
 @reference 'tailwindcss';
 @media (max-width: 639px) {
-:global(.verse-grid)  {
+:global(div.verse-card:not(.meditate) .verse-grid)  {
     grid-template-columns: 1fr !important;
 }
 }

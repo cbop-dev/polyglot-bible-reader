@@ -36,7 +36,7 @@ gap-2 sm:gap-4 -mx-3 px-1 sm:-mx-4 sm:px-4 md:-mx-8 md:px-3">
     <img
       src={siteLogo}
       alt="Polyglot Bible Reader logo"
-      class="w-8 h-8 sm:w-11 sm:h-11 md:w-14 md:h-14 lg:w-16 lg:h-16 flex-shrink-0 object-contain rounded-full shadow-xs"
+      class="w-8 h-8 sm:w-11 sm:h-11 {readerState.meditationMode ? '' :' md:w-14 md:h-14 lg:w-16 lg:h-16'} flex-shrink-0 object-contain rounded-full shadow-xs"
     />
     {#if !readerState.meditationMode}
     <div class="min-w-0">
@@ -78,14 +78,14 @@ gap-2 sm:gap-4 -mx-3 px-1 sm:-mx-4 sm:px-4 md:-mx-8 md:px-3">
  
 
       
-    <!--Meditation Mode!-->
-  <div class="{readerState.meditationMode ? 'absolute left-1/2 -translate-x-1/2 -translate-y-1 sm:-translate-y-3':''}">
+    <!--Meditation Mode button!-->
+  <div class="{readerState.meditationMode ? 'absolute left-1/2 -translate-x-1/2 -translate-y-1 sm:-translate-y-1':''}">
       <div class="relative ml-1">
-      <label class="hidden lg:block text-xs font-bold mb-1 text-center text-ink-soft" for="meditation-mode-button">Med.</label>
+      <label class="hidden {readerState.meditationMode? '': 'lg:block'} text-xs font-bold mb-1 text-center text-ink-soft" for="meditation-mode-button">Med.</label>
       <button
         id="meditation-mode-button"
         type="button"
-        class=" h-[26px] min-w-[28px] sm:h-[38px] sm:min-w-[38px] px-1 sm:px-2 rounded border text-sm sm:text-lg flex items-center justify-center cursor-pointer transition-colors duration-150 focus:outline-none focus:ring-1 focus:ring-blue-500 
+        class=" h-[26px] min-w-[24px] sm:h-[32px] sm:min-w-[32px] px-1 sm:px-2 rounded border text-sm sm:text-md flex items-center justify-center cursor-pointer transition-colors duration-150 focus:outline-none focus:ring-1 focus:ring-blue-500 
         {readerState.meditationMode
           ? 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700 shadow-xs font-bold'
           : 'bg-page text-ink-soft border-rule hover:bg-rule hover:text-ink font-normal'}"
@@ -102,8 +102,8 @@ gap-2 sm:gap-4 -mx-3 px-1 sm:-mx-4 sm:px-4 md:-mx-8 md:px-3">
 
 <!-- show book / chapter in meditation mode-->
 {#if readerState.meditationMode}
-<div class="absolute right-1"><h2 class="text-lg sm:text-xl font-bold">{readerState.selectedBook} {readerState.selectedChapter}</h2>
-  {#if size.current!='base'} <i>({readerState.visibleVersions.join('/') })</i>{/if}
+<div class="absolute right-1"><h2 class="inline block text-md/1 sm:text-lg/1 leading-0 font-bold ">{readerState.selectedBook} {readerState.selectedChapter}</h2>
+  {#if size.current!='base'} <br class="leading-0"/><span class="text-xs leading-0">({readerState.visibleVersions.join('/') })</span>{/if}
 </div>
 {/if}
   <!-- Right side: diacritics, version, book, chapter, and verse buttson-->

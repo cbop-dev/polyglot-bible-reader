@@ -36,8 +36,8 @@
      <hr class="verse-separator-hr"/>
     {/if}
     
-    <div class="grid gap-6 verse-grid "
-    style="grid-template-columns: repeat({row.length > 0 ? row.length : 1}, minmax(0, 1fr))"
+    <div class="grid sm:gap-6 verse-grid "
+    style="grid-template-columns: repeat({row.length > 0  ? (size.current != 'base' ? row.length: Math.min(row.length,2)) : 1}, minmax(0, 1fr))"
     >
       {#each row as colVersion, cIdx}
       
@@ -74,6 +74,7 @@
             {#if vData?.omitted}
               <span class="text-sm italic text-ink-soft font-sans" dir="ltr">[Not found in this version.]</span>
             {:else if vData?.verseData?.words}
+            {#if readerState.meditationMode}<span class="text-xs font-greek align-super">{verseKey} </span>{/if}
               {#each vData.verseData.words as w}
                 {#if !myDataSets.lookup(colVersion)?.lemmaInfoEnabled}
                   {@const text = w.word}
