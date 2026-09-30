@@ -160,7 +160,7 @@ export class ReaderState {
 	/**
 	 * Loads the active chapter for all active grid versions from the SQLite database.
 	 */
-	async loadCurrentChapter() {
+	async loadCurrentChapter(realign=true) {
 		this.isLoading = true;
 		const book = this.selectedBook;
 		const chapNum = parseInt(this.selectedChapter, 10) || 1;
@@ -203,6 +203,10 @@ export class ReaderState {
 			}
 			this.loadedBooks = booksMap;
 		} finally {
+			if(realign){
+				mylog("loadCurrentChapter: realigning!", true);
+				this.realignAll();
+			}
 			this.isLoading = false;
 		}
 	}
@@ -222,10 +226,12 @@ export class ReaderState {
 
 	getDefaultAlign(rIdx: number, cIdx: number, version: string): 'left' | 'right' {
 		const totalCols = this.versionGrid[0]?.length || 2;
-		if (totalCols === 2) {
+		/*if (totalCols === 2) {
 			return cIdx === 0 ? 'right' : 'left';
-		}
-		return version === 'BHS' ? 'right' : 'left';
+		}*/
+		const align =  version === 'BHS' ? 'right' : 'left';
+
+		return align
 	}
 
 	getCellAlign(rIdx: number, cIdx: number): 'left' | 'right' {
@@ -246,7 +252,7 @@ export class ReaderState {
 		});
 	}
 
-	async setDisplayGrid(grid: string[][], reload=true): Promise<boolean>{
+	async setDisplayGrid(grid: string[][], reload=true, fixAlignment=true): Promise<boolean>{
 		let changed = false;
 		const newGrid :string[][]= [];
 		grid.forEach((row)=>{
@@ -264,6 +270,10 @@ export class ReaderState {
 		if (newGrid.length){
 			this.versionGrid=newGrid;
 			changed = true;
+			if(fixAlignment) {
+				mylog(`realigning!`, true);
+				this.realignAll();
+			}
 			if (reload)
 				this.loadCurrentChapter();
 		}
@@ -304,14 +314,50 @@ export class ReaderState {
 		this.gridAlignments = this.gridAlignments.filter((_, idx) => idx !== rowIndex);
 	}
 
-	updateCell(rIdx: number, cIdx: number, version: string) {
+	realignAll(){
+		this.gridAlignments = this.versionGrid.map(
+			(row, rIdx)=>
+				row.map((col,cIdx)=>
+					this.getDefaultAlign(rIdx,cIdx,col))
+		);
+
+		
+	}
+
+	realignCell(rIdx: number, cIdx: number){
+		if (this.gridAlignments[rIdx] && this.gridAlignments[rIdx].length){
+			if (this.versionGrid[rIdx].length > cIdx ){
+			this.gridAlignments[rIdx][cIdx] = 
+				(myDataSets.lookup(this.versionGrid[rIdx][cIdx])?.language.toLocaleLowerCase() == "hebrew") ?
+				"right" : "left";
+			this.gridAlignments=this.gridAlignments;//for reactivity!)
+				
+			} 
+			else{
+				mylog(`found alignment for ${rIdx}, ${cIdx}, but not version!`, true);
+			}
+		
+		}
+		else{
+			mylog(`could not find valid grid entry for row ${rIdx} and col ${cIdx}: grid rows=${this.gridAlignments.length}; 
+				row1: ${this.gridAlignments[0].join(",")}`, true);
+		}
+	}
+
+	updateCell(rIdx: number, cIdx: number, version: string, realign=false, reload=true) {
 		this.versionGrid = this.versionGrid.map((row, r) => {
 			if (r !== rIdx) return row;
 			const newRow = [...row];
 			newRow[cIdx] = version;
 			return newRow;
 		});
-		this.loadCurrentChapter();
+
+		if(realign){
+			this.realignCell(rIdx,cIdx);
+		}
+
+		
+		if (reload) this.loadCurrentChapter();
 	}
 
 	cycleHebrewMode() {
@@ -464,7 +510,7 @@ export class ReaderState {
 	 * @param reload 
 	 * @returns {Promise<boolean>} true if a valid version was given and selectedVersion was changed.
 	 */
-	async selectVersion(version: string, reload=true): Promise<boolean> {
+	async selectVersion(version: string, reload=true, realign=true): Promise<boolean> {
 		let ret = false;
 		const oldVersion = this.selectedVersion;
 		const matchingVersion = availableBibles.find((ver)=>ver.toLocaleLowerCase() == version.toLocaleLowerCase());
@@ -532,8 +578,13 @@ export class ReaderState {
 			}
 
 		}
-		if (ret && reload)
-			this.loadCurrentChapter();
+		if (ret){
+			if (realign) this.realignAll();
+			if (reload)	this.loadCurrentChapter();
+		} 
+			
+		
+			
 		return ret;
 	}
 

@@ -95,3 +95,23 @@ describe('getGridRowColIdxOfVersion', ()=>{
     });
 
 });
+
+describe('realign cell', ()=>{
+    it('try realigning cell automatically: rtl Vulate->ltr', ()=>{
+        const rs = new ReaderState();
+        
+        rs.updateCell(0,0,"Vulgate", false,false);
+        expect(rs.getCellAlign(0,0)).toEqual("right");
+        rs.realignCell(0,0);
+        expect(rs.getCellAlign(0,0)).toEqual("left");
+        rs.updateCell(0,0,"BHS", false,false);
+        expect(rs.getCellAlign(0,0)).toEqual("left");
+        rs.realignAll();
+        expect(rs.getCellAlign(0,0)).toEqual("right");
+        rs.selectVersion('SBLGNT', false);
+        expect(rs.versionGrid[0][0]).toEqual("KJV");
+        
+        expect(rs.gridAlignments[0][0]).toEqual("left");
+    });
+
+});
