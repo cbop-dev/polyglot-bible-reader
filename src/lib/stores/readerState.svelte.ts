@@ -1,10 +1,10 @@
-import { getVersionBooks } from '$lib/config/versions';
+import { getVersionBooks, myDataSets } from '$lib/config/versions';
 import { mylog } from '$lib/lemma-ui/env/env';
-import { getBookFile, getMappedReference, getBookForVersion, getCorrectVersionName } from '$lib/bookMapping.js';
+import { getBookFile, getMappedReference, getBookForVersion,  } from '$lib/config/bookMapping.js';
 import type { HebrewDiacriticMode } from '$lib/utils/diacritics';
 import { loadChapterFromDb, loadChaptersForBook } from '$lib/services/bibleDataLoader';
 //import { availableBibles } from '$lib/services/bible-datasets';
-import { isValidVersion, availableBibles,dataSets } from '$lib/bookMapping.js';
+import { isValidVersion, availableBibles,dataSets,getCorrectVersionName } from '$lib/config/versions'
 import {page} from "$app/state";
 import { getBaseurl } from '$lib/utils/ui-utils';
 import {
@@ -269,13 +269,13 @@ export class ReaderState {
 		}
 		return changed;
 	}
-	addColumn(newVersion='') {
+	addColumn(newVersion='',reload=true) {
 		
 		const used = new Set(this.versionGrid.flat());
 		const nextVer = newVersion ? newVersion : (availableBibles.find((d) => !used.has(d)) || 'WEB');
 		this.versionGrid = this.versionGrid.map((row) => [...row, nextVer]);
 		this.gridAlignments = this.gridAlignments.map((row) => [...row, null]);
-		this.loadCurrentChapter();
+		if (reload) this.loadCurrentChapter();
 	}
 
 	removeColumn(colIndex: number) {
@@ -339,8 +339,127 @@ export class ReaderState {
 		return changed;
 	}
 
+	getGridRowColIdxOfVersion(version:string){
+		const rowColObj = this.versionGrid
+					.map((row,rIdx)=>({index:rIdx,row: row.map((col,cIdx)=>({index:cIdx, col: col})).filter((col)=>col.col==version)}))
+						.find((row)=>row.row.length);
+
+		return rowColObj? [rowColObj.index, rowColObj?.row[0].index] : [];
+	}
+
+	/**
+	 * @description removes/replaces all those restrictive (OT vs. NT) visible versions if the selected version is exclusively OT/NT.
+	 * @param [reloadChapter=false] if true, will reload the chapter data/display
+	 */
+	ensureVisibleCompatibleWithSelectedVersion(reloadChapter=false){
+		
+		const incompatVersions=this.findIncompatibleVersions(this.selectedVersion);
+		let madeChanges = false;
+		incompatVersions.forEach((ver)=>{
+			//console.log(`here we are working on ${ver}'`);
+			//see if another in its language group is available:
+			let replaced= false;
+			//get this version
+			const theVersionData = myDataSets.lookup(ver);
+			const rowCol = this.getGridRowColIdxOfVersion(ver);
+			//get set of same language versions not already displayed:
+			const compatibleDatasets=this.findCompatibleVersions(ver);
+			//console.log(`visisble version: ${this.visibleVersions.join(',')}`);
+			const availableDatasets = new Set(availableBibles).difference(new Set(this.visibleVersions));
+			const languageVersionsAvailableSet = Array.from(availableDatasets).filter((ds)=>ds?.language==theVersionData?.language);
+			//console.log(`Available versions of some language: ${Array.from(languageVersionsAvailableSet).join(',')}`)
+			const nextAvailableVersion = languageVersionsAvailableSet?.values().next().value?.abbrev||'';
+
+			if (nextAvailableVersion){
+				//console.log(`found next available version for ${ver}: ${nextAvailableVersion}`)
+				const incompRowCol = this.versionGrid
+					.map((row,rIdx)=>({index:rIdx,row: row.map((col,cIdx)=>({index:cIdx, col: col})).filter((col)=>col.col==ver)}))
+						.find((row)=>row.row.length);
+
+				if(incompRowCol){
+					const rIdx = incompRowCol.index;
+					const cIdx = incompRowCol.row[0].index;
+					this.versionGrid[rIdx][cIdx]=nextAvailableVersion;
+					replaced=true;
+					madeChanges=true;
+				}
+			}
+			else if(availableDatasets.size){
+				//cannot replace with same language, let's just replace it with another available one:
+				
+				
+				if (rowCol.length){
+					const newVersion = availableBibles.values().next().value;
+					if (newVersion){
+						this.versionGrid[rowCol[0]][rowCol[1]]=newVersion;
+						madeChanges=true;
+						replaced=true;
+					}
+				}				
+			}
+
+			if(!replaced){ //need to replace it with SOMETHING:
+				//console.log(`Have not yet replaced ${ver}...`)
+				//try an unused one
+				const unusedDatasets = new Set(availableBibles).difference(new Set(this.visibleVersions));
+				if(unusedDatasets.size){
+					const replacement = unusedDatasets.values().next().value;
+					if (replacement) {
+						this.versionGrid[rowCol[0]][rowCol[1]]=replacement;
+						replaced=true;
+						madeChanges=true;
+
+					}
+					
+				}
+
+				if(!replaced){ //anything!
+					this.versionGrid[rowCol[0]][rowCol[1]]=availableBibles[0];
+					replaced=true;
+					madeChanges=true;
+
+				}
+
+			}
+			
+			if(!replaced){
+				console.log(`could not replace ${ver}`);
+			}
+			
+		});
+
+		if(reloadChapter && madeChanges){
+			this.loadCurrentChapter();
+		}
+	}
+
 	/**
 	 * 
+	 * @param version version to check against
+	 * @returns an array of strings, each of which is a version in this.versionGrid/visibleVersions which is either exlusively OT or NT,
+	 * but the 'version' given is the opposite. NB: passing an invalid version, or a version of both NT/OT returns empty array. 
+	 * NB: this does not check for book compatibility, only testament (OT/NT) compatibitility.
+	 */
+	findIncompatibleVersions(version: string): string[]{
+		let ret: string[] = [];
+		const theChosenDataset = myDataSets.lookup(version);
+		if (theChosenDataset){
+			if (theChosenDataset.testament=='nt'){
+				ret.push(...this.visibleVersions.filter((ver)=>myDataSets.lookup(ver)?.testament=='ot'));
+			}
+			else if(theChosenDataset.testament=='ot'){
+				ret.push(...this.visibleVersions.filter((ver)=>myDataSets.lookup(ver)?.testament=='nt'));
+			}
+		} 
+		
+		return ret;
+	}
+
+	findCompatibleVersions(version:string): string[]{
+		return Array.from(new Set(availableBibles).difference(new Set(this.findIncompatibleVersions(version))));
+	}
+	/**
+	 * @description changes the version used. If the new version was not among the displayed ones, it replaces one of them.
 	 * @param version 
 	 * @param reload 
 	 * @returns {Promise<boolean>} true if a valid version was given and selectedVersion was changed.
@@ -354,7 +473,7 @@ export class ReaderState {
 			
 			this.versionDropdownOpen = false;
 			this.ensureVisibleContainsSelectedVersion();
-
+			this.ensureVisibleCompatibleWithSelectedVersion(false);
 			const books = getVersionBooks(matchingVersion);
 			const currentCh = parseInt(this.selectedChapter, 10) || 1;
 			const targetBook = getBookForVersion(this.selectedBook, matchingVersion, currentCh);

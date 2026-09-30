@@ -1,6 +1,6 @@
 import { getDbWorker } from './dbWorker';
 import { mylog } from '$lib/lemma-ui/env/env';
-import { normalizeBookName, getMappedReference } from '$lib/bookMapping.js';
+import { normalizeBookName, getMappedReference } from '$lib/config/bookMapping.js';
 
 export interface WorkRow {
 	id: number;

@@ -2,7 +2,7 @@
   import CopyText from '$lib/lemma-ui/components/ui/CopyText.svelte';
   import { readerState } from '$lib/stores/readerState.svelte';
   import { formatVerseText } from '$lib/services/bibleDataLoader';
-  import { dataSets, myDataSets } from '$lib/bookMapping';
+  import { dataSets, myDataSets } from '$lib/config/versions';
   import { size,theme } from '$lib/stores/ThemeObserver.svelte';
   import { findTopmostDiv } from '$lib/utils/ui-utils';
   import Icon from '../ui/Icon.svelte';

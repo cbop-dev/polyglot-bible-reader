@@ -1,3 +1,81 @@
+
+export const biblesByLanguage={
+  english:['KJV', 'Brenton'],
+  greek:['LXX']
+}
+
+export class Dataset{
+  abbrev= '';
+  language='';
+  description='';
+  lemmaInfoEnabled=false;
+  testament=''; //ot, nt, or both
+
+  constructor(abbrev: string, language: string,testament: string,description='', lemmaInfoEnabled=false){
+    this.abbrev=abbrev;
+    this.language=language;
+    this.testament=testament;
+    this.description=description;
+    this.lemmaInfoEnabled=lemmaInfoEnabled;
+  }
+}
+
+
+
+
+export const datasetsDict=
+{
+  'KJV': {language:'English',testament: 'both', lemmas:false},
+  'Vulgate':{language:'Latin', testament: 'both', lemmas:false},
+  'WEB':{language:'English',testament: 'both', lemmas:false},
+   'Brenton':{language: 'English', testament: 'ot', lemmas:false},
+   'BHS':{language:'Hebrew', testament: 'ot', lemmas:true},
+   'LXX':{language:'Greek', testament: 'ot', lemmas:true},
+   'SBLGNT':{language:'Greek', testament: 'nt', lemmas:true}
+};
+
+export const dataSets = Object.entries(datasetsDict).map(([k,v])=>new Dataset(k, v.language,v.testament,'', v.lemmas));
+//mylog(`datasets abbrevs: [${dataSets.map((ds)=>ds.abbrev).join(',')}]`, true);
+
+
+export const myDataSets={
+  dataSets: dataSets,
+  lookup(abbrev:string){
+    return dataSets.find((ds)=>ds.abbrev.toLocaleLowerCase()==abbrev.toLocaleLowerCase());
+  },
+  
+  /**
+   * 
+   * @param {string} language The language to check for.
+   * @returns {Dataset[]} an array of the versions which are in this language group 
+   */
+  getByLang(language: string): Dataset[]{
+    return dataSets.filter((ds)=>ds.language.toLocaleLowerCase()==language.toLocaleLowerCase());
+  }
+
+}
+
+export const availableBibles=Object.keys(datasetsDict);
+
+export function getCorrectVersionName(fuzzyName: string){
+	return availableBibles.find((ver)=>ver.toLocaleLowerCase() == fuzzyName.toLocaleLowerCase());
+}
+
+export function isValidVersion(versionName: string, caseSensitive=false): boolean{
+
+	let ret = false;
+
+	return availableBibles.find((ver)=>{
+		if (caseSensitive){
+			return isValidVersion(ver) ? true : false;
+		}
+		else{
+			return ver == versionName;
+		}
+	})? true: false;
+}
+
+
 export interface VersionGroup {
   language: string;
   versions: string[];

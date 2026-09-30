@@ -1,5 +1,5 @@
 import { formatHebrew, formatGreek, type HebrewDiacriticMode } from '$lib/utils/diacritics';
-import { getBookForVersion } from '$lib/bookMapping';
+import { getBookForVersion } from '$lib/config/bookMapping';
 import {
 	getChapterVerses,
 	getBookChapters,
