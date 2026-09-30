@@ -73,27 +73,30 @@
           <div class="{colVersion === 'BHS' ? 'text-2xl' : 'text-xl'} {align === 'right' ? 'text-right' : 'text-left'} leading-snug w-full" dir={colVersion === 'BHS' ? 'rtl' : 'ltr'}>
             {#if vData?.omitted}
               <span class="text-sm italic text-ink-soft font-sans" dir="ltr">[Not found in this version.]</span>
-            {:else if vData?.verseData?.words}
-            {#if readerState.meditationMode}<span class="text-xs font-greek align-super">{verseKey} </span>{/if}
-              {#each vData.verseData.words as w}
-                {#if !myDataSets.lookup(colVersion)?.lemmaInfoEnabled}
-                  {@const text = w.word}
-                  <span class="bible-font inline">{text}{w.trailer ?? ' '}</span>
-                {:else}
-                  {@const text = formatVerseText(w.word, colVersion, readerState.hebrewMode, readerState.greekDiacritics)}
-                  <button
-                    type="button"
-                    class="{colVersion === 'BHS' ? 'font-hebrew' : colVersion === 'Vulgate' ? 'font-sans' : 'font-greek'} 
-                    {readerState.meditationMode? '': 'cursor-pointer hover:bg-rule'} rounded focus:outline-none inline"
-                    onclick={(e) => { if (!readerState.meditationMode) {e.stopPropagation(); readerState.inspectWord(w, colVersion);} }}
-                  >{text}</button>{w.trailer ?? ' '}
-                {/if}
-              {/each}
-            {:else if vData?.verseData?.text}
-              {@const text = formatVerseText(vData.verseData.text, colVersion, readerState.hebrewMode, readerState.greekDiacritics)}
-              <span class="{colVersion === 'BHS' ? 'font-hebrew' : colVersion === 'Vulgate' || colVersion === 'WEB' ? 'font-sans' : 'font-greek'}">
-                {text}
-              </span>
+            {:else if vData?.verseData?.words || vData?.verseData?.text}
+              {#if readerState.meditationMode}<span class="text-xs font-greek align-super">{verseKey} </span>{/if}
+              {#if vData?.verseData?.words}
+              
+                {#each vData.verseData.words as w}
+                  {#if !myDataSets.lookup(colVersion)?.lemmaInfoEnabled}
+                    {@const text = w.word}
+                    <span class="bible-font inline">{text}{w.trailer ?? ' '}</span>
+                  {:else}
+                    {@const text = formatVerseText(w.word, colVersion, readerState.hebrewMode, readerState.greekDiacritics)}
+                    <button
+                      type="button"
+                      class="{colVersion === 'BHS' ? 'font-hebrew' : colVersion === 'Vulgate' ? 'font-sans' : 'font-greek'} 
+                      {readerState.meditationMode? '': 'cursor-pointer hover:bg-rule'} rounded focus:outline-none inline"
+                      onclick={(e) => { if (!readerState.meditationMode) {e.stopPropagation(); readerState.inspectWord(w, colVersion);} }}
+                    >{text}</button>{w.trailer ?? ' '}
+                  {/if}
+                {/each}
+              {:else if vData?.verseData?.text}
+                {@const text = formatVerseText(vData.verseData.text, colVersion, readerState.hebrewMode, readerState.greekDiacritics)}
+                <span class="{colVersion === 'BHS' ? 'font-hebrew' : colVersion === 'Vulgate' || colVersion === 'WEB' ? 'font-sans' : 'font-greek'}">
+                  {text}
+                </span>
+            {/if}
             {:else}
               <span class="text-sm italic text-ink-soft font-sans">[Verse text not available]</span>
             {/if}
