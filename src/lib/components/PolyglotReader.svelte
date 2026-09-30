@@ -20,7 +20,7 @@ let {
     chapter='',
     verse='',
     grid=[],
-    meditate=''
+    meditate=false
 
 } : {version: string, book: string,chapter: string, verse: string, grid: string[][], meditate:boolean} = $props();
 

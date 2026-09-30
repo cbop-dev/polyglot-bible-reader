@@ -10,7 +10,8 @@ const book = page.url.searchParams.get('book')?? '';
 const chapter = page.url.searchParams.get('chapter')?? '';
 const verse = page.url.searchParams.get('verse')?? '';
 const grid=page.url.searchParams.get('grid') ?? '';//versions in the display grid
-const meditate=page.url.searchParams.get('meditate') ?? '';
+const meditate= page.url.searchParams.get('meditate')?.toLocaleLowerCase() == 'true' 
+  || page.url.searchParams.get('meditate') == '1' || false;
 const gridArray: string[][]=[];
 if (grid){
     

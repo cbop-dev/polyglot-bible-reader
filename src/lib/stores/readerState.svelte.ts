@@ -704,7 +704,7 @@ export class ReaderState {
 			'book':this.selectedBook,
 			'grid':this.versionGrid.map((row)=>row.join(',')).join("|"),
 			'verse':verse,
-			'meditate':meditate
+			'meditate':meditate ? 1 : 0
 		}
 
 		return base+'?'+Object.entries(params).map(([k,v])=>`${k}=${v}`).join("&");
