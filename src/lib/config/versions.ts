@@ -106,15 +106,16 @@ export function getVersionLanguage(version:string){
 
 export const allVersions: string[] = versionGroups.flatMap((g) => g.versions);
 
-export function formatVersionLabel(opt: string): string {
-  if (opt === 'BHS') return 'Hebrew (BHS)';
-  if (opt === 'LXX') return 'Greek (LXX)';
-  if (opt === 'SBLGNT') return 'Greek NT (SBLGNT)';
-  if (opt === 'WEB') return 'English (WEB)';
-  if (opt === 'Vulgate') return 'Latin (Vulgate)';
-  if (opt === 'KJV') return 'English (KJV)';
-  if (opt === 'Brenton') return "Brenton's (LXX)";
-  return opt;
+export function formatVersionLabel(opt: string, short=false): string {
+  if (short){
+    return opt
+  }
+  else{
+    const ds = myDataSets.lookup(opt);
+
+    return ds ? `${ds.language} (${ds?.abbrev})` : '';
+  }
+  
 }
 
 export const bhsBooks = [

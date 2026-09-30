@@ -82,10 +82,11 @@ pb-2.5 border-b border-rule z-20 shadow-xs">
         {#each row as cellVersion, cIdx}
           {@const align = readerState.getCellAlign(rIdx, cIdx)}
           
-          <div class="relative flex items-center justify-center gap-1.5 bg-page border border-rule/60 rounded-md px-3 py-1.5 group hover:border-link transition-colors shadow-xs">
+          <div class="relative flex items-center justify-center gap-1.5 bg-page border border-rule/60 rounded-md px-3 py-1.5 
+          group hover:border-link transition-colors shadow-xs">
            
             <select 
-              class="font-bold text-sm bg-page text-ink cursor-pointer appearance-none text-center focus:outline-none text-ink truncate"
+              class="font-bold text-sm bg-page text-ink cursor-pointer appearance-none text-center focus:outline-none text-ink truncate w-full min-w-0 truncate "
               value={cellVersion}
               onchange={(e) => readerState.updateCell(rIdx, cIdx, e.currentTarget.value)}
               aria-label="Select translation for Row {rIdx + 1}, Column {cIdx + 1}"
@@ -93,7 +94,7 @@ pb-2.5 border-b border-rule z-20 shadow-xs">
               {#each versionGroups as group}
                 <optgroup label={group.language} class="underline text-left">
                   {#each group.versions as opt}
-                    <option class="text-left" value={opt}>{formatVersionLabel(opt)}</option>
+                    <option class="text-left " value={opt}>{formatVersionLabel(opt, size.current=='base')}</option>
                   {/each}
                 </optgroup>
               {/each}
