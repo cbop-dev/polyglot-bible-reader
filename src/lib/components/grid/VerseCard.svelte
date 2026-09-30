@@ -64,7 +64,7 @@
             <span>{vData?.label}</span>
             <span class="px-1.5 py-0.2 rounded text-[10px] bg-rule/50 font-medium">({colVersion})</span>
             <CopyText  height={10}
-  tooltip="Copy URL to share this verse on this page's view!"
+  tooltip="Copy URL sharing/bookmarking this verse and view"
   btnCssClass={(theme.value=='dark' ? 'bg-white/10 hover:bg-white/60': 'bg-gray-500/10 hover:bg-blue-500/30')+" "} 
   getTextFunc={()=>{return getURL(verseKey)}}>
   <LinkIcon --strokecolor={theme.value=='dark'?'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.4)'} height={8} width={10} /></CopyText>
@@ -74,7 +74,7 @@
             {#if vData?.omitted}
               <span class="text-sm italic text-ink-soft font-sans" dir="ltr">[Not found in this version.]</span>
             {:else if vData?.verseData?.words || vData?.verseData?.text}
-              {#if readerState.meditationMode}<CopyText tooltip={"Copy URL to this verse/view for sharing/bookmarking."} btnCssClass={''} btnSizeCssClass='' showButton={false} supressCopiedMsg={true} copyText={readerState.generatePageStateURL(verseKey)}><span class="text-xs font-greek align-super">{verseKey} </span></CopyText>{/if}
+              {#if readerState.meditationMode}<CopyText tooltip={"Copy URL sharing/bookmarking this verse and view"} btnCssClass={''} btnSizeCssClass='' showButton={false} supressCopiedMsg={true} copyText={readerState.generatePageStateURL(verseKey)}><span class="text-xs font-greek align-super">{verseKey} </span></CopyText>{/if}
               {#if vData?.verseData?.words}
               
                 {#each vData.verseData.words as w}
