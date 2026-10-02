@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { base } from '$app/paths';
-  
+
+  import { resolve } from '$app/paths';
   import siteLogo from '$lib/assets/logo.png';
   import prayerWhiteSvg from '$lib/assets/prayer-white.svg';
   import prayerBlackSvg from '$lib/assets/prayer-black.svg';
@@ -33,11 +33,12 @@ gap-2 sm:gap-4 -mx-3 px-1 sm:-mx-4 sm:px-4 md:-mx-8 md:px-3">
   
   <!-- top left of header: Logo/title, version, info-->
   <div class="float-left flex items-center gap-2 sm:gap-3 md:gap-4 min-w-0">
+    <a href={resolve('/')} class="" target="_blank"  >
     <img
       src={siteLogo}
       alt="Polyglot Bible Reader logo"
       class="w-8 h-8 sm:w-11 sm:h-11 {readerState.meditationMode ? '' :' md:w-14 md:h-14 lg:w-16 lg:h-16'} flex-shrink-0 object-contain rounded-full shadow-xs"
-    />
+    /></a>
     {#if !readerState.meditationMode}
     <div class="min-w-0">
       <h1 class="text-sm min-[360px]:text-base min-[410px]:text-lg sm:text-2xl md:text-2xl lg:text-4xl font-bold tracking-tight inline-flex items-center flex-wrap gap-x-1 sm:gap-x-1.5">
@@ -50,7 +51,7 @@ gap-2 sm:gap-4 -mx-3 px-1 sm:-mx-4 sm:px-4 md:-mx-8 md:px-3">
         </span>
         <span class=" sm:inline-flex items-center flex-shrink-0">
           <a
-            href="{base}/sources-and-licenses"
+            href="{resolve('/')}sources-and-licenses"
             class="btn btn-circle btn-ghost btn-xs text-base-content/80 sm:btn-sm hover:bg-base-200 hover:text-base-content inline-flex items-center justify-center rounded-full p-0.5 sm:p-1 text-ink-soft hover:text-ink hover:bg-rule/50 transition-colors align-super relative -top-0.5 sm:-top-1 ml-0.5 sm:ml-1"
             title="Sources &amp; Licenses"
             aria-label="Sources &amp; Licenses"
