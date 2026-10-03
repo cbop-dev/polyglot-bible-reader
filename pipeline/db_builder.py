@@ -115,6 +115,15 @@ CREATE TABLE IF NOT EXISTS concordance_refs (
     work_unit_id INTEGER NOT NULL,
     PRIMARY KEY (corpus_id, strongs, work_unit_id)
 ) WITHOUT ROWID;
+
+-- 7. Pre-computed Corpus Book Statistics (Word & Verse totals per book)
+CREATE TABLE IF NOT EXISTS corpus_book_stats (
+    corpus_id TEXT NOT NULL,
+    book_code TEXT NOT NULL,
+    total_words INTEGER NOT NULL,
+    total_verses INTEGER NOT NULL,
+    PRIMARY KEY (corpus_id, book_code)
+);
 """
 
 INDEX_SQL = """

@@ -71,6 +71,11 @@ def index_lemmas_and_concordance(conn: sqlite3.Connection):
         """
     )
 
+    # Book and corpus word & verse aggregations
+    corpus_word_counts: Dict[str, int] = defaultdict(int)
+    book_word_counts: Dict[Tuple[str, str], int] = defaultdict(int)
+    book_verse_counts: Dict[Tuple[str, str], int] = defaultdict(int)
+
     # In-memory aggregations:
     # key: (corpus_id, work_id, strongs_key)
     # val: dict of book_code -> count
@@ -93,7 +98,11 @@ def index_lemmas_and_concordance(conn: sqlite3.Connection):
         except Exception:
             continue
 
-        token_count += len(tokens)
+        n_tok = len(tokens)
+        token_count += n_tok
+        corpus_word_counts[corpus_id] += n_tok
+        book_word_counts[(corpus_id, std_book)] += n_tok
+        book_verse_counts[(corpus_id, std_book)] += 1
 
         # Track keys already encountered in this verse to avoid duplicate count in concordance
         verse_keys_seen: Set[str] = set()
@@ -132,7 +141,31 @@ def index_lemmas_and_concordance(conn: sqlite3.Connection):
         f"Identified {len(lemma_book_counts):,} unique lemmas and {len(concordance_set):,} verse occurrences."
     )
 
-    # 3. Populate lemma_stats table
+    # 3. Create and populate corpus_book_stats table
+    print("Populating corpus_book_stats table...")
+    t_cbs = time.time()
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS corpus_book_stats (
+            corpus_id TEXT NOT NULL,
+            book_code TEXT NOT NULL,
+            total_words INTEGER NOT NULL,
+            total_verses INTEGER NOT NULL,
+            PRIMARY KEY (corpus_id, book_code)
+        )
+    """)
+    cur.execute("DELETE FROM corpus_book_stats")
+    cbs_rows = [
+        (c_id, b_code, w_cnt, book_verse_counts.get((c_id, b_code), 0))
+        for (c_id, b_code), w_cnt in book_word_counts.items()
+    ]
+    cur.executemany(
+        "INSERT INTO corpus_book_stats (corpus_id, book_code, total_words, total_verses) VALUES (?, ?, ?, ?)",
+        cbs_rows
+    )
+    conn.commit()
+    print(f"Inserted {len(cbs_rows):,} rows into corpus_book_stats in {time.time() - t_cbs:.2f}s.")
+
+    # 4. Populate lemma_stats table
     print("Populating lemma_stats table...")
     t_stats = time.time()
     cur.execute("DELETE FROM lemma_stats")
@@ -145,10 +178,12 @@ def index_lemmas_and_concordance(conn: sqlite3.Connection):
         book_list = []
         for b_code, count in book_counts.items():
             order_idx, name_en = books_meta.get(b_code, (999, b_code))
+            book_words = book_word_counts.get((corpus_id, b_code), 0)
             book_list.append({
                 "title": name_en,
                 "sbl_abbreviation": b_code,
                 "count": count,
+                "book_words": book_words,
                 "_order": order_idx,
             })
 
@@ -222,3 +257,20 @@ def index_lemmas_and_concordance(conn: sqlite3.Connection):
     )
     total_elapsed = time.time() - start_time
     print(f"=== Lemma Indexing Complete in {total_elapsed:.2f}s ===\n")
+
+
+if __name__ == "__main__":
+    import sys
+    from pathlib import Path
+
+    db_path = Path("pipeline/build/polyglot-working.sqlite3")
+    if not db_path.exists():
+        db_path = Path("build/polyglot-working.sqlite3")
+    if not db_path.exists():
+        print(f"Database not found at {db_path}")
+        sys.exit(1)
+
+    print(f"Connecting to {db_path}...")
+    conn = sqlite3.connect(db_path)
+    index_lemmas_and_concordance(conn)
+    conn.close()

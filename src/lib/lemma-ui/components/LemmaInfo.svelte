@@ -19,9 +19,17 @@
 		getWordFrequencyByBook,
 		getConcordance,
 		getLemmaTotalCount,
+		getCorpusTotalWords,
+		getCorpusBookWords,
 		type BookFrequency,
 		type ConcordanceOccurrence
 	} from '$lib/services/dbClient';
+	import {
+		calcTotalFrequency,
+		calcFreqRatio,
+		floatRound,
+		LemmaSectionStats
+	} from '$lib/utils/lex-stats';
 	import { readerState } from '$lib/stores/readerState.svelte';
     import { mylog } from '../env/env';
 
@@ -34,8 +42,14 @@
 	let isFetchingStats = $state(false);
 	let isFetchingReferences = $state(false);
 	let selectedStatsTab = $state(0);
+	const statsTabs = ['Basic Stats', 'Small Charts', 'Large Charts / Table'];
+
 	let chartOptionIndex = $state(0);
-	const chartOptions = ['Bar Chart', 'Pie Chart', 'Data Table'];
+	const chartOptions = ['Lemma Count', 'Frequency (per 1k)', 'Data Table'];
+
+	let chosenBook = $state(readerState.selectedBook || '');
+	let corpusWordsTotal = $state(0);
+	let sectionBookWords = $state(0);
 
 	let bookFrequencies = $state<BookFrequency[]>([]);
 	let concordanceOccurrences = $state<ConcordanceOccurrence[]>([]);
@@ -76,6 +90,9 @@
 		bookFrequencies = [];
 		concordanceOccurrences = [];
 		totalCount = lemma?.total_count ?? lemma?.total ?? null;
+		chosenBook = readerState.selectedBook || '';
+		corpusWordsTotal = 0;
+		sectionBookWords = 0;
 	}
 
 	function switchSegment(segmentId: string){
@@ -86,6 +103,9 @@
 		concordanceOccurrences = [];
 		showStats = false;
 		totalCount = null;
+		chosenBook = readerState.selectedBook || '';
+		corpusWordsTotal = 0;
+		sectionBookWords = 0;
 	}
 
 	const parsedHebrewMorph = $derived.by(() => {
@@ -124,15 +144,23 @@
 	});
 
 	async function loadStats() {
-		if (bookFrequencies.length > 0 || isFetchingStats) return;
+		if (bookFrequencies.length > 0 && corpusWordsTotal > 0) return;
 		isFetchingStats = true;
 		try {
 			const workId = currentLemmaData?.work_id || lemma?.work_id;
-			const freqs = await getWordFrequencyByBook(workId, lookupKey, currentLemmaData?.strongs);
+			const corpusId = lemma?.corpus || (isHebrew ? 'wlc' : (lemma?.colVersion === 'LXX' ? 'swete_lxx' : (lemma?.corpus === 'ognt' ? 'ognt' : 'swete_lxx')));
+			const [freqs, totalW] = await Promise.all([
+				getWordFrequencyByBook(workId, lookupKey, currentLemmaData?.strongs),
+				getCorpusTotalWords(corpusId)
+			]);
 			bookFrequencies = freqs;
+			corpusWordsTotal = totalW;
 			if (freqs && freqs.length > 0) {
 				const sum = freqs.reduce((acc, f) => acc + f.count, 0);
 				if (sum > 0) totalCount = sum;
+			}
+			if (!chosenBook && freqs.length > 0) {
+				chosenBook = freqs[0].sbl_abbreviation || freqs[0].title;
 			}
 		} catch (err) {
 			console.warn('[LemmaInfo] Error loading frequencies:', err);
@@ -158,7 +186,50 @@
 		}
 	}
 
-	const chartData = $derived.by(() => {
+	// Update sectionBookWords whenever chosenBook changes
+	$effect(() => {
+		const target = chosenBook;
+		if (!target) return;
+		const corpusId = lemma?.corpus || (isHebrew ? 'wlc' : (lemma?.colVersion === 'LXX' ? 'swete_lxx' : (lemma?.corpus === 'ognt' ? 'ognt' : 'swete_lxx')));
+		const match = bookFrequencies.find(
+			(b) => b.sbl_abbreviation === target || b.title === target
+		);
+		if (match?.book_words) {
+			sectionBookWords = match.book_words;
+		} else {
+			getCorpusBookWords(corpusId, target).then((w) => {
+				sectionBookWords = w;
+			});
+		}
+	});
+
+	const selectedBookFrequency = $derived.by(() => {
+		if (!chosenBook || bookFrequencies.length === 0) return null;
+		const clean = chosenBook.trim().toUpperCase();
+		return (
+			bookFrequencies.find(
+				(b) => b.sbl_abbreviation?.toUpperCase() === clean || b.title?.toUpperCase() === clean
+			) || null
+		);
+	});
+
+	const sectionLexCount = $derived(selectedBookFrequency?.count ?? 0);
+
+	const sectionStats = $derived.by(() => {
+		return new LemmaSectionStats(
+			sectionLexCount,
+			totalOccurrences,
+			sectionBookWords,
+			corpusWordsTotal
+		);
+	});
+
+	const activeBookDisplay = $derived(
+		selectedBookFrequency?.title || chosenBook || 'Selected Book'
+	);
+
+	// Large Charts & Tables derived data
+	const countChartData = $derived.by(() => {
 		if (bookFrequencies.length === 0) return null;
 		return {
 			labels: bookFrequencies.map((f) => f.sbl_abbreviation || f.title),
@@ -166,19 +237,43 @@
 		};
 	});
 
-	const tableData = $derived.by(() => {
+	const freqChartData = $derived.by(() => {
 		if (bookFrequencies.length === 0) return null;
 		return {
-			columns: ['Book', 'Occurrences', 'Share (%)'],
-			data: bookFrequencies.map((f) => [
-				f.title,
-				f.count,
-				totalOccurrences > 0 ? ((100 * f.count) / totalOccurrences).toFixed(1) + '%' : '-'
-			])
+			labels: bookFrequencies.map((f) => f.sbl_abbreviation || f.title),
+			nums: bookFrequencies.map((f) => floatRound((1000 * f.count) / (f.book_words || 1), 3))
 		};
 	});
 
-	const statsTabs = ['Distribution & Charts', 'Basic Summary'];
+	const tableData = $derived.by(() => {
+		if (bookFrequencies.length === 0) return null;
+		return {
+			columns: ['Book', 'Count', 'Freq (#/1k)', 'Freq Ratio'],
+			data: bookFrequencies.map((f) => {
+				const freq = floatRound((1000 * f.count) / (f.book_words || 1), 3);
+				const avgFreq = sectionStats.freq.corpus;
+				const ratio = avgFreq > 0 ? floatRound(freq / avgFreq, 2) + 'x' : '-';
+				return [f.title, f.count, freq, ratio];
+			})
+		};
+	});
+
+	// Small Charts derived data
+	const pieChartData = $derived.by(() => {
+		if (!sectionStats) return null;
+		return {
+			labels: [activeBookDisplay, `Rest of ${corpusLabel}`],
+			nums: [sectionStats.lexCounts.section, sectionStats.lexCounts.rest]
+		};
+	});
+
+	const ratioBarChartData = $derived.by(() => {
+		if (!sectionStats) return null;
+		return {
+			labels: [activeBookDisplay, `Rest of ${corpusLabel}`],
+			nums: [floatRound(sectionStats.freq.section, 3), floatRound(sectionStats.freq.rest, 3)]
+		};
+	});
 
 	function navigateToOccurrence(displayLabel: string) {
 		if (!displayLabel) return;
@@ -330,69 +425,175 @@
 	{#if showStats}
 		<hr class="my-4 border-rule opacity-60" />
 		<div class="max-w-2xl mx-auto text-center">
-			<h2 class="text-xl font-bold pb-1 text-ink text-center">Frequency Distribution</h2>
+			<h2 class="text-xl font-bold pb-1 text-ink text-center">Stats and Charts</h2>
+			<span class="block text-center text-xs text-ink-soft opacity-70 mb-2 italic">
+				Advanced lexeme distribution and comparative frequencies across {corpusLabel}
+			</span>
 
 			<Tabs headings={statsTabs} bind:selectedTabIndex={selectedStatsTab} classes={['my-2']} />
 
 			{#if isFetchingStats}
 				<div class="py-8 text-center flex flex-col items-center justify-center gap-2">
 					<span class="inline-block w-8 h-8 border-4 border-link border-t-transparent rounded-full animate-spin"></span>
-					<span class="text-sm text-ink-soft font-medium">Querying SQLite for book frequencies...</span>
+					<span class="text-sm text-ink-soft font-medium">Loading corpus and book statistics...</span>
 				</div>
 			{:else if bookFrequencies.length === 0}
 				<div class="py-6 text-center text-sm text-ink-soft">
 					No frequency distribution records found for this lemma.
 				</div>
-			{:else if selectedStatsTab === 0}
-				<!-- Distribution & Charts -->
-				<div class="mt-2 mb-4 text-center">
-					<select
-						bind:value={chartOptionIndex}
-						class="border border-rule bg-page text-ink rounded-lg px-3 py-1.5 text-sm shadow-xs focus:outline-none focus:ring-2 focus:ring-link/30 inline-block self-center text-center cursor-pointer"
-					>
-						{#each chartOptions as name, index}
-							<option value={index}>{name}</option>
-						{/each}
-					</select>
+			{:else}
+				<!-- Book Selector Dropdown (visible in Basic Stats and Small Charts) -->
+				{#if selectedStatsTab === 0 || selectedStatsTab === 1}
+					<div class="my-3 flex items-center justify-center gap-2">
+						<span class="text-xs font-semibold text-ink-soft uppercase tracking-wider">Book:</span>
+						<select
+							bind:value={chosenBook}
+							class="border border-rule bg-page text-ink rounded-lg px-2.5 py-1 text-xs shadow-xs focus:outline-none focus:ring-2 focus:ring-link/30 cursor-pointer"
+						>
+							{#if chosenBook && !bookFrequencies.some((b) => b.sbl_abbreviation === chosenBook || b.title === chosenBook)}
+								<option value={chosenBook}>{chosenBook} (Reading View - 0 occurrences)</option>
+							{/if}
+							{#each bookFrequencies as b}
+								<option value={b.sbl_abbreviation || b.title}>{b.title} ({b.count})</option>
+							{/each}
+						</select>
+					</div>
+				{/if}
 
-					{#if chartOptionIndex === 0 && chartData}
-						<div class="my-3">
-							<BarChart barData={chartData} horizontal={true} corpusAbbrev={corpusLabel} />
+				{#if selectedStatsTab === 0}
+					<!-- Tab 0: Basic Stats -->
+					<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 my-4">
+						<div class="p-3.5 rounded-xl border border-rule bg-page shadow-xs text-center">
+							<div class="text-xs font-semibold uppercase tracking-wider text-ink-soft">Section Word Count</div>
+							<div class="text-2xl font-bold text-link my-1">{sectionStats.lexCounts.section}</div>
+							<div class="text-xs text-ink-soft opacity-80">Total in {activeBookDisplay}</div>
 						</div>
-					{:else if chartOptionIndex === 1 && chartData}
-						<div class="my-3 max-w-md mx-auto">
-							<PieChart pieData={chartData} title="Distribution by Book" />
+
+						<div class="p-3.5 rounded-xl border border-rule bg-page shadow-xs text-center">
+							<div class="text-xs font-semibold uppercase tracking-wider text-ink-soft">Rest of {corpusLabel} Count</div>
+							<div class="text-2xl font-bold text-link my-1">{sectionStats.lexCounts.rest}</div>
+							<div class="text-xs text-ink-soft opacity-80">Excluding {activeBookDisplay}</div>
 						</div>
-					{:else if chartOptionIndex === 2 && tableData}
-						<div class="my-3 text-left">
-							<Grid
-								data={tableData.data}
-								sort={true}
-								columns={tableData.columns}
-								pagination={{ limit: 15 }}
-							/>
+
+						<div class="p-3.5 rounded-xl border border-rule bg-page shadow-xs text-center">
+							<div class="text-xs font-semibold uppercase tracking-wider text-ink-soft">Section Frequency</div>
+							<div class="text-2xl font-bold text-link my-1">{sectionStats.freq.section.toFixed(3)}</div>
+							<div class="text-xs text-ink-soft opacity-80">Per 1,000 words in {activeBookDisplay}</div>
 						</div>
-					{/if}
-				</div>
-			{:else if selectedStatsTab === 1}
-				<!-- Basic Summary -->
-				<div class="grid grid-cols-1 sm:grid-cols-3 gap-3 my-4">
-					<div class="p-3.5 rounded-xl border border-rule bg-page shadow-xs">
-						<div class="text-xs font-semibold uppercase tracking-wider text-ink-soft">Total Occurrences</div>
-						<div class="text-2xl font-bold text-link my-1">{totalOccurrences}</div>
-						<div class="text-xs text-ink-soft opacity-80">Across {corpusLabel}</div>
+
+						<div class="p-3.5 rounded-xl border border-rule bg-page shadow-xs text-center">
+							<div class="text-xs font-semibold uppercase tracking-wider text-ink-soft">Rest of {corpusLabel} Freq</div>
+							<div class="text-2xl font-bold text-link my-1">{sectionStats.freq.rest.toFixed(3)}</div>
+							<div class="text-xs text-ink-soft opacity-80">Per 1,000 words</div>
+						</div>
+
+						<div class="p-3.5 rounded-xl border border-rule bg-page shadow-xs text-center">
+							<div class="text-xs font-semibold uppercase tracking-wider text-ink-soft">% of {corpusLabel} Use</div>
+							<div class="text-2xl font-bold text-link my-1">{sectionStats.percentageUse.toFixed(1)}%</div>
+							<div class="text-xs text-ink-soft opacity-80">{activeBookDisplay}'s share of total</div>
+						</div>
+
+						<div class="p-3.5 rounded-xl border border-rule bg-page shadow-xs text-center">
+							<div class="text-xs font-semibold uppercase tracking-wider text-ink-soft">{corpusLabel} Count</div>
+							<div class="text-2xl font-bold text-link my-1">{totalOccurrences}</div>
+							<div class="text-xs text-ink-soft opacity-80">Total across entire corpus</div>
+						</div>
+
+						<div class="p-3.5 rounded-xl border border-rule bg-page shadow-xs text-center sm:col-span-2 md:col-span-3">
+							<div class="text-xs font-semibold uppercase tracking-wider text-ink-soft">Average {corpusLabel} Frequency</div>
+							<div class="text-2xl font-bold text-link my-1">{sectionStats.freq.corpus.toFixed(3)}</div>
+							<div class="text-xs text-ink-soft opacity-80">
+								Per 1,000 words in entire corpus ({corpusWordsTotal > 0 ? corpusWordsTotal.toLocaleString() : '—'} words)
+							</div>
+						</div>
 					</div>
-					<div class="p-3.5 rounded-xl border border-rule bg-page shadow-xs">
-						<div class="text-xs font-semibold uppercase tracking-wider text-ink-soft">Top Book</div>
-						<div class="text-2xl font-bold text-link my-1">{bookFrequencies[0]?.sbl_abbreviation || '-'}</div>
-						<div class="text-xs text-ink-soft opacity-80">{bookFrequencies[0]?.count || 0} occurrences</div>
+
+				{:else if selectedStatsTab === 1}
+					<!-- Tab 1: Small Charts -->
+					<div class="grid grid-cols-1 md:grid-cols-2 gap-4 my-4">
+						<!-- Pie Chart: Section vs Rest of Corpus -->
+						<div class="p-4 rounded-xl border border-rule bg-page shadow-xs flex flex-col items-center">
+							<h3 class="text-sm font-semibold text-ink mb-1">{activeBookDisplay} vs. {corpusLabel} Count</h3>
+							<div class="my-2 max-w-[220px] w-full">
+								{#if pieChartData}
+									{#key chosenBook + sectionStats.lexCounts.section}
+										<PieChart pieData={pieChartData} />
+									{/key}
+								{/if}
+							</div>
+							<div class="text-xl font-bold text-link mt-1">{sectionStats.percentageUse.toFixed(1)}%</div>
+							<p class="text-xs text-ink-soft opacity-80 mt-0.5">
+								{activeBookDisplay}'s share of {corpusLabel}'s total use of this word
+							</p>
+						</div>
+
+						<!-- Frequency Ratio Bar Chart -->
+						<div class="p-4 rounded-xl border border-rule bg-page shadow-xs flex flex-col items-center">
+							<h3 class="text-sm font-semibold text-ink mb-1">{activeBookDisplay} vs. Rest of {corpusLabel}: Freq Ratio</h3>
+							<div class="my-2 w-full max-w-[280px]">
+								{#if ratioBarChartData}
+									{#key chosenBook + sectionStats.freqRatio}
+										<BarChart
+											barData={ratioBarChartData}
+											yAxisLabel="Frequency (#/1000)"
+											corpusAbbrev={corpusLabel}
+										/>
+									{/key}
+								{/if}
+							</div>
+							<div class="text-xl font-bold text-link mt-1">{floatRound(sectionStats.freqRatio, 2)}x</div>
+							<p class="text-xs text-ink-soft opacity-80 mt-0.5">
+								(1.0 = same frequency; 2.0 = 2x more; 0.5 = half as frequent)
+							</p>
+						</div>
 					</div>
-					<div class="p-3.5 rounded-xl border border-rule bg-page shadow-xs">
-						<div class="text-xs font-semibold uppercase tracking-wider text-ink-soft">Books with Word</div>
-						<div class="text-2xl font-bold text-link my-1">{bookFrequencies.length}</div>
-						<div class="text-xs text-ink-soft opacity-80">Distinct biblical books</div>
+
+				{:else if selectedStatsTab === 2}
+					<!-- Tab 2: Large Charts / Table -->
+					<div class="mt-2 mb-4 text-center">
+						<select
+							bind:value={chartOptionIndex}
+							class="border border-rule bg-page text-ink rounded-lg px-3 py-1.5 text-sm shadow-xs focus:outline-none focus:ring-2 focus:ring-link/30 inline-block self-center text-center cursor-pointer"
+						>
+							{#each chartOptions as name, index}
+								<option value={index}>{name}</option>
+							{/each}
+						</select>
+
+						{#if chartOptionIndex === 0 && countChartData}
+							<div class="my-3">
+								{#key countChartData}
+									<BarChart barData={countChartData} horizontal={true} corpusAbbrev={corpusLabel} />
+								{/key}
+							</div>
+						{:else if chartOptionIndex === 1 && freqChartData}
+							<div class="my-3">
+								<p class="text-xs text-ink-soft opacity-80 italic mb-2">
+									Normalized frequency per 1,000 words in each biblical book
+								</p>
+								{#key freqChartData}
+									<BarChart
+										barData={freqChartData}
+										horizontal={true}
+										yAxisLabel="Frequency (#/1000)"
+										corpusAbbrev={corpusLabel}
+									/>
+								{/key}
+							</div>
+						{:else if chartOptionIndex === 2 && tableData}
+							<div class="my-3 text-left">
+								{#key tableData}
+									<Grid
+										data={tableData.data}
+										sort={true}
+										columns={tableData.columns}
+										pagination={{ limit: 15 }}
+									/>
+								{/key}
+							</div>
+						{/if}
 					</div>
-				</div>
+				{/if}
 			{/if}
 		</div>
 	{/if}
@@ -429,3 +630,83 @@
 		</div>
 	{/if}
 </div>
+<style>
+	@import 'gridjs/dist/theme/mermaid.min.css';
+
+	:global(.gridjs-container) {
+		color: var(--color-ink, inherit) !important;
+	}
+	:global(.gridjs-wrapper) {
+		background-color: var(--color-page, transparent) !important;
+		border: 1px solid var(--color-rule, rgba(128, 128, 128, 0.2)) !important;
+		box-shadow: none !important;
+		border-radius: 0.5rem !important;
+	}
+	:global(.gridjs-table) {
+		background-color: var(--color-page, transparent) !important;
+		color: var(--color-ink, inherit) !important;
+	}
+	:global(.gridjs-tbody) {
+		background-color: var(--color-page, transparent) !important;
+	}
+	:global(.gridjs-th) {
+		background-color: var(--fallback-b2, rgba(128, 128, 128, 0.08)) !important;
+		color: var(--color-ink, inherit) !important;
+		border-color: var(--color-rule, rgba(128, 128, 128, 0.2)) !important;
+		font-weight: 600 !important;
+		font-size: 0.75rem !important;
+		text-transform: uppercase !important;
+		letter-spacing: 0.05em !important;
+		padding: 8px 14px !important;
+	}
+	:global(.gridjs-th-content) {
+		color: var(--color-ink, inherit) !important;
+	}
+	:global(.gridjs-td) {
+		background-color: var(--color-page, transparent) !important;
+		color: var(--color-ink, inherit) !important;
+		border-color: var(--color-rule, rgba(128, 128, 128, 0.15)) !important;
+		font-size: 0.875rem !important;
+		padding: 8px 14px !important;
+	}
+	:global(.gridjs-tr:hover td) {
+		background-color: var(--fallback-b2, rgba(128, 128, 128, 0.12)) !important;
+	}
+	:global(.gridjs-footer) {
+		background-color: var(--fallback-b2, rgba(128, 128, 128, 0.06)) !important;
+		color: var(--color-ink-soft, inherit) !important;
+		border-top: 1px solid var(--color-rule, rgba(128, 128, 128, 0.2)) !important;
+		border-bottom: none !important;
+		box-shadow: none !important;
+		padding: 8px 14px !important;
+		border-radius: 0 0 0.5rem 0.5rem !important;
+	}
+	:global(.gridjs-pagination .gridjs-summary) {
+		color: var(--color-ink-soft, inherit) !important;
+		font-size: 0.75rem !important;
+	}
+	:global(.gridjs-pagination .gridjs-pages button) {
+		background-color: var(--color-page, transparent) !important;
+		color: var(--color-ink, inherit) !important;
+		border-color: var(--color-rule, rgba(128, 128, 128, 0.25)) !important;
+		font-size: 0.75rem !important;
+		padding: 4px 10px !important;
+	}
+	:global(.gridjs-pagination .gridjs-pages button:hover:not(:disabled)) {
+		background-color: var(--fallback-b2, rgba(128, 128, 128, 0.15)) !important;
+		color: var(--color-ink, inherit) !important;
+	}
+	:global(.gridjs-pagination .gridjs-pages button.gridjs-currentPage) {
+		background-color: var(--color-link, #2563eb) !important;
+		color: #ffffff !important;
+		border-color: var(--color-link, #2563eb) !important;
+		font-weight: 600 !important;
+	}
+	:global(.gridjs-pagination .gridjs-pages button:disabled) {
+		opacity: 0.35 !important;
+		cursor: not-allowed !important;
+	}
+	:global(:root[data-theme='dark'] button.gridjs-sort) {
+		filter: invert(0.85);
+	}
+</style>

@@ -1,6 +1,7 @@
 import { getDbWorker } from './dbWorker';
 import { mylog } from '$lib/lemma-ui/env/env';
 import { normalizeBookName, getBookForVersion, formatDisplayReference, formatBookAbbreviation } from '$lib/config/bookMapping.js';
+import { getStaticCorpusTotalWords, getStaticBookWordStats } from '$lib/config/corpusBookStats';
 
 export interface WorkRow {
 	id: number;
@@ -65,6 +66,14 @@ export interface BookFrequency {
 	title: string;
 	sbl_abbreviation: string;
 	count: number;
+	book_words?: number;
+}
+
+export interface CorpusBookStat {
+	corpus_id: string;
+	book_code: string;
+	total_words: number;
+	total_verses: number;
 }
 
 export interface ConcordanceOccurrence {
@@ -873,10 +882,12 @@ export async function getWordFrequencyByBook(
 			const bCode = f.sbl_abbreviation || f.title;
 			const canon = normalizeBookName(bCode);
 			const abbrev = formatBookAbbreviation(getBookForVersion(bCode, ver));
+			const words = f.book_words || getStaticBookWordStats(corpusId, canon?.usfm || bCode)?.words || 0;
 			return {
 				...f,
 				title: canon?.title || f.title,
-				sbl_abbreviation: abbrev || formatBookAbbreviation(f.sbl_abbreviation)
+				sbl_abbreviation: abbrev || formatBookAbbreviation(f.sbl_abbreviation),
+				book_words: words
 			};
 		});
 	};
@@ -953,6 +964,45 @@ export async function getWordFrequencyByBook(
 	}
 
 	return [];
+}
+
+/**
+ * Retrieve total words in a corpus.
+ */
+export async function getCorpusTotalWords(corpusId: string): Promise<number> {
+	if (!corpusId) return 0;
+	try {
+		const row = await queryOne<{ total: number }>(`
+			SELECT SUM(total_words) as total
+			FROM corpus_book_stats
+			WHERE corpus_id = ?
+		`, [corpusId.toLowerCase()]);
+		if (row && row.total > 0) return row.total;
+	} catch (e) {}
+
+	return getStaticCorpusTotalWords(corpusId);
+}
+
+/**
+ * Retrieve total words for a specific book in a corpus.
+ */
+export async function getCorpusBookWords(corpusId: string, bookIdentifier: string): Promise<number> {
+	if (!corpusId || !bookIdentifier) return 0;
+	const code = resolveBookCode(bookIdentifier);
+	if (!code) return 0;
+
+	try {
+		const row = await queryOne<{ total_words: number }>(`
+			SELECT total_words
+			FROM corpus_book_stats
+			WHERE corpus_id = ? AND book_code = ?
+			LIMIT 1
+		`, [corpusId.toLowerCase(), code.toUpperCase()]);
+		if (row && row.total_words > 0) return row.total_words;
+	} catch (e) {}
+
+	const stat = getStaticBookWordStats(corpusId, code);
+	return stat ? stat.words : 0;
 }
 
 /**
