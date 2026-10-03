@@ -74,26 +74,17 @@
             {#if vData?.omitted}
               <span class="text-sm italic text-ink-soft font-sans" dir="ltr">[Not found in this version.]</span>
             {:else if vData?.verseData?.words || vData?.verseData?.text}
-              {#if readerState.meditationMode}<CopyText tooltip={"Copy URL sharing/bookmarking this verse and view"} btnCssClass={''} btnSizeCssClass='' showButton={false} supressCopiedMsg={true} copyText={readerState.generatePageStateURL(verseKey)}><span class="text-xs font-greek align-super">{verseKey} </span></CopyText>{/if}
+              {#if readerState.meditationMode}<CopyText tooltip={"Copy URL sharing/bookmarking this verse and view"} btnCssClass={'align-super'} btnSizeCssClass='' showButton={false} supressCopiedMsg={true} copyText={readerState.generatePageStateURL(verseKey)}><span class="text-xs font-greek">{verseKey} </span></CopyText>{/if}
               {#if vData?.verseData?.words}
-              
-                {#each vData.verseData.words as w}
-                  {#if !myDataSets.lookup(colVersion)?.lemmaInfoEnabled}
-                    {@const text = w.word}
-                    <span class="bible-font inline">{text}{w.trailer ?? ' '}</span>
-                  {:else}
-                    {@const text = formatVerseText(w.word, colVersion, readerState.hebrewMode, readerState.greekDiacritics)}
-                    <button
+                {#each vData.verseData.words as w}{#if w.indent}<br /><span class="inline-block pl-5" aria-hidden="true"></span>{/if}{#if !myDataSets.lookup(colVersion)?.lemmaInfoEnabled}{@const text = w.word}<span class="bible-font inline">{text}{#if (w.trailer ?? ' ')}{w.trailer ?? ' '}{/if}</span>{:else}{@const text = formatVerseText(w.word, colVersion, readerState.hebrewMode, readerState.greekDiacritics)}<button
                       type="button"
                       class="{colVersion === 'BHS' ? 'font-hebrew' : colVersion === 'Vulgate' ? 'font-sans' : 'font-greek'} 
                       {readerState.meditationMode? '': 'cursor-pointer hover:bg-rule'} rounded focus:outline-none inline"
                       onclick={(e) => { if (!readerState.meditationMode) {e.stopPropagation(); readerState.inspectWord(w, colVersion);} }}
-                    >{text}</button>{w.trailer ?? ' '}
-                  {/if}
-                {/each}
+                    >{text}</button>{#if (w.trailer ?? ' ')}{w.trailer ?? ' '}{/if}{/if}{#if w.para_break}<span class="block mt-2"></span>{/if}{/each}
               {:else if vData?.verseData?.text}
                 {@const text = formatVerseText(vData.verseData.text, colVersion, readerState.hebrewMode, readerState.greekDiacritics)}
-                <span class="{colVersion === 'BHS' ? 'font-hebrew' : colVersion === 'Vulgate' || colVersion === 'WEB' ? 'font-sans' : 'font-greek'}">
+                <span class="{colVersion === 'BHS' ? 'font-hebrew' : colVersion === 'Vulgate' || colVersion === 'WEB' ? 'font-sans' : 'font-greek'} whitespace-pre-line">
                   {text}
                 </span>
             {/if}

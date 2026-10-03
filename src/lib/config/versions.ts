@@ -31,7 +31,17 @@ export const datasetsDict=
    'Brenton':{language: 'English', testament: 'ot', lemmas:false},
    'BHS':{language:'Hebrew', testament: 'ot', lemmas:true},
    'LXX':{language:'Greek', testament: 'ot', lemmas:true},
-   'SBLGNT':{language:'Greek', testament: 'nt', lemmas:true}
+   'OpenGNT':{language:'Greek', testament: 'nt', lemmas:true}
+};
+
+/**
+ * Case-insensitive aliases for URL parameters, legacy links, and alternate acronyms.
+ */
+export const VERSION_ALIASES: Record<string, string> = {
+  sblgnt: 'OpenGNT',
+  sbl: 'OpenGNT',
+  ognt: 'OpenGNT',
+  opengnt: 'OpenGNT'
 };
 
 export const dataSets = Object.entries(datasetsDict).map(([k,v])=>new Dataset(k, v.language,v.testament,'', v.lemmas));
@@ -41,7 +51,10 @@ export const dataSets = Object.entries(datasetsDict).map(([k,v])=>new Dataset(k,
 export const myDataSets={
   dataSets: dataSets,
   lookup(abbrev:string){
-    return dataSets.find((ds)=>ds.abbrev.toLocaleLowerCase()==abbrev.toLocaleLowerCase());
+    if (!abbrev) return undefined;
+    const clean = abbrev.trim().toLowerCase();
+    const resolved = VERSION_ALIASES[clean] || abbrev;
+    return dataSets.find((ds)=>ds.abbrev.toLocaleLowerCase()==resolved.toLocaleLowerCase());
   },
   
   /**
@@ -58,21 +71,24 @@ export const myDataSets={
 export const availableBibles=Object.keys(datasetsDict);
 
 export function getCorrectVersionName(fuzzyName: string){
-	return availableBibles.find((ver)=>ver.toLocaleLowerCase() == fuzzyName.toLocaleLowerCase());
+	if (!fuzzyName) return undefined;
+	const clean = fuzzyName.trim().toLowerCase();
+	if (VERSION_ALIASES[clean]) {
+		return VERSION_ALIASES[clean];
+	}
+	return availableBibles.find((ver)=>ver.toLocaleLowerCase() == clean);
 }
 
 export function isValidVersion(versionName: string, caseSensitive=false): boolean{
-
-	let ret = false;
-
-	return availableBibles.find((ver)=>{
+	if (!versionName) return false;
+	const clean = versionName.trim().toLowerCase();
+	if (VERSION_ALIASES[clean]) return true;
+	return availableBibles.some((ver)=>{
 		if (caseSensitive){
-			return isValidVersion(ver) ? true : false;
+			return ver === versionName;
 		}
-		else{
-			return ver == versionName;
-		}
-	})? true: false;
+		return ver.toLowerCase() === clean;
+	});
 }
 
 
@@ -88,7 +104,7 @@ export const versionGroups: VersionGroup[] = [
   },
   {
     language: 'Greek',
-    versions: ['LXX', 'SBLGNT']
+    versions: ['LXX', 'OpenGNT']
   },
   {
     language: 'Latin',
@@ -101,7 +117,10 @@ export const versionGroups: VersionGroup[] = [
 ];
 
 export function getVersionLanguage(version:string){
-  return versionGroups.find((vg)=>vg.versions.map((v)=>v.toLocaleLowerCase()).includes (version.toLocaleLowerCase()))?.language ?? '';
+  if (!version) return '';
+  const clean = version.trim().toLowerCase();
+  const resolved = VERSION_ALIASES[clean] || version;
+  return versionGroups.find((vg)=>vg.versions.map((v)=>v.toLocaleLowerCase()).includes (resolved.toLocaleLowerCase()))?.language ?? '';
 }
 
 export const allVersions: string[] = versionGroups.flatMap((g) => g.versions);
@@ -113,7 +132,7 @@ export function formatVersionLabel(opt: string, short=false): string {
   else{
     const ds = myDataSets.lookup(opt);
 
-    return ds ? `${ds.language} (${ds?.abbrev})` : '';
+    return ds ? `${ds.language} (${ds?.abbrev})` : opt;
   }
   
 }
@@ -178,9 +197,13 @@ export const brentonBooks = [
 ];
 
 export function getVersionBooks(version: string): string[] {
-  switch (version) {
+  const clean = version?.trim().toLowerCase();
+  const resolved = VERSION_ALIASES[clean] || version;
+  switch (resolved) {
     case 'BHS': return bhsBooks;
     case 'LXX': return lxxBooks;
+    case 'OpenGNT':
+    case 'OGNT':
     case 'SBLGNT': return ntBooks;
     case 'KJV': return kjvBooks;
     case 'Vulgate': return vulgateBooks;

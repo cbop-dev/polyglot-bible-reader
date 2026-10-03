@@ -62,32 +62,21 @@
 				<div class="mb-4 flex flex-wrap items-center justify-between gap-3">
 					<h2 class="text-xl font-bold">Curated Datasets &amp; Static Indexes</h2>
 					<div class="flex flex-wrap gap-1.5 font-mono text-xs font-semibold">
-						<span class="border border-rule px-2.5 py-1 rounded bg-rule/50">ISC (OpenScriptorium)</span>
 						<span class="border border-rule px-2.5 py-1 rounded bg-rule/50"><a href="#lsj-note">Public Domain<sup>*</sup></a></span>
 						<span class="border border-rule px-2.5 py-1 rounded bg-rule/50">CC BY-SA 4.0</span>
 						<span class="border border-rule px-2.5 py-1 rounded bg-rule/50">CC BY-NC 4.0</span>
 					</div>
 				</div>
 				<p class="mb-3 text-sm opacity-90">
-					Some Biblical text datasets (KJV, WEB, Vulgate), chapter data, and alignments, and concordance databases were obtained from the
-					<a href="https://github.com/OpenScriptorium" target="_blank" rel="noopener noreferrer" class="text-link underline hover:opacity-80">Openscriptorium.org GitHub project database</a>
-					(licensed under the <a href="https://opensource.org/licenses/ISC" target="_blank" rel="noopener noreferrer" class="text-link underline hover:opacity-80">ISC License</a>).
-					The Latin Vulgate, King James Version (KJV), World English Bible (WEB), Swete Septuagint, and classical lexica are in the <strong>Public Domain</strong>.
+					The Latin Vulgate, King James Version (KJV), World English Bible (WEB), Swete Septuagint, and classical lexica are in the <strong>Public Domain</strong> worldwide.
 					Scholarly morphological datasets and versification tables are licensed under CC BY-SA 4.0 or CC BY-NC 4.0 (<strong>Commercial use prohibited for BHS and TVTMS</strong>).
 				</p>
 				<ul class="mb-4 list-inside list-disc space-y-1 text-xs text-ink-soft">
-					<li><strong>OpenScriptorium Database:</strong> Core text databases provided under the permissive ISC License.</li>
 					<li><strong>Public Domain Translations:</strong> Latin Vulgate, King James Version (KJV), and World English Bible (WEB) are fully public domain worldwide.</li>
 					<li><strong>Non-Commercial Restriction:</strong> BHS and TVTMS data are strictly restricted to non-commercial usage.</li>
 				</ul>
 			</div>
 			<div class="flex flex-wrap gap-2 border-t border-rule pt-4 text-xs">
-				<a href="https://openscriptorium.org" target="_blank" rel="noopener noreferrer" class="border border-rule px-2.5 py-1 rounded hover:bg-rule transition-colors">
-					OpenScriptorium.org
-				</a>
-				<a href="https://opensource.org/licenses/ISC" target="_blank" rel="noopener noreferrer" class="border border-rule px-2.5 py-1 rounded hover:bg-rule transition-colors">
-					View ISC License
-				</a>
 				<a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener noreferrer" class="border border-rule px-2.5 py-1 rounded hover:bg-rule transition-colors">
 					View CC BY-SA 4.0 Deed
 				</a>
@@ -106,25 +95,6 @@
 		</p>
 		
 		<div class="space-y-6">
-			<!-- Openscriptorium.org Database -->
-			<div class="border border-rule bg-page p-5 rounded-lg shadow-sm space-y-2">
-				<div class="flex flex-wrap items-baseline justify-between gap-2">
-					<h3 class="text-lg font-bold">Openscriptorium.org Project Database</h3>
-					<span class="font-mono text-xs border border-rule px-2 py-0.5 rounded">
-						<a href="https://opensource.org/licenses/ISC" target="_blank" rel="noopener noreferrer" class="text-link underline">ISC License</a>
-					</span>
-				</div>
-				<p class="text-sm opacity-90">
-					Some Biblical text datasets (KJV, WEB, Vulgate), chapter data, and alignments, and concordance databases were obtained from the
-					<a href="https://openscriptorium.org" target="_blank" rel="noopener noreferrer" class="text-link underline hover:opacity-80">Openscriptorium.org</a>
-					GitHub project database.
-				</p>
-				<p class="text-xs text-ink-soft">
-					Source repository: <a href="https://github.com/OpenScriptorium" target="_blank" rel="noopener noreferrer" class="text-link underline">OpenScriptorium on GitHub</a>.
-					Licensed under the <a href="https://opensource.org/licenses/ISC" target="_blank" rel="noopener noreferrer" class="text-link underline">ISC License</a>.
-				</p>
-			</div>
-
 			<!-- Latin Vulgate (Vulgate) -->
 			<div class="border border-rule bg-page p-5 rounded-lg shadow-sm space-y-2">
 				<div class="flex flex-wrap items-baseline justify-between gap-2">
@@ -133,7 +103,7 @@
 				</div>
 				<p class="text-sm opacity-90">
 					Saint Jerome's ancient Latin translation (completed c. 405 A.D.) and the Sixto-Clementine Vulgate (1592). The text is in the <strong>Public Domain worldwide</strong>.
-					Dataset sourced from the OpenScriptorium project database.
+					Dataset sourced from the <a href="https://github.com/scrollmapper/bible_databases" target="_blank" rel="noopener noreferrer" class="text-link underline">scrollmapper/bible_databases</a> digital edition (Public Domain).
 				</p>
 			</div>
 
@@ -145,7 +115,7 @@
 				</div>
 				<p class="text-sm opacity-90">
 					The King James Version (Authorized Version) of 1611. The biblical text is unencumbered and in the <strong>Public Domain worldwide</strong>.
-					Dataset sourced from the OpenScriptorium project database.
+					Dataset sourced from the <a href="https://github.com/scrollmapper/bible_databases" target="_blank" rel="noopener noreferrer" class="text-link underline">scrollmapper/bible_databases</a> digital edition (Public Domain).
 				</p>
 			</div>
 
@@ -157,7 +127,7 @@
 				</div>
 				<p class="text-sm opacity-90">
 					A modern English translation produced by Rainbow Missions, Inc. and Michael Paul Johnson, translated directly from the original biblical languages. The editors have explicitly and irrevocably dedicated the entire work to the <strong>Public Domain worldwide</strong>.
-					Dataset sourced from the OpenScriptorium project database.
+					Dataset sourced from Rainbow Missions, Inc. / <a href="https://ebible.org" target="_blank" rel="noopener noreferrer" class="text-link underline">eBible.org</a> digital edition (Public Domain).
 				</p>
 				<p>
 					<a href="https://worldenglish.bible" target="_blank" rel="noopener noreferrer" class="text-link text-xs underline hover:opacity-80">View World English Bible Website</a>
@@ -211,17 +181,17 @@
 				</p>
 			</div>
 
-			<!-- SBL Greek New Testament (SBLGNT) -->
+			<!-- Open Greek New Testament (OpenGNT) -->
 			<div class="border border-rule bg-page p-5 rounded-lg shadow-sm space-y-2">
 				<div class="flex flex-wrap items-baseline justify-between gap-2">
-					<h3 class="text-lg font-bold">The Greek New Testament: SBL Edition (SBLGNT) &amp; MorphGNT</h3>
-					<span class="font-mono text-xs border border-rule px-2 py-0.5 rounded">CC BY 4.0</span>
+					<h3 class="text-lg font-bold">The Open Greek New Testament (OpenGNT)</h3>
+					<span class="font-mono text-xs border border-rule px-2 py-0.5 rounded">CC BY-SA 4.0</span>
 				</div>
 				<p class="text-sm opacity-90">
-					Edited by Michael W. Holmes in collaboration with the Society of Biblical Literature and Logos Bible Software (2010), licensed under CC BY 4.0. Morphological parsing provided by James Tauber's <a href="https://github.com/morphgnt" target="_blank" rel="noopener noreferrer" class="text-link underline">MorphGNT project</a> (CC BY 4.0).
+					Curated by Eliran Wong and contributors (<a href="https://github.com/eliranwong/OpenGNT" target="_blank" rel="noopener noreferrer" class="text-link underline">eliranwong/OpenGNT</a>), licensed under CC BY-SA 4.0. NA28-aligned Greek New Testament text with comprehensive word-level lemmatization, Strong's concordance numbers, and Robinson's Morphological Analysis Codes (RMAC).
 				</p>
 				<p>
-					<a href="https://sblgnt.com/license/" target="_blank" rel="noopener noreferrer" class="text-link text-xs underline hover:opacity-80">View SBLGNT License Agreement</a>
+					<a href="https://github.com/eliranwong/OpenGNT/blob/master/LICENSE" target="_blank" rel="noopener noreferrer" class="text-link text-xs underline hover:opacity-80">View OpenGNT License Agreement</a>
 				</p>
 			</div>
 

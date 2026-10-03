@@ -29,7 +29,7 @@ export async function getDbWorker(): Promise<WorkerHttpvfs> {
 		// Resolve URLs relative to window.location and SvelteKit base path
 		const workerUrl = new URL(`${base}/sqlite/sqlite.worker.js`, window.location.href).toString();
 		const wasmUrl = new URL(`${base}/sqlite/sql-wasm.wasm`, window.location.href).toString();
-		const configUrl = new URL(`${base}/db/config.json`, window.location.href).toString();
+		const configUrl = new URL(`${base}/db/config.json?t=${Date.now()}`, window.location.href).toString();
 
 		console.info(`[DB] Initializing sql.js-httpvfs worker:`, { workerUrl, wasmUrl, configUrl });
 		const config: SplitFileConfig = {

@@ -1,18 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { getBookFile, getMappedReference, normalizeBookName, getCanonicalSlug } from './bookMapping.js';
+import { getBookFile, getBookForVersion, normalizeBookName, getCanonicalSlug, resolveBookCode } from './bookMapping.js';
 
 describe('bookMapping', () => {
-  describe('getBookFile', () => {
+  describe('getBookForVersion / getBookFile', () => {
     it('should map BHS books 1:1', () => {
       expect(getBookFile('BHS', 'Gen')).toBe('Gen');
       expect(getBookFile('BHS', 'Ezra')).toBe('Ezra');
       expect(getBookFile('BHS', 'Neh')).toBe('Neh');
-    });
-
-    it('should map LXX Ezra/Neh to 2Esdr', () => {
-      expect(getBookFile('LXX', 'Ezra')).toBe('2Esdr');
-      expect(getBookFile('LXX', 'Neh')).toBe('2Esdr');
-      expect(getBookFile('LXX', 'Gen')).toBe('Gen');
     });
 
     it('should map Maccabees across versions correctly', () => {
@@ -63,140 +57,14 @@ describe('bookMapping', () => {
     it('should map Tobit and Esther correctly', () => {
       expect(getBookFile('LXX', 'Tob')).toBe('TobBA');
       expect(getBookFile('LXX', 'TobBA')).toBe('TobBA');
-      expect(getBookFile('LXX', 'TobS')).toBe('TobS');
 
       expect(getBookFile('KJV', 'TobBA')).toBe('Tob');
-      expect(getBookFile('KJV', 'TobS')).toBe('Tob');
       expect(getBookFile('WEB', 'TobBA')).toBe('Tob');
       expect(getBookFile('Vulgate', 'TobBA')).toBe('Tob');
       expect(getBookFile('Brenton', 'TobBA')).toBe('Tob');
 
-      expect(getBookFile('Brenton', 'Esth')).toBe('AddEsth');
+      expect(getBookFile('Brenton', 'AddEsth')).toBe('AddEsth');
       expect(getBookFile('LXX', 'AddEsth')).toBe('Esth');
-    });
-  });
-
-  describe('getMappedReference', () => {
-    it('should map BHS Ezra 1:1 to LXX 2Esdr 1:1', () => {
-      const ref = getMappedReference('LXX', 'Ezra', '1', '1');
-      expect(ref.mappedBook).toBe('2Esdr');
-      expect(ref.mappedChapter).toBe('1');
-      expect(ref.mappedVerse).toBe('1');
-    });
-
-    it('should map BHS Neh 1:1 to LXX 2Esdr 11:1', () => {
-      const ref = getMappedReference('LXX', 'Neh', '1', '1');
-      expect(ref.mappedBook).toBe('2Esdr');
-      expect(ref.mappedChapter).toBe('11');
-      expect(ref.mappedVerse).toBe('1');
-    });
-
-    it('should map LXX 2Esdr 1:1 to BHS Ezra 1:1', () => {
-      const ref = getMappedReference('BHS', '2Esdr', '1', '1');
-      expect(ref.mappedBook).toBe('Ezra');
-      expect(ref.mappedChapter).toBe('1');
-      expect(ref.mappedVerse).toBe('1');
-    });
-
-    it('should map LXX 2Esdr 11:1 to BHS Neh 1:1', () => {
-      const ref = getMappedReference('BHS', '2Esdr', '11', '1');
-      expect(ref.mappedBook).toBe('Neh');
-      expect(ref.mappedChapter).toBe('1');
-      expect(ref.mappedVerse).toBe('1');
-    });
-
-    it('should indicate LXX 1Esdr is omitted in BHS', () => {
-      const ref = getMappedReference('BHS', '1Esdr', '1', '1');
-      expect(ref.omitted).toBe(true);
-    });
-
-    it('should map BHS Ps 22:1 to LXX Ps 21:1', () => {
-      const ref = getMappedReference('LXX', 'Ps', '22', '1');
-      expect(ref.mappedBook).toBe('Ps');
-      expect(ref.mappedChapter).toBe('21');
-      expect(ref.mappedVerse).toBe('1');
-    });
-
-    it('should map BHS Jer 30:1 to LXX Jer 37:1', () => {
-      const ref = getMappedReference('LXX', 'Jer', '30', '1');
-      expect(ref.mappedBook).toBe('Jer');
-      expect(ref.mappedChapter).toBe('37');
-      expect(ref.mappedVerse).toBe('1');
-    });
-
-    it('should map Maccabees references properly across versions', () => {
-      const lxxRef = getMappedReference('LXX', '1Mac', '1', '1');
-      expect(lxxRef.mappedBook).toBe('1Mac');
-
-      const webRef = getMappedReference('WEB', '1Mac', '1', '1');
-      expect(webRef.mappedBook).toBe('1Mac');
-
-      const vulgRef = getMappedReference('Vulgate', '1Mac', '1', '1');
-      expect(vulgRef.mappedBook).toBe('1Mac');
-
-      const kjvRef = getMappedReference('KJV', '1Macc', '1', '1');
-      expect(kjvRef.mappedBook).toBe('1Mac');
-    });
-
-    it('should map Qoh/Eccl and Cant/Song references properly', () => {
-      const lxxQoh = getMappedReference('LXX', 'Eccl', '1', '1');
-      expect(lxxQoh.mappedBook).toBe('Qoh');
-
-      const kjvQoh = getMappedReference('KJV', 'Qoh', '1', '1');
-      expect(kjvQoh.mappedBook).toBe('Eccl');
-
-      const lxxCant = getMappedReference('LXX', 'Song', '1', '1');
-      expect(lxxCant.mappedBook).toBe('Cant');
-
-      const webCant = getMappedReference('WEB', 'Cant', '1', '1');
-      expect(webCant.mappedBook).toBe('Song');
-    });
-
-    it('should leave normal references unaffected', () => {
-      const ref = getMappedReference('LXX', 'Gen', '1', '1');
-      expect(ref.mappedBook).toBe('Gen');
-      expect(ref.mappedChapter).toBe('1');
-      expect(ref.mappedVerse).toBe('1');
-      
-      const ref2 = getMappedReference('BHS', 'Jer', '30', '1');
-      expect(ref2.mappedBook).toBe('Jer');
-      expect(ref2.mappedChapter).toBe('30');
-      expect(ref2.mappedVerse).toBe('1');
-    });
-
-    it('should map book identifiers correctly for 1-4 Maccabees, Qoh, Cant, Tob', () => {
-      const testCases: { version: string; book: string; expected: string }[] = [
-        { version: 'LXX', book: '1Mac', expected: '1Mac' },
-        { version: 'LXX', book: '2Mac', expected: '2Mac' },
-        { version: 'LXX', book: '3Mac', expected: '3Mac' },
-        { version: 'LXX', book: '4Mac', expected: '4Mac' },
-        { version: 'WEB', book: '1Mac', expected: '1Mac' },
-        { version: 'WEB', book: '2Mac', expected: '2Mac' },
-        { version: 'Vulgate', book: '1Mac', expected: '1Mac' },
-        { version: 'Vulgate', book: '2Mac', expected: '2Mac' },
-        { version: 'KJV', book: '1Mac', expected: '1Mac' },
-        { version: 'KJV', book: '2Mac', expected: '2Mac' },
-        { version: 'Brenton', book: '1Mac', expected: '1Mac' },
-        { version: 'Brenton', book: '2Mac', expected: '2Mac' },
-        { version: 'Brenton', book: '3Mac', expected: '3Mac' },
-        { version: 'Brenton', book: '4Mac', expected: '4Mac' },
-        { version: 'Brenton', book: '2Esdr', expected: '2Esdr' },
-        { version: 'KJV', book: 'Qoh', expected: 'Eccl' },
-        { version: 'KJV', book: 'Cant', expected: 'Song' },
-        { version: 'KJV', book: 'TobBA', expected: 'Tob' },
-        { version: 'WEB', book: 'Qoh', expected: 'Eccl' },
-        { version: 'WEB', book: 'Cant', expected: 'Song' },
-        { version: 'Vulgate', book: 'Qoh', expected: 'Eccl' },
-        { version: 'Vulgate', book: 'Cant', expected: 'Song' },
-        { version: 'Brenton', book: 'Qoh', expected: 'Eccl' },
-        { version: 'Brenton', book: 'Cant', expected: 'Song' },
-        { version: 'Brenton', book: 'Esth', expected: 'AddEsth' }
-      ];
-
-      for (const tc of testCases) {
-        const fileName = getBookFile(tc.version, tc.book);
-        expect(fileName).toBe(tc.expected);
-      }
     });
   });
 
@@ -220,14 +88,25 @@ describe('bookMapping', () => {
       expect(getCanonicalSlug('1 Kingdoms')).toBe('1-samuel');
     });
 
-    it('should return the full BookDefinition with metadata', () => {
+    it('should return the full CanonicalBook with metadata', () => {
       const def = normalizeBookName('Qoh');
       expect(def).not.toBeNull();
+      expect(def?.code).toBe('ECC');
       expect(def?.slug).toBe('ecclesiastes');
       expect(def?.title).toBe('Ecclesiastes');
       expect(def?.standardAbbrev).toBe('Eccl');
       expect(def?.versionBooks?.BHS).toBe('Qoh');
       expect(def?.versionBooks?.KJV).toBe('Eccl');
+    });
+
+    it('should resolve standard 3-letter USFM codes via resolveBookCode', () => {
+      expect(resolveBookCode('Genesis')).toBe('GEN');
+      expect(resolveBookCode('1 Samuel')).toBe('1SA');
+      expect(resolveBookCode('1 Kingdoms')).toBe('1SA');
+      expect(resolveBookCode('1Kgdms')).toBe('1SA');
+      expect(resolveBookCode('Psalms')).toBe('PSA');
+      expect(resolveBookCode('Ps')).toBe('PSA');
+      expect(resolveBookCode('2 Esdras')).toBe('2ES');
     });
   });
 });

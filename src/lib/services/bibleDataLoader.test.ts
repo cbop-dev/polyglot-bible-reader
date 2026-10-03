@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { loadChapterFromDb, loadChaptersForBook, formatVerseText } from './bibleDataLoader';
+import { loadChapterFromDb, loadChaptersForBook, formatVerseText, computeWordTrailers } from './bibleDataLoader';
 import * as dbClient from './dbClient';
 
 describe('bibleDataLoader', () => {
@@ -27,7 +27,9 @@ describe('bibleDataLoader', () => {
 						surface: 'בְּרֵאשִׁ֖ית',
 						normalized: 'בראשית',
 						strongs_number: '7225',
-						morph_code: 'Prep-b'
+						morph_code: 'Prep-b',
+						lemma: 'רֵאשִׁית',
+						gloss: 'beginning'
 					}
 				]
 			},
@@ -49,7 +51,9 @@ describe('bibleDataLoader', () => {
 						surface: 'ἐν',
 						normalized: 'ἐν',
 						strongs_number: 'G1722',
-						morph_code: 'PREP'
+						morph_code: 'PREP',
+						lemma: 'ἐν',
+						gloss: 'in, on, among'
 					}
 				]
 			},
@@ -71,7 +75,10 @@ describe('bibleDataLoader', () => {
 		expect(res.chapterDataByVerse['1']['BHS'].exists).toBe(true);
 		expect(res.chapterDataByVerse['1']['LXX'].exists).toBe(true);
 		expect(res.chapterDataByVerse['1']['BHS'].verseData.words).toHaveLength(1);
+		expect(res.chapterDataByVerse['1']['BHS'].verseData.words[0].lemma).toBe('רֵאשִׁית');
+		expect(res.chapterDataByVerse['1']['BHS'].verseData.words[0].gloss).toBe('beginning');
 		expect(res.chapterDataByVerse['1']['LXX'].verseData.words).toHaveLength(1);
+		expect(res.chapterDataByVerse['1']['LXX'].verseData.words[0].gloss).toBe('in, on, among');
 		expect(res.chapterDataByVerse['2']['BHS'].exists).toBe(true);
 	});
 
@@ -90,5 +97,28 @@ describe('bibleDataLoader', () => {
 		const greek = 'ἐν ἀρχῇ';
 		expect(formatVerseText(greek, 'LXX', 'all', true)).toBe('ἐν ἀρχῇ');
 		expect(formatVerseText(greek, 'LXX', 'all', false)).toBe('εν αρχη');
+	});
+
+	it('computes word trailers correctly attaching Hebrew prepositions to following word', () => {
+		const body = 'בְּרֵאשִׁ֖ית בָּרָ֣א אֱלֹהִ֑ים';
+		const words: any[] = [
+			{ surface: 'בְּ', position: 0 },
+			{ surface: 'רֵאשִׁ֖ית', position: 1 },
+			{ surface: 'בָּרָ֣א', position: 2 },
+			{ surface: 'אֱלֹהִ֑ים', position: 3 }
+		];
+
+		const trailers = computeWordTrailers(words, body);
+		expect(trailers).toEqual(['', ' ', ' ', ' ']);
+	});
+
+	it('respects explicit trailer when present on token', () => {
+		const words: any[] = [
+			{ surface: 'בְּ', trailer: '', position: 0 },
+			{ surface: 'רֵאשִׁ֖ית', trailer: ' ', position: 1 }
+		];
+
+		const trailers = computeWordTrailers(words);
+		expect(trailers).toEqual(['', ' ']);
 	});
 });

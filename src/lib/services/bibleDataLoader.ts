@@ -1,5 +1,4 @@
 import { formatHebrew, formatGreek, type HebrewDiacriticMode } from '$lib/utils/diacritics';
-import { getBookForVersion } from '$lib/config/bookMapping';
 import {
 	getChapterVerses,
 	getBookChapters,
@@ -11,6 +10,53 @@ export interface ChapterDataResult {
 	verses: VerseResult[];
 	verseKeys: string[];
 	chapterDataByVerse: Record<string, Record<string, any>>;
+}
+
+/**
+ * Computes word trailers based on explicit token trailers or by matching substrings in the verse text body.
+ */
+export function computeWordTrailers(words: WordRow[], body?: string): string[] {
+	if (!words || words.length === 0) return [];
+	const cleanBody = (body || '').trim();
+
+	const trailers: string[] = [];
+	let searchPos = 0;
+
+	for (let i = 0; i < words.length; i++) {
+		if (words[i].trailer !== undefined) {
+			trailers.push(words[i].trailer!);
+			continue;
+		}
+
+		if (!cleanBody) {
+			trailers.push(' ');
+			continue;
+		}
+
+		const surface = words[i].surface;
+		const matchIdx = cleanBody.indexOf(surface, searchPos);
+		if (matchIdx === -1) {
+			trailers.push(' ');
+			continue;
+		}
+
+		const wordEnd = matchIdx + surface.length;
+		if (i < words.length - 1) {
+			const nextSurface = words[i + 1].surface;
+			const nextIdx = cleanBody.indexOf(nextSurface, wordEnd);
+			if (nextIdx !== -1) {
+				trailers.push(cleanBody.slice(wordEnd, nextIdx));
+				searchPos = nextIdx;
+			} else {
+				trailers.push(' ');
+				searchPos = wordEnd;
+			}
+		} else {
+			trailers.push(' ');
+		}
+	}
+
+	return trailers;
 }
 
 /**
@@ -39,21 +85,26 @@ export async function loadChapterFromDb(
 			}
 
 			// Format words array for UI compatibility
-			const formattedWords = (v.words || []).map((w: WordRow) => ({
+			const words = v.words || [];
+			const wordTrailers = computeWordTrailers(words, v.body);
+			const formattedWords = words.map((w: WordRow, idx: number) => ({
 				word: w.surface,
-				trailer: ' ',
+				surface: w.surface,
+				trailer: w.trailer !== undefined ? w.trailer : wordTrailers[idx] ?? ' ',
 				id: w.id,
 				work_id: w.work_id,
 				position: w.position,
 				normalized: w.normalized,
 				strongs: w.strongs_number,
-				morph: w.morph_code
+				morph: w.morph_code,
+				lemma: w.lemma,
+				gloss: w.gloss
 			}));
 
 			chapterDataByVerse[vKey][v.version] = {
 				exists: true,
 				omitted: false,
-				label: v.verse_label ? `${getBookForVersion(book,v.version)} ${v.verse_label}` : v.base_label,
+				label: v.native_citation || (v.verse_label ? `${v.verse_label}` : v.base_label),
 				isDivergent: v.verse_label ? v.verse_label !== `${chapter}:${vKey}` : false,
 				verseData: {
 					id: v.work_unit_id,
@@ -106,7 +157,7 @@ export function formatVerseText(
 	let ret = String(text);
 	if (version === 'BHS') {
 		ret = formatHebrew(ret, hebrewMode);
-	} else if (version === 'LXX' || version === 'SBLGNT') {
+	} else if (version === 'LXX' || version === 'OpenGNT' || version === 'OGNT' || version === 'SBLGNT') {
 		ret = formatGreek(ret, greekDiacritics);
 	}
 	return ret;

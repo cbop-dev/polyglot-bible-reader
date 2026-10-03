@@ -8,7 +8,7 @@ import GridHeader from '$lib/components/grid/GridHeader.svelte';
 import VerseCard from '$lib/components/grid/VerseCard.svelte';
 import LemmaModal from '$lib/components/lexicon/LemmaModal.svelte';
 import { readerState } from '$lib/stores/readerState.svelte';
-import { myDataSets } from '$lib/config/versions';
+import { getVersionBooks, myDataSets } from '$lib/config/versions';
 import { page } from '$app/state';
 import { mylog } from '$lib/lemma-ui/env/env';
 import { onMount } from 'svelte';
@@ -79,7 +79,7 @@ const hotkeys={
 			} 
 		}
 	}
-$inspect('versions grid:', readerState.versionGrid);
+//$inspect('versions grid:', readerState.versionGrid);
 //$inspect('params: ', page.params);
 </script>
 
@@ -95,10 +95,9 @@ onclick={() => readerState.closeAllPopups()}
 
 <main>
 
-{#key readerState.selectedBook &&  readerState.selectedChapter && readerState.activeVersions }
 <GridHeader/>
 
-
+{#key `${readerState.selectedBook}-${readerState.selectedChapter}-${readerState.versionGrid.flat().join(',')}`}
 <!-- Dynamic Grid Verse Cards -->
 <div class="relative flex flex-col gap-1 max-w-full mx-auto {readerState.versionGrid[0].length==1 ?'lg:max-w-1/2':''}">
     {#if readerState.isLoading }

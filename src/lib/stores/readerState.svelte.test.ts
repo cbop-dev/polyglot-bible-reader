@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { ReaderState, readerState } from './readerState.svelte';
+import * as dbClient from '$lib/services/dbClient';
 
 describe('findIncompatibleVersions', ()=>{
     it('check if finds ot versions (BHS, Brenton, LXX) when given nt (SBLGNT) version', ()=>{
@@ -26,16 +27,15 @@ describe('findIncompatibleVersions', ()=>{
     });
 
 
-    it('check if finds only nt versions (SBLGNT) when given ot (LXX) version', ()=>{
+    it('check if finds only nt versions (SBLGNT alias -> OpenGNT) when given ot (LXX) version', ()=>{
         const rs = new ReaderState();
         ['SBLGNT', 'KJV'].forEach((v)=>rs.addColumn(v,false));
-        
         
         const incomp = rs.findIncompatibleVersions('LXX');
         expect(incomp.length).toEqual(1);
 
         const notToFind = ['BHS', 'LXX', 'KJV'];
-        const toFind=['SBLGNT'];
+        const toFind=['OpenGNT'];
         toFind.forEach((v)=>{
             expect(incomp.includes(v)).toBe(true);
         });
@@ -64,21 +64,27 @@ describe('findIncompatibleVersions', ()=>{
 
 
 describe('ensureVisibleCompatibleWithSelectedVersion', ()=>{
-    it('adjust versions (BHS, Brenton, LXX) when selecting nt (SBLGNT) version', ()=>{
+    it('adjust versions (BHS, Brenton, LXX) when selecting nt (SBLGNT alias -> OpenGNT) version', async ()=>{
         const rs = new ReaderState();
-        rs.selectVersion('SBLGNT', false);
-        rs.ensureVisibleCompatibleWithSelectedVersion(false)
+        expect(rs.selectedBook).toBe('Gen');
+        await rs.selectVersion('SBLGNT', false);
+        rs.ensureVisibleCompatibleWithSelectedVersion(false);
     
-        const toFind = ['SBLGNT'];
-        const notToFind=['BHS', 'Brenton', 'LXX'];;
+        const toFind = ['OpenGNT'];
+        const notToFind=['BHS', 'Brenton', 'LXX'];
         toFind.forEach((v)=>{
             expect(rs.visibleVersions.includes(v)).toBe(true);
         });
 
         notToFind.forEach((v)=>{
-            console.log(`found version '${v}'! oops!`);
             expect(rs.visibleVersions.includes(v)).toBe(false);
-        })
+        });
+
+        // Automatically changes to an available NT book
+        console.log('DEBUG: rs.versionGrid:', JSON.stringify(rs.versionGrid));
+        console.log('DEBUG: rs.activeVersions:', JSON.stringify(rs.activeVersions));
+        expect(rs.selectedBook).toBe('Matt');
+        expect(rs.selectedChapter).toBe('1');
     });
 
 });
@@ -97,7 +103,7 @@ describe('getGridRowColIdxOfVersion', ()=>{
 });
 
 describe('realign cell', ()=>{
-    it('try realigning cell automatically: rtl Vulate->ltr', ()=>{
+    it('try realigning cell automatically: rtl Vulate->ltr', async ()=>{
         const rs = new ReaderState();
         
         rs.updateCell(0,0,"Vulgate", false,false);
@@ -108,10 +114,142 @@ describe('realign cell', ()=>{
         expect(rs.getCellAlign(0,0)).toEqual("left");
         rs.realignAll();
         expect(rs.getCellAlign(0,0)).toEqual("right");
-        rs.selectVersion('SBLGNT', false);
+        await rs.selectVersion('SBLGNT', false);
         expect(rs.versionGrid[0][0]).toEqual("KJV");
         
         expect(rs.gridAlignments[0][0]).toEqual("left");
     });
 
+    it('immediately loads Matt 1 verses without omitted state when switching to OpenGNT from landing state', async () => {
+        vi.spyOn(dbClient, 'getBookChapters').mockResolvedValue([1, 2, 3]);
+        vi.spyOn(dbClient, 'getChapterVerses').mockImplementation(async (book, chapter, versions) => {
+            if (book === 'Matt' || book === 'MAT') {
+                return [
+                    {
+                        base_cref_id: 1,
+                        ord: 1001,
+                        hierarchy: '1,1',
+                        base_label: 'Matt 1:1',
+                        version: 'KJV',
+                        work_unit_id: 101,
+                        verse_label: '1:1',
+                        body: 'The book of the generation of Jesus Christ...',
+                        words: []
+                    },
+                    {
+                        base_cref_id: 1,
+                        ord: 1001,
+                        hierarchy: '1,1',
+                        base_label: 'Matt 1:1',
+                        version: 'OpenGNT',
+                        work_unit_id: 201,
+                        verse_label: '1:1',
+                        body: 'Βίβλος γενέσεως Ἰησοῦ Χριστοῦ...',
+                        words: []
+                    }
+                ];
+            }
+            return [];
+        });
+
+        const rs = new ReaderState();
+        expect(rs.selectedVersion).toBe('BHS');
+        expect(rs.selectedBook).toBe('Gen');
+        expect(rs.selectedChapter).toBe('1');
+        expect(rs.versionGrid).toEqual([['BHS', 'LXX']]);
+
+        // Select OpenGNT with reload=true (default)
+        await rs.selectVersion('OpenGNT');
+
+        expect(rs.selectedVersion).toBe('OpenGNT');
+        expect(rs.selectedBook).toBe('Matt');
+        expect(rs.selectedChapter).toBe('1');
+        expect(rs.versionGrid).toEqual([['KJV', 'OpenGNT']]);
+
+        const opengntVerse = rs.getVerseData('1', 'OpenGNT');
+        expect(opengntVerse.exists).toBe(true);
+        expect(opengntVerse.omitted).toBe(false);
+        expect(opengntVerse.verseData?.body || opengntVerse.verseData?.text).toBe('Βίβλος γενέσεως Ἰησοῦ Χριστοῦ...');
+
+        const kjvVerse = rs.getVerseData('1', 'KJV');
+        expect(kjvVerse.exists).toBe(true);
+        expect(kjvVerse.omitted).toBe(false);
+    });
+
+    it('inspectWord resolves Hebrew lemma gloss from database or token fallback', async () => {
+        const rs = new ReaderState();
+        vi.spyOn(dbClient, 'getLemma').mockResolvedValue({
+            id: 1,
+            corpus: 'bdb',
+            lex_id: 1,
+            lemma: 'רֵאשִׁית',
+            gloss: 'beginning',
+            pos: null,
+            strongs: 'H7225',
+            beta: '',
+            plain: 'ראשית',
+            total: 51
+        });
+        vi.spyOn(dbClient, 'getLexiconEntry').mockResolvedValue({
+            id: 1,
+            dictionary: 'bdb',
+            strongs: 'H7225',
+            headword: 'רֵאשִׁית',
+            consonant_key: 'ראשית',
+            transliteration: '',
+            gloss: 'beginning',
+            definition: 'beginning'
+        });
+
+        await rs.inspectWord(
+            {
+                word: 'בְּרֵאשִׁית',
+                normalized: 'בראשית',
+                lemma: 'רֵאשִׁית',
+                strongs: 'H7225',
+                morph: 'Prep-b',
+                gloss: 'beginning'
+            },
+            'BHS'
+        );
+
+        expect(rs.showLemmaModal).toBe(true);
+        expect(rs.activeWord).toBeDefined();
+        expect(rs.activeWord?.lemma).toBe('רֵאשִׁית');
+        expect(rs.activeWord?.gloss).toBe('beginning');
+        expect(rs.activeWord?.strongs).toBe('H7225');
+    });
+
+    it('inspectWord falls back to token gloss when lexData gloss is empty', async () => {
+        const rs = new ReaderState();
+        vi.spyOn(dbClient, 'getLemma').mockResolvedValue({
+            id: 2,
+            corpus: 'bdb',
+            lex_id: 2,
+            lemma: 'אָדָם',
+            gloss: '',
+            pos: null,
+            strongs: 'H120',
+            beta: '',
+            plain: 'אדם',
+            total: 562
+        });
+        vi.spyOn(dbClient, 'getLexiconEntry').mockResolvedValue(null);
+
+        await rs.inspectWord(
+            {
+                word: 'אָדָם',
+                normalized: 'אדם',
+                lemma: 'אָדָם',
+                strongs: 'H120',
+                morph: 'N-ms',
+                gloss: 'human, mankind'
+            },
+            'BHS'
+        );
+
+        expect(rs.showLemmaModal).toBe(true);
+        expect(rs.activeWord).toBeDefined();
+        expect(rs.activeWord?.gloss).toBe('human, mankind');
+    });
 });

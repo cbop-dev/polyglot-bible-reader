@@ -14,9 +14,9 @@
   import Icon from '../ui/Icon.svelte';
   import { theme,size } from '$lib/stores/ThemeObserver.svelte';
   let displayedLanguages: string[]=$derived(Array.from(new Set(readerState.visibleVersions.map((v)=>getVersionLanguage(v)))));
-  $inspect('readerState.visibleVersions',readerState.visibleVersions);
+  //$inspect('readerState.visibleVersions',readerState.visibleVersions);
 
-  $inspect('reader.showGridHeader', readerState.showGridHeader);
+  //$inspect('reader.showGridHeader', readerState.showGridHeader);
   $effect(()=>{
     if (readerState.meditationMode){
       readerState.gridHeaderExpanded=false;

@@ -10,7 +10,6 @@ This repository follows a dual-licensing model to distinguish between the **appl
 |---|---|---|---|
 | **Application Software** | **GNU AGPL v3.0** | [LICENSE](LICENSE) | Covers all frontend UI code, reader components, navigation logic, scripts, and build tools. |
 | **Data & Static Assets** |
-| OpenScriptorium Database & Datasets | **[ISC License](https://opensource.org/licenses/ISC)** | | Sourced from the Openscriptorium.org GitHub project database from which all reader data was obtained. |
 | Public Domain Bible Texts & Lexica | **Public Domain** | | Latin Vulgate, King James Version (KJV), World English Bible (WEB), Swete LXX, LSJ & BDB Lexicons. |
 | Everything except BHS & TVTMS | **CC BY-SA 4.0** | [LICENSE-DATA](LICENSE-DATA) | Covers static Bible text data, lexicon entries, and search indexes (except BHS and TVTMS). |
 | BHS text, lemma and morphology data | **[CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/)** | | Derived from ETCBC/BHSA and Eliran Wong's BHS-morphology package. **Commercial use prohibited.** |
@@ -25,9 +24,6 @@ The GNU Affero General Public License v3.0 governs all executable source code, s
 - `src/` — SvelteKit application routes, components, reading interfaces, and stores.
 - `scripts/` — Dataset download, extraction, and preprocessing scripts.
 - Root configuration files (`package.json`, `svelte.config.js`, `vite.config.ts`, `tsconfig.json`).
-
-### Data Transformations & Static Assets
-  - Some Biblical text datasets (KJV, WEB, Vulgate), chapter data, and alignments, and concordance databases were obtained from the Openscriptorium.org project database. ([ISC License](https://opensource.org/licenses/ISC)).
 
 Several Bible translations and lexical resources are in the **Public Domain**:
 - `static/data/vulgate/` — Latin Vulgate text and concordances (Public Domain).
@@ -49,26 +45,20 @@ The Creative Commons Attribution-NonCommercial 4.0 International License ([CC BY
 
 The developer(s) is(are) grateful to the digital humanities projects whose open-licensed datasets make this work possible:
 
-### OpenScriptorium Project Database
-1. **Openscriptorium.org GitHub Project Database**:
-   - **Source**: [Openscriptorium.org](https://openscriptorium.org) / [OpenScriptorium on GitHub](https://github.com/OpenScriptorium).
-   - **License**: [ISC License](https://opensource.org/licenses/ISC).
-   - **Attribution**:   Some Biblical text datasets (KJV, WEB, Vulgate), chapter data, and alignments, and concordance databases were obtained from the Openscriptorium.org project database.
-
 ### Latin Vulgate (Biblia Sacra Vulgata)
 1. **Latin Vulgate Edition**:
    - **License**: **Public Domain worldwide**.
-   - **Source**: Saint Jerome's Latin translation (completed c. 405 A.D.) and the Clementine Vulgate (1592). The text is in the public domain worldwide. Sourced from the OpenScriptorium project database.
+   - **Source**: Saint Jerome's Latin translation (completed c. 405 A.D.) and the Clementine Vulgate (1592). The text is in the public domain worldwide. Sourced from the [scrollmapper/bible_databases](https://github.com/scrollmapper/bible_databases) digital Clementine Vulgate edition.
 
 ### King James Version (KJV)
 1. **King James Version (Authorized Version, 1611)**:
    - **License**: **Public Domain worldwide**.
-   - **Source**: Translated under King James I of England and published in 1611. The biblical text is unencumbered and in the public domain worldwide. Sourced from the OpenScriptorium project database.
+   - **Source**: Translated under King James I of England and published in 1611. The biblical text is unencumbered and in the public domain worldwide. Sourced from the [scrollmapper/bible_databases](https://github.com/scrollmapper/bible_databases) digital KJV edition (with Apocrypha).
 
 ### World English Bible (WEB)
 1. **World English Bible**:
    - **License**: **Public Domain worldwide**.
-   - **Source**: Modern English translation of the Holy Bible produced by Rainbow Missions, Inc. and Michael Paul Johnson ([World English Bible](https://worldenglish.bible)). The editors and translators dedicated the entire work to the public domain worldwide without copyright restrictions. Sourced from the OpenScriptorium project database.
+   - **Source**: Modern English translation of the Holy Bible produced by Rainbow Missions, Inc. and Michael Paul Johnson ([World English Bible](https://worldenglish.bible)). The editors and translators dedicated the entire work to the public domain worldwide without copyright restrictions. Sourced via [eBible.org](https://ebible.org).
 
 ### Hebrew Bible (BHS)
 1. **ETCBC / Text-Fabric**: Hebrew morphological dataset developed by the Eep Talstra Centre for Bible and Computer (Vrije Universiteit Amsterdam).

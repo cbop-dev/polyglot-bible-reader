@@ -2,11 +2,15 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
 	VERSION_MAP,
 	SLUG_TO_VERSION,
+	resolveBookCode,
 	resolveCanonicalWorkId,
 	getWorks,
+	getCanonicalWorks,
+	getBookChapters,
 	getChapterVerses,
 	getWordsForWorkUnits,
 	getLemma,
+	getLemmaTotalCount,
 	getWordFrequencyByBook,
 	getConcordance,
 	getVerseText,
@@ -19,16 +23,23 @@ import * as dbWorker from './dbWorker';
 describe('dbClient service', () => {
 	it('maps UI versions to work slugs correctly', () => {
 		expect(VERSION_MAP['BHS']).toBe('wlc');
-		expect(VERSION_MAP['LXX']).toBe('swete-lxx');
-		expect(VERSION_MAP['SBLGNT']).toBe('sblgnt');
-		expect(VERSION_MAP['Vulgate']).toBe('vulgate-clementine');
+		expect(VERSION_MAP['LXX']).toBe('swete_lxx');
+		expect(VERSION_MAP['OpenGNT']).toBe('ognt');
+		expect(VERSION_MAP['OGNT']).toBe('ognt');
+		expect(VERSION_MAP['SBLGNT']).toBe('ognt');
+		expect(VERSION_MAP['Vulgate']).toBe('vulgate');
 		expect(VERSION_MAP['KJV']).toBe('kjv');
 		expect(VERSION_MAP['WEB']).toBe('webbe');
 		expect(VERSION_MAP['Brenton']).toBe('brenton-lxx');
 
 		expect(SLUG_TO_VERSION['wlc']).toBe('BHS');
+		expect(SLUG_TO_VERSION['swete_lxx']).toBe('LXX');
 		expect(SLUG_TO_VERSION['swete-lxx']).toBe('LXX');
-		expect(SLUG_TO_VERSION['sblgnt']).toBe('SBLGNT');
+		expect(SLUG_TO_VERSION['ognt']).toBe('OpenGNT');
+		expect(SLUG_TO_VERSION['sblgnt']).toBe('OpenGNT');
+		expect(SLUG_TO_VERSION['vulgate']).toBe('Vulgate');
+		expect(SLUG_TO_VERSION['vulgate-clementine']).toBe('Vulgate');
+		expect(SLUG_TO_VERSION['kjv']).toBe('KJV');
 	});
 
 	describe('with mocked database worker', () => {
@@ -44,255 +55,282 @@ describe('dbClient service', () => {
 			});
 		});
 
-		it('fetches works list', async () => {
+		it('fetches works list from corpora', async () => {
 			mockQuery.mockResolvedValue([
-				{ id: 2, slug: 'wlc', title: 'Westminster Leningrad Codex', language: 'he' },
-				{ id: 24, slug: 'swete-lxx', title: "Swete's Septuagint", language: 'el-koine' }
+				{ id: 'wlc', title: 'Westminster Leningrad Codex', language: 'hbo', category: 'bible' },
+				{ id: 'swete_lxx', title: "Swete's Septuagint", language: 'grc', category: 'bible' }
 			]);
 
 			const works = await getWorks();
 			expect(works).toHaveLength(2);
 			expect(works[0].slug).toBe('wlc');
+			expect(works[1].slug).toBe('swete_lxx');
 			expect(mockQuery).toHaveBeenCalledWith(
-				expect.stringContaining('SELECT id, slug, title'),
+				expect.stringContaining('SELECT id, title, language, category FROM corpora'),
 				expect.any(Array)
 			);
 		});
 
-		it('resolves canonical work IDs for various aliases', async () => {
+		it('resolves canonical book codes and works', async () => {
+			expect(resolveBookCode('genesis')).toBe('GEN');
+			expect(resolveBookCode('Gen')).toBe('GEN');
+			expect(resolveBookCode('1-corinthians')).toBe('1CO');
+			expect(resolveBookCode('1_Cor')).toBe('1CO');
+			expect(resolveBookCode('1 Cor')).toBe('1CO');
+			expect(resolveBookCode('psalms')).toBe('PSA');
+			expect(resolveBookCode('Ps')).toBe('PSA');
+			expect(resolveBookCode('Qoh')).toBe('ECC');
+			expect(resolveBookCode('Eccl')).toBe('ECC');
+			expect(resolveBookCode('Cant')).toBe('SNG');
+			expect(resolveBookCode('2Esdr')).toBe('2ES');
+
 			mockQuery.mockResolvedValue([
-				{ id: 1, slug: 'genesis', title: 'Genesis', sbl_abbreviation: 'Gen', book_key: 'genesis', testament: 'ot' },
-				{ id: 19, slug: 'psalms', title: 'Psalms', sbl_abbreviation: 'Ps', book_key: 'psalms', testament: 'ot' },
-				{ id: 40, slug: 'matthew', title: 'Matthew', sbl_abbreviation: 'Matt', book_key: 'matthew', testament: 'nt' },
-				{ id: 46, slug: '1-corinthians', title: '1 Corinthians', sbl_abbreviation: '1 Cor', book_key: '1-corinthians', testament: 'nt' }
+				{ code: 'GEN', order_index: 1, testament: 'OT', name_english: 'Genesis', total_chapters: 50 },
+				{ code: 'PSA', order_index: 19, testament: 'OT', name_english: 'Psalms', total_chapters: 150 },
+				{ code: 'MAT', order_index: 60, testament: 'NT', name_english: 'Matthew', total_chapters: 28 }
 			]);
 
-			expect(await resolveCanonicalWorkId('genesis')).toBe(1);
-			expect(await resolveCanonicalWorkId('Gen')).toBe(1);
-			expect(await resolveCanonicalWorkId('1-corinthians')).toBe(46);
-			expect(await resolveCanonicalWorkId('1_Cor')).toBe(46);
-			expect(await resolveCanonicalWorkId('1 Cor')).toBe(46);
-			expect(await resolveCanonicalWorkId('psalms')).toBe(19);
-			expect(await resolveCanonicalWorkId('Ps')).toBe(19);
+			const works = await getCanonicalWorks();
+			expect(works).toHaveLength(3);
+			expect(works[0].book_key).toBe('GEN');
+
+			const id = await resolveCanonicalWorkId('Gen');
+			expect(id).toBe(1);
 		});
 
-		it('resolves version-specific canonical work IDs for LXX and Brenton', async () => {
+		it('fetches chapter count via getBookChapters', async () => {
 			mockQuery.mockResolvedValueOnce([
-				{ id: 19, slug: 'psalms', title: 'Psalms', sbl_abbreviation: 'Ps', book_key: 'psalms', testament: 'ot' },
-				{ id: 87, slug: 'psalms-lxx', title: 'Psalms (LXX)', sbl_abbreviation: null, book_key: 'psalms-lxx', testament: 'ot' },
-				{ id: 24, slug: 'jeremiah', title: 'Jeremiah', sbl_abbreviation: 'Jer', book_key: 'jeremiah', testament: 'ot' },
-				{ id: 88, slug: 'jeremiah-lxx', title: 'Jeremiah (LXX)', sbl_abbreviation: null, book_key: 'jeremiah-lxx', testament: 'ot' },
-				{ id: 21, slug: 'ecclesiastes', title: 'Ecclesiastes', sbl_abbreviation: 'Eccl', book_key: 'ecclesiastes', testament: 'ot' },
-				{ id: 85, slug: 'psalms-of-solomon', title: 'Psalms of Solomon', sbl_abbreviation: null, book_key: 'psalms-of-solomon', testament: 'ot' }
+				{ total_chapters: 50 }
 			]);
 
-			// Jer in BHS vs LXX
-			expect(await resolveCanonicalWorkId('Jer', 'BHS')).toBe(24);
-			expect(await resolveCanonicalWorkId('Jer', 'LXX')).toBe(88);
-			expect(await resolveCanonicalWorkId('Jer', 'Brenton')).toBe(88);
-
-			// Ps in BHS vs LXX
-			expect(await resolveCanonicalWorkId('Ps', 'BHS')).toBe(19);
-			expect(await resolveCanonicalWorkId('Ps', 'LXX')).toBe(87);
-
-			// Aliases
-			expect(await resolveCanonicalWorkId('Qoh', 'BHS')).toBe(21);
-			expect(await resolveCanonicalWorkId('PsSol', 'LXX')).toBe(85);
+			const chaps = await getBookChapters('Gen');
+			expect(chaps).toHaveLength(50);
+			expect(chaps[0]).toBe(1);
+			expect(chaps[49]).toBe(50);
+			expect(mockQuery).toHaveBeenCalledWith(
+				expect.stringContaining('SELECT total_chapters FROM canonical_books WHERE code = ?'),
+				['GEN']
+			);
 		});
 
-		it('translates references between versions using versification mappings', async () => {
-			// Mock canonical works resolution
+		it('translates references between versions using text_units alignment join', async () => {
 			mockQuery.mockResolvedValueOnce([
-				{ id: 24, slug: 'jeremiah', title: 'Jeremiah', sbl_abbreviation: 'Jer', book_key: 'jeremiah', testament: 'ot' },
-				{ id: 88, slug: 'jeremiah-lxx', title: 'Jeremiah (LXX)', sbl_abbreviation: null, book_key: 'jeremiah-lxx', testament: 'ot' }
+				{ native_book: 'Ps', native_chapter: 50, native_verse: 3 }
 			]);
 
-			// Mock versification mapping query returning Jer 38:1
-			mockQuery.mockResolvedValueOnce([
-				{ hierarchy: '38,1' }
-			]);
-
-			const trans = await translateReference('Jer', 31, 1, 'BHS', 'LXX');
-			expect(trans).toEqual({ book: 'Jer', chapter: 38, verse: 1 });
+			const trans = await translateReference('Ps', 51, 3, 'BHS', 'LXX');
+			expect(trans).toEqual({ book: 'Ps', chapter: 50, verse: 3 });
+			expect(mockQuery).toHaveBeenCalledWith(
+				expect.stringContaining('FROM text_units a\n\t\t\tJOIN text_units b'),
+				['wlc', 'Ps', 'PSA', 51, 51, 3, 3, 'swete_lxx']
+			);
 		});
 
-		it('retrieves chapter verses and re-maps slugs to UI version acronyms', async () => {
-			// Mock canonical works resolution
-			mockQuery.mockResolvedValueOnce([
-				{ id: 1, slug: 'genesis', title: 'Genesis', sbl_abbreviation: 'Gen', book_key: 'genesis', testament: 'ot' }
-			]);
+		it('returns null when reference translation fails or passage does not exist', async () => {
+			mockQuery.mockResolvedValueOnce([]);
 
-			// Mock verse rows query
+			const trans = await translateReference('Gen', 1, 1, 'BHS', 'OpenGNT');
+			expect(trans).toBeNull();
+		});
+
+		it('retrieves chapter verses from text_units and embeds tokens_json into words', async () => {
 			mockQuery.mockResolvedValueOnce([
 				{
-					base_cref_id: 1,
-					ord: 1,
-					hierarchy: '1,1',
-					base_label: 'Genesis 1:1',
-					version: 'wlc',
 					work_unit_id: 101,
-					verse_label: '1:1',
-					body: 'בְּרֵאשִׁ֖ית...'
+					corpus_id: 'wlc',
+					std_book: 'GEN',
+					std_chapter: 1,
+					std_verse: 1,
+					std_subverse: '',
+					native_book: 'Gen',
+					native_chapter: 1,
+					native_verse: 1,
+					verse_label: 'Gen 1:1',
+					body: 'בְּרֵאשִׁ֖ית בָּרָ֣א אֱלֹהִ֑ים אֵ֥ת הַשָּׁמַ֖יִם וְאֵ֥ת הָאָֽרֶץ׃',
+					tokens_json: JSON.stringify([
+						{ word: 'בְּרֵאשִׁ֖ית', normalized: 'בראשית', strongs: 'H7225', morph: 'Prep-b' }
+					])
 				},
 				{
-					base_cref_id: 1,
-					ord: 1,
-					hierarchy: '1,1',
-					base_label: 'Genesis 1:1',
-					version: 'swete-lxx',
 					work_unit_id: 201,
-					verse_label: '1:1',
-					body: 'ἐν ἀρχῇ...'
+					corpus_id: 'swete_lxx',
+					std_book: 'GEN',
+					std_chapter: 1,
+					std_verse: 1,
+					std_subverse: '',
+					native_book: 'Gen',
+					native_chapter: 1,
+					native_verse: 1,
+					verse_label: 'Gen 1:1',
+					body: 'ἐν ἀρχῇ ἐποίησεν ὁ θεὸς τὸν οὐρανὸν καὶ τὴν γῆν',
+					tokens_json: JSON.stringify([
+						{ word: 'ἐν', normalized: 'εν', strongs: 'G1722', morph: 'PREP' }
+					])
 				}
-			]);
-
-			// Mock word tokens query for work units 101 and 201
-			mockQuery.mockResolvedValueOnce([
-				{ id: 1, work_id: 2, work_unit_id: 101, position: 1, surface: 'בְּרֵאשִׁ֖ית', normalized: 'בראשית', strongs_number: '7225', morph_code: 'Prep-b' },
-				{ id: 2, work_id: 24, work_unit_id: 201, position: 1, surface: 'ἐν', normalized: 'ἐν', strongs_number: 'G1722', morph_code: 'PREP' }
 			]);
 
 			const verses = await getChapterVerses('Gen', 1, ['BHS', 'LXX'], true);
 			expect(verses).toHaveLength(2);
-			// Check remapping from 'wlc' to 'BHS' and 'swete-lxx' to 'LXX'
 			expect(verses[0].version).toBe('BHS');
 			expect(verses[1].version).toBe('LXX');
 			expect(verses[0].words).toHaveLength(1);
+			expect(verses[0].words![0].surface).toBe('בְּרֵאשִׁ֖ית');
+			expect(verses[0].words![0].strongs_number).toBe('H7225');
 			expect(verses[1].words).toHaveLength(1);
-		});
+			expect(verses[1].words![0].surface).toBe('ἐν');
+			expect(verses[1].words![0].strongs_number).toBe('G1722');
 
-		it('retrieves Psalms 1 verses using variant_identity_refs SQL structure', async () => {
-			// Mock canonical works resolution for 'Ps'
-			mockQuery.mockResolvedValueOnce([
-				{ id: 19, slug: 'psalms', title: 'Psalms', sbl_abbreviation: 'Ps', book_key: 'psalms', testament: 'ot' }
-			]);
-
-			// Mock verse rows for Ps 1:1 in BHS and LXX
-			mockQuery.mockResolvedValueOnce([
-				{
-					base_cref_id: 13941,
-					ord: 13941,
-					hierarchy: '1,1',
-					base_label: 'Psalms 1:1',
-					version: 'wlc',
-					work_unit_id: 974950,
-					verse_label: '1:1',
-					body: 'אַ֥שְֽׁרֵי־ הָאִ֗ישׁ...'
-				},
-				{
-					base_cref_id: 13941,
-					ord: 13941,
-					hierarchy: '1,1',
-					base_label: 'Psalms 1:1',
-					version: 'swete-lxx',
-					work_unit_id: 974960,
-					verse_label: '1:1',
-					body: 'μακάριος ἀνήρ...'
-				}
-			]);
-
-			// Mock word tokens
-			mockQuery.mockResolvedValueOnce([]);
-
-			const verses = await getChapterVerses('Ps', 1, ['BHS', 'LXX'], true);
-			expect(verses).toHaveLength(2);
-			expect(verses[0].version).toBe('BHS');
-			expect(verses[1].version).toBe('LXX');
-
-			// Verify that the query was called with the variant_identity_refs CTE and both cwId params
 			expect(mockQuery).toHaveBeenCalledWith(
-				expect.stringContaining('variant_identity_refs'),
-				[19, '1', '1,%', 19, 'wlc', 'swete-lxx']
+				expect.stringContaining('FROM text_units\n\t\t\tWHERE std_book = ? AND std_chapter = ? AND corpus_id IN (?,?)'),
+				['GEN', 1, 'wlc', 'swete_lxx']
 			);
 		});
 
-		it('retrieves Jeremiah 31 verses aligned with LXX 38', async () => {
-			// Mock canonical works resolution for 'Jer'
-			mockQuery.mockResolvedValueOnce([
-				{ id: 24, slug: 'jeremiah', title: 'Jeremiah', sbl_abbreviation: 'Jer', book_key: 'jeremiah', testament: 'ot' }
-			]);
-
-			// Mock verse rows for Jer 31:1 (BHS 31:1, LXX 38:1)
+		it('retrieves parallel Psalm 51 verses with divergent native labels', async () => {
 			mockQuery.mockResolvedValueOnce([
 				{
-					base_cref_id: 19693,
-					ord: 19693,
-					hierarchy: '31,1',
-					base_label: 'Jeremiah 31:1',
-					version: 'wlc',
-					work_unit_id: 985300,
-					verse_label: '31:1',
-					body: 'בָּעֵ֤ת הַהִיא֙ נְאֻם־ יְהוָ֔ה אֶֽהְיֶה֙ לֵֽאלֹהִ֔ים...'
+					work_unit_id: 1,
+					corpus_id: 'kjv',
+					std_book: 'PSA',
+					std_chapter: 51,
+					std_verse: 1,
+					std_subverse: '',
+					native_book: 'Ps',
+					native_chapter: 51,
+					native_verse: 1,
+					verse_label: 'Ps 51:1',
+					body: 'Have mercy upon me, O God, according to thy lovingkindness...',
+					tokens_json: null
 				},
 				{
-					base_cref_id: 19693,
-					ord: 19693,
-					hierarchy: '31,1',
-					base_label: 'Jeremiah 31:1',
-					version: 'swete-lxx',
-					work_unit_id: 985400,
-					verse_label: '38:1',
-					body: 'ἐν τῷ χρόνῳ ἐκείνῳ εἶπεν κύριος ἔσομαι εἰς θεὸν...'
+					work_unit_id: 2,
+					corpus_id: 'swete_lxx',
+					std_book: 'PSA',
+					std_chapter: 51,
+					std_verse: 1,
+					std_subverse: '',
+					native_book: 'Ps',
+					native_chapter: 50,
+					native_verse: 3,
+					verse_label: 'Ps 50:3',
+					body: 'ἐλέησόν με ὁ θεός κατὰ τὸ μέγα ἔλεός σου...',
+					tokens_json: null
+				},
+				{
+					work_unit_id: 3,
+					corpus_id: 'vulgate',
+					std_book: 'PSA',
+					std_chapter: 51,
+					std_verse: 1,
+					std_subverse: '',
+					native_book: 'Ps',
+					native_chapter: 50,
+					native_verse: 3,
+					verse_label: 'Ps 50:3',
+					body: 'Miserere mei, Deus, secundum magnam misericordiam tuam...',
+					tokens_json: null
+				},
+				{
+					work_unit_id: 4,
+					corpus_id: 'wlc',
+					std_book: 'PSA',
+					std_chapter: 51,
+					std_verse: 1,
+					std_subverse: '',
+					native_book: 'Ps',
+					native_chapter: 51,
+					native_verse: 3,
+					verse_label: 'Ps 51:3',
+					body: 'חָנֵּ֣נִי אֱלֹהִ֣ים כְּחַסְדֶּ֑ךָ...',
+					tokens_json: null
 				}
 			]);
 
-			// Mock words
-			mockQuery.mockResolvedValueOnce([]);
-
-			const verses = await getChapterVerses('Jer', 31, ['BHS', 'LXX'], true);
-			expect(verses).toHaveLength(2);
-			expect(verses[0].version).toBe('BHS');
-			expect(verses[0].verse_label).toBe('31:1');
-			expect(verses[1].version).toBe('LXX');
-			expect(verses[1].verse_label).toBe('38:1');
+			const verses = await getChapterVerses('Ps', 51, ['KJV', 'LXX', 'Vulgate', 'BHS'], false);
+			expect(verses).toHaveLength(4);
+			expect(verses[0].verse_label).toBe('51:1');
+			expect(verses[1].verse_label).toBe('50:3');
+			expect(verses[2].verse_label).toBe('50:3');
+			expect(verses[3].verse_label).toBe('51:3');
 		});
 
-		it('consolidates contiguous workUnitIds into BETWEEN range scans with UNION ALL', async () => {
+		it('queries aligned parallel verses for Esther across BHS and LXX under EST', async () => {
 			mockQuery.mockResolvedValueOnce([
 				{
-					id: 1,
-					work_id: 2,
-					work_unit_id: 101,
-					position: 1,
-					surface: 'בְּרֵאשִׁ֖ית',
-					normalized: 'בראשית',
-					strongs_number: 'H7225',
-					morph_code: 'Ncfsa'
+					work_unit_id: 1,
+					corpus_id: 'wlc',
+					std_book: 'EST',
+					std_chapter: 1,
+					std_verse: 1,
+					std_subverse: '',
+					native_book: 'Esth',
+					native_chapter: 1,
+					native_verse: 1,
+					verse_label: 'Esth 1:1',
+					body: 'וַיְהִ֖י בִּימֵ֣י אֲחַשְׁוֵרֹ֑ושׁ',
+					tokens_json: null
 				},
 				{
-					id: 2,
-					work_id: 24,
-					work_unit_id: 201,
-					position: 1,
-					surface: 'ἐν',
-					normalized: 'εν',
-					strongs_number: 'G1722',
-					morph_code: 'PREP'
+					work_unit_id: 2,
+					corpus_id: 'swete_lxx',
+					std_book: 'EST',
+					std_chapter: 1,
+					std_verse: 1,
+					std_subverse: '',
+					native_book: 'Esth',
+					native_chapter: 1,
+					native_verse: 1,
+					verse_label: 'Esth 1:1',
+					body: 'ἔτους δευτέρου βασιλεύοντος Ἀρταξέρξου',
+					tokens_json: null
 				}
 			]);
 
-			// Pass two contiguous blocks: [101, 102, 103] and [201, 202]
-			const words = await getWordsForWorkUnits([101, 102, 103, 201, 202]);
+			const verses = await getChapterVerses('Esth', 1, ['BHS', 'LXX'], false);
+			expect(verses).toHaveLength(2);
+			expect(verses[0].version).toBe('BHS');
+			expect(verses[0].base_label).toBe('EST 1:1');
+			expect(verses[1].version).toBe('LXX');
+			expect(verses[1].base_label).toBe('EST 1:1');
+		});
+
+		it('queries words for work units via getWordsForWorkUnits', async () => {
+			mockQuery.mockResolvedValueOnce([
+				{
+					id: 101,
+					corpus_id: 'wlc',
+					tokens_json: JSON.stringify([
+						{ word: 'בְּרֵאשִׁ֖ית', normalized: 'בראשית', strongs: 'H7225', morph: 'Prep-b' }
+					])
+				},
+				{
+					id: 201,
+					corpus_id: 'swete_lxx',
+					tokens_json: JSON.stringify([
+						{ word: 'ἐν', normalized: 'εν', strongs: 'G1722', morph: 'PREP' }
+					])
+				}
+			]);
+
+			const words = await getWordsForWorkUnits([101, 201]);
 			expect(words).toHaveLength(2);
+			expect(words[0].surface).toBe('בְּרֵאשִׁ֖ית');
+			expect(words[1].surface).toBe('ἐν');
 			expect(mockQuery).toHaveBeenCalledWith(
-				expect.stringContaining('work_unit_id BETWEEN ? AND ?\nUNION ALL\nSELECT id, work_id, work_unit_id, position, surface, normalized, strongs_number, morph_code FROM words WHERE work_unit_id BETWEEN ? AND ?'),
-				[101, 103, 201, 202]
+				expect.stringContaining('SELECT id, corpus_id, tokens_json\n\t\t\tFROM text_units\n\t\t\tWHERE id IN (?,?)'),
+				[101, 201]
 			);
 		});
 
-		it('retrieves lemma information by lemma or lex_id', async () => {
+		it('retrieves lemma information by querying lexicon_entries', async () => {
 			mockQuery.mockResolvedValueOnce([
 				{
 					id: 14680,
-					corpus: 'sblgnt',
-					lex_id: 3040,
+					dictionary: 'lsj',
+					strongs_id: 'G3056',
 					lemma: 'λόγος',
 					gloss: 'word, speech',
-					pos: 4,
-					strongs: 'G3056',
-					beta: 'logos',
-					plain: 'λογος',
-					total: 330
+					consonant_key: 'λογος'
 				}
 			]);
 
@@ -300,99 +338,77 @@ describe('dbClient service', () => {
 			expect(lemma).not.toBeNull();
 			expect(lemma?.lemma).toBe('λόγος');
 			expect(lemma?.strongs).toBe('G3056');
-			expect(lemma?.total).toBe(330);
+			expect(mockQuery).toHaveBeenCalledWith(
+				expect.stringContaining('SELECT id, dictionary, strongs_id, lemma, gloss, consonant_key\n\t\t\t\tFROM lexicon_entries'),
+				['lsj', 'λόγος', 'λόγος']
+			);
 		});
 
-		it('retrieves word frequency by book', async () => {
+		it('retrieves word frequency by book from lemma_stats', async () => {
 			mockQuery.mockResolvedValueOnce([
 				{
 					book_counts_json: JSON.stringify([
-						{ title: 'Matthew', sbl_abbreviation: 'Matt', count: 33 },
-						{ title: 'John', sbl_abbreviation: 'John', count: 40 }
+						{ title: 'Matthew', sbl_abbreviation: 'MAT', count: 33 },
+						{ title: 'John', sbl_abbreviation: 'JHN', count: 40 }
 					]),
 					total_count: 73
 				}
 			]);
 
-			const freqs = await getWordFrequencyByBook(25, 'λόγος');
+			const freqs = await getWordFrequencyByBook(40, 'λόγος', 'G3056');
 			expect(freqs).toHaveLength(2);
 			expect(freqs[0].title).toBe('Matthew');
 			expect(freqs[1].count).toBe(40);
-		});
-
-		it('retrieves word frequencies for lemmas without Strongs number (pseudo-strongs)', async () => {
-			mockQuery.mockResolvedValueOnce([
-				{
-					book_counts_json: JSON.stringify([
-						{ title: 'Genesis', sbl_abbreviation: 'Gen', count: 1 }
-					]),
-					total_count: 1
-				}
-			]);
-
-			const freqs = await getWordFrequencyByBook(24, 'ἀκατασκεύαστος');
-			expect(freqs).toHaveLength(1);
-			expect(freqs[0].title).toBe('Genesis');
-			expect(freqs[0].count).toBe(1);
 			expect(mockQuery).toHaveBeenCalledWith(
 				expect.stringContaining('FROM lemma_stats'),
-				expect.arrayContaining([24, 'ἀκατασκεύαστος', 'ἀκατασκεύαστος', 'WORD:ἀκατασκεύαστος'])
+				['ognt', 40, 'G3056', 'G3056']
 			);
 		});
 
-		it('retrieves concordance occurrences', async () => {
+		it('retrieves total count directly from lemma_stats via getLemmaTotalCount', async () => {
+			mockQuery.mockResolvedValueOnce([
+				{
+					total_count: 917
+				}
+			]);
+
+			const total = await getLemmaTotalCount(40, 'Ἰησοῦς', 'G2424');
+			expect(total).toBe(917);
+			expect(mockQuery).toHaveBeenCalledWith(
+				expect.stringContaining('SELECT total_count'),
+				['ognt', 40, 'G2424', 'G2424']
+			);
+		});
+
+		it('retrieves concordance occurrences from concordance_refs', async () => {
 			mockQuery.mockResolvedValueOnce([
 				{
 					work_unit_id: 5001,
 					display_label: 'John 1:1',
-					verse_label: '1:1',
-					body: 'Ἐν ἀρχῇ ἦν ὁ λόγος...',
-					surface: 'λόγος',
-					position: 5
+					ref_label: 'John 1:1'
 				}
 			]);
 
-			const conc = await getConcordance(25, 'λόγος', 10);
+			const conc = await getConcordance(40, 'λόγος', 10, 'G3056');
 			expect(conc).toHaveLength(1);
 			expect(conc[0].display_label).toBe('John 1:1');
-			expect(conc[0].surface).toBe('λόγος');
-		});
-
-		it('queries pre-indexed concordance_refs with Strongs number priority', async () => {
-			mockQuery.mockResolvedValueOnce([
-				{
-					ref_label: 'Gen 1:1',
-					display_label: 'Gen 1:1',
-					work_unit_id: 58765
-				},
-				{
-					ref_label: 'Gen 10:10',
-					display_label: 'Gen 10:10',
-					work_unit_id: 59000
-				}
-			]);
-
-			const conc = await getConcordance(2, 'ראשית', 10, 'H7225');
-			expect(conc).toHaveLength(2);
-			expect(conc[0].ref_label).toBe('Gen 1:1');
-			expect(conc[0].work_unit_id).toBe(58765);
 			expect(mockQuery).toHaveBeenCalledWith(
 				expect.stringContaining('FROM concordance_refs'),
-				[2, 'H7225', 10]
+				['ognt', 40, 'G3056', 'G3056', 10]
 			);
 		});
 
 		it('fetches on-demand verse text via getVerseText', async () => {
 			mockQuery.mockResolvedValueOnce([
 				{
-					body: 'בְּרֵאשִׁ֖ית בָּרָ֣א אֱלֹהִ֑ים אֵ֥ת הַשָּׁמַ֖יִם וְאֵ֥ת הָאָֽרֶץ׃'
+					text_content: 'בְּרֵאשִׁ֖ית בָּרָ֣א אֱלֹהִ֑ים אֵ֥ת הַשָּׁמַ֖יִם וְאֵ֥ת הָאָֽרֶץ׃'
 				}
 			]);
 
 			const body = await getVerseText(58765);
 			expect(body).toContain('בְּרֵאשִׁ֖ית');
 			expect(mockQuery).toHaveBeenCalledWith(
-				expect.stringContaining('SELECT body FROM work_units WHERE id = ?'),
+				expect.stringContaining('SELECT text_content FROM text_units WHERE id = ?'),
 				[58765]
 			);
 		});
@@ -403,8 +419,8 @@ describe('dbClient service', () => {
 				{
 					id: 1,
 					dictionary: 'bdb',
-					key: 'בראשית',
-					headword: 'בְּרֵאשִׁית',
+					key: 'ראשית',
+					headword: 'רֵאשִׁית',
 					strongs: 'H7225',
 					definition: '<div><p><b>H7225. reshith</b></p><p>beginning, chief</p></div>'
 				}
@@ -414,7 +430,7 @@ describe('dbClient service', () => {
 			expect(bdbStrongsRes).not.toBeNull();
 			expect(bdbStrongsRes?.strongs).toBe('H7225');
 			expect(mockQuery).toHaveBeenCalledWith(
-				expect.stringContaining("WHERE dictionary = 'bdb' AND strongs = ? AND (headword = ? OR key = ?"),
+				expect.stringContaining("WHERE dictionary = 'bdb' AND strongs_id = ? AND (lemma = ? OR consonant_key = ?"),
 				['H7225', 'בְּרֵאשִׁית', 'בְּרֵאשִׁית', 'בראשית', 'בראשית']
 			);
 
@@ -434,7 +450,7 @@ describe('dbClient service', () => {
 			expect(bdbHeadwordRes).not.toBeNull();
 			expect(bdbHeadwordRes?.headword).toBe('בָּרָא');
 			expect(mockQuery).toHaveBeenCalledWith(
-				expect.stringContaining("WHERE dictionary = 'bdb' AND headword = ?"),
+				expect.stringContaining("WHERE dictionary = 'bdb' AND lemma = ?"),
 				['בָּרָא']
 			);
 
@@ -456,7 +472,7 @@ describe('dbClient service', () => {
 			expect(bdbKeyRes).not.toBeNull();
 			expect(bdbKeyRes?.key).toBe('ברא');
 			expect(mockQuery).toHaveBeenCalledWith(
-				expect.stringContaining("WHERE dictionary = 'bdb' AND key = ?"),
+				expect.stringContaining("WHERE dictionary = 'bdb' AND consonant_key = ?"),
 				['ברא']
 			);
 
@@ -467,7 +483,7 @@ describe('dbClient service', () => {
 					dictionary: 'lsj',
 					key: 'ποιεω',
 					headword: 'ποιέω',
-					lsj_index: 'n84234',
+					strongs: 'G4160',
 					definition: '<p>ποιέω to make</p>'
 				}
 			]);
@@ -476,48 +492,49 @@ describe('dbClient service', () => {
 			expect(lsjRes).not.toBeNull();
 			expect(lsjRes?.key).toBe('ποιεω');
 			expect(mockQuery).toHaveBeenCalledWith(
-				expect.stringContaining("WHERE dictionary = 'lsj' AND (key = ? OR headword = ? OR lsj_index = ?)"),
-				['ποιεω', 'ποιέω', 'ποιέω']
+				expect.stringContaining("WHERE dictionary = 'lsj' AND (consonant_key = ? OR lemma = ?)"),
+				['ποιεω', 'ποιέω']
 			);
 		});
 
 		it('loads BHS and LXX Gen 1:1 word tokens and retrieves correct BDB and LSJ entries', async () => {
-			// 1. Mock canonical works resolution for 'Gen'
-			mockQuery.mockResolvedValueOnce([
-				{ id: 1, slug: 'genesis', title: 'Genesis', sbl_abbreviation: 'Gen', book_key: 'genesis', testament: 'ot' }
-			]);
-
-			// 2. Mock verse rows for Gen 1:1 in BHS and LXX
+			// Mock verse rows for Gen 1:1 in BHS and LXX with tokens_json embedded
 			mockQuery.mockResolvedValueOnce([
 				{
-					base_cref_id: 1,
-					ord: 1,
-					hierarchy: '1,1',
-					base_label: 'Genesis 1:1',
-					version: 'wlc',
 					work_unit_id: 58765,
-					verse_label: '1:1',
-					body: 'בְּרֵאשִׁ֖ית בָּרָ֣א אֱלֹהִ֑ים אֵ֥ת הַשָּׁמַ֖יִם וְאֵ֥ת הָאָֽרֶץ׃'
+					corpus_id: 'wlc',
+					std_book: 'GEN',
+					std_chapter: 1,
+					std_verse: 1,
+					std_subverse: '',
+					native_book: 'Gen',
+					native_chapter: 1,
+					native_verse: 1,
+					verse_label: 'Gen 1:1',
+					body: 'בְּרֵאשִׁ֖ית בָּרָ֣א אֱלֹהִ֑ים אֵ֥ת הַשָּׁמַ֖יִם וְאֵ֥ת הָאָֽרֶץ׃',
+					tokens_json: JSON.stringify([
+						{ word: 'בְּרֵאשִׁ֖ית', normalized: 'בראשית', strongs: '7225', morph: 'Prep-b | N-fs' },
+						{ word: 'בָּרָ֣א', normalized: 'ברא', strongs: '1254', morph: 'V-qp3ms' }
+					])
 				},
 				{
-					base_cref_id: 1,
-					ord: 1,
-					hierarchy: '1,1',
-					base_label: 'Genesis 1:1',
-					version: 'swete-lxx',
 					work_unit_id: 958890,
-					verse_label: '1:1',
-					body: 'ἐν ἀρχῇ ἐποίησεν ὁ θεὸς τὸν οὐρανὸν καὶ τὴν γῆν'
+					corpus_id: 'swete_lxx',
+					std_book: 'GEN',
+					std_chapter: 1,
+					std_verse: 1,
+					std_subverse: '',
+					native_book: 'Gen',
+					native_chapter: 1,
+					native_verse: 1,
+					verse_label: 'Gen 1:1',
+					body: 'ἐν ἀρχῇ ἐποίησεν ὁ θεὸς τὸν οὐρανὸν καὶ τὴν γῆν',
+					tokens_json: JSON.stringify([
+						{ word: 'ἐν', normalized: 'ἐν', strongs: 'G1722', morph: 'PREP' },
+						{ word: 'ἀρχῇ', normalized: 'ἀρχή', strongs: 'G746', morph: 'N-DSF' },
+						{ word: 'ἐποίησεν', normalized: 'ποιέω', strongs: 'G4160', morph: 'V-AAI' }
+					])
 				}
-			]);
-
-			// 3. Mock word tokens for work units 58765 and 958890
-			mockQuery.mockResolvedValueOnce([
-				{ id: 1090494, work_id: 2, work_unit_id: 58765, position: 1, surface: 'בְּרֵאשִׁ֖ית', normalized: 'בראשית', strongs_number: '7225', morph_code: 'Prep-b | N-fs' },
-				{ id: 1090495, work_id: 2, work_unit_id: 58765, position: 2, surface: 'בָּרָ֣א', normalized: 'ברא', strongs_number: '1254', morph_code: 'V-qp3ms' },
-				{ id: 3395930, work_id: 24, work_unit_id: 958890, position: 1, surface: 'ἐν', normalized: 'ἐν', strongs_number: 'G1722', morph_code: 'PREP' },
-				{ id: 3395931, work_id: 24, work_unit_id: 958890, position: 2, surface: 'ἀρχῇ', normalized: 'ἀρχή', strongs_number: 'G746', morph_code: 'N-DSF' },
-				{ id: 3395932, work_id: 24, work_unit_id: 958890, position: 3, surface: 'ἐποίησεν', normalized: 'ποιέω', strongs_number: 'G4160', morph_code: 'V-AAI' }
 			]);
 
 			const verses = await getChapterVerses('Gen', 1, ['BHS', 'LXX'], true);
@@ -528,7 +545,7 @@ describe('dbClient service', () => {
 			expect(bhsVerse).toBeDefined();
 			expect(lxxVerse).toBeDefined();
 
-			// Test BHS 1st word: בְּרֵאשִׁ֖ית with Strong's 7225 -> exactBoth fails, strongs fallback finds BDB H7225
+			// Test BHS 1st word: בְּרֵאשִׁ֖ית with Strong's 7225
 			const bhsWord1 = bhsVerse!.words![0];
 			expect(bhsWord1.surface).toBe('בְּרֵאשִׁ֖ית');
 			expect(bhsWord1.strongs_number).toBe('7225');
@@ -553,7 +570,7 @@ describe('dbClient service', () => {
 
 			// Test BHS 2nd word: בָּרָ֣א -> BDB H1254
 			const bhsWord2 = bhsVerse!.words![1];
-			expect(bhsWord2.position).toBe(2);
+			expect(bhsWord2.position).toBe(1);
 			expect(bhsWord2.surface).toBe('בָּרָ֣א');
 			expect(bhsWord2.normalized).toBe('ברא');
 
@@ -576,7 +593,7 @@ describe('dbClient service', () => {
 
 			// Test LXX 3rd word: ἐποίησεν -> LSJ (lemma: ποιέω)
 			const lxxWord3 = lxxVerse!.words![2];
-			expect(lxxWord3.position).toBe(3);
+			expect(lxxWord3.position).toBe(2);
 			expect(lxxWord3.surface).toBe('ἐποίησεν');
 			expect(lxxWord3.normalized).toBe('ποιέω');
 
@@ -586,7 +603,7 @@ describe('dbClient service', () => {
 					dictionary: 'lsj',
 					key: 'ποιεω',
 					headword: 'ποιέω',
-					lsj_index: 'n84234',
+					strongs: 'G4160',
 					definition: '**ποιέω**, to make, produce, create'
 				}
 			]);
@@ -596,6 +613,180 @@ describe('dbClient service', () => {
 			expect(lsjEntry?.key).toBe('ποιεω');
 			expect(lsjEntry?.headword).toBe('ποιέω');
 			expect(lsjEntry?.definition).toContain('to make');
+		});
+
+		it('resolves Roman numeral Vulgate books and LXX dual recension book codes', () => {
+			// Vulgate Roman numerals
+			expect(resolveBookCode('I Samuel')).toBe('1SA');
+			expect(resolveBookCode('II Samuel')).toBe('2SA');
+			expect(resolveBookCode('I Kings')).toBe('1KI');
+			expect(resolveBookCode('II Kings')).toBe('2KI');
+			expect(resolveBookCode('I Chronicles')).toBe('1CH');
+			expect(resolveBookCode('II Chronicles')).toBe('2CH');
+			expect(resolveBookCode('I Maccabees')).toBe('1MA');
+			expect(resolveBookCode('II Maccabees')).toBe('2MA');
+			expect(resolveBookCode('I Corinthians')).toBe('1CO');
+			expect(resolveBookCode('II Corinthians')).toBe('2CO');
+			expect(resolveBookCode('Revelation of John')).toBe('REV');
+
+			// Psalms of Solomon
+			expect(resolveBookCode('PsSol')).toBe('PSS');
+			expect(resolveBookCode('PssSol')).toBe('PSS');
+
+			// Version-aware dual recensions for LXX vs Western
+			expect(resolveBookCode('Sus', 'LXX')).toBe('SUG');
+			expect(resolveBookCode('SusTh', 'LXX')).toBe('SUS');
+			expect(resolveBookCode('Sus', 'KJV')).toBe('SUS');
+			expect(resolveBookCode('Dan', 'LXX')).toBe('DAG');
+			expect(resolveBookCode('DanTh', 'LXX')).toBe('DAN');
+			expect(resolveBookCode('Dan', 'BHS')).toBe('DAN');
+			expect(resolveBookCode('Bel', 'LXX')).toBe('BLG');
+			expect(resolveBookCode('BelTh', 'LXX')).toBe('BEL');
+			expect(resolveBookCode('Bel', 'KJV')).toBe('BEL');
+		});
+
+		it('returns 23 chapters for 2Esdr', async () => {
+			const chapters = await getBookChapters('2Esdr');
+			expect(chapters).toHaveLength(23);
+			expect(chapters[0]).toBe(1);
+			expect(chapters[22]).toBe(23);
+		});
+
+		it('routes 2Esdr 1 to EZR and 2Esdr 11 to NEH 1', async () => {
+			mockQuery.mockResolvedValueOnce([
+				{
+					work_unit_id: 101,
+					corpus_id: 'swete_lxx',
+					std_book: 'EZR',
+					std_chapter: 1,
+					std_verse: 1,
+					std_subverse: '',
+					native_book: '2Esdr',
+					native_chapter: 1,
+					native_verse: 1,
+					verse_label: '2Esdr 1:1',
+					body: 'Ἐν ἔτει πρώτῳ Κύρου',
+					tokens_json: null
+				}
+			]);
+
+			const ezrResults = await getChapterVerses('2Esdr', 1, ['LXX']);
+			expect(ezrResults).toHaveLength(1);
+			expect(ezrResults[0].base_label).toBe('EZR 1:1');
+			expect(mockQuery).toHaveBeenCalledWith(
+				expect.stringContaining('WHERE std_book = ? AND std_chapter = ?'),
+				['EZR', 1, 'swete_lxx']
+			);
+
+			mockQuery.mockResolvedValueOnce([
+				{
+					work_unit_id: 201,
+					corpus_id: 'swete_lxx',
+					std_book: 'NEH',
+					std_chapter: 1,
+					std_verse: 1,
+					std_subverse: '',
+					native_book: '2Esdr',
+					native_chapter: 11,
+					native_verse: 1,
+					verse_label: '2Esdr 11:1',
+					body: 'Λόγοι Νεεμια υἱοῦ Χελκια',
+					tokens_json: null
+				}
+			]);
+
+			const nehResults = await getChapterVerses('2Esdr', 11, ['LXX']);
+			expect(nehResults).toHaveLength(1);
+			expect(nehResults[0].base_label).toBe('NEH 1:1');
+			expect(mockQuery).toHaveBeenCalledWith(
+				expect.stringContaining('WHERE std_book = ? AND std_chapter = ?'),
+				['NEH', 1, 'swete_lxx']
+			);
+		});
+
+		it('queries PsSol without legacy work_units fallback', async () => {
+			mockQuery.mockResolvedValueOnce([
+				{
+					work_unit_id: 301,
+					corpus_id: 'swete_lxx',
+					std_book: 'PSS',
+					std_chapter: 1,
+					std_verse: 1,
+					std_subverse: '',
+					native_book: 'PsSol',
+					native_chapter: 1,
+					native_verse: 1,
+					verse_label: 'PsSol 1:1',
+					body: 'Ἐβόησα πρὸς κύριον ἐν τῷ θλίβεσθαί με',
+					tokens_json: null
+				}
+			]);
+
+			const pssResults = await getChapterVerses('PsSol', 1, ['LXX']);
+			expect(pssResults).toHaveLength(1);
+			expect(pssResults[0].base_label).toBe('PSS 1:1');
+			expect(pssResults[0].verse_label).toBe('1:1');
+		});
+
+		it('handles empty results cleanly without throwing work_units error', async () => {
+			mockQuery.mockResolvedValueOnce([]);
+
+			const emptyResults = await getChapterVerses('Gen', 999, ['LXX']);
+			expect(emptyResults).toEqual([]);
+		});
+
+		it('queries Old Greek vs Theodotion Susanna correctly', async () => {
+			// Old Greek Susanna
+			mockQuery.mockResolvedValueOnce([
+				{
+					work_unit_id: 401,
+					corpus_id: 'swete_lxx',
+					std_book: 'SUG',
+					std_chapter: 1,
+					std_verse: 6,
+					std_subverse: '',
+					native_book: 'Sus',
+					native_chapter: 1,
+					native_verse: 6,
+					verse_label: 'Sus 1:6',
+					body: 'καὶ ἦν Ἰωακιμ πλούσιος σφόδρα',
+					tokens_json: null
+				}
+			]);
+
+			const sugResults = await getChapterVerses('Sus', 1, ['LXX'], false, 'LXX');
+			expect(sugResults).toHaveLength(1);
+			expect(sugResults[0].base_label).toBe('SUG 1:6');
+			expect(mockQuery).toHaveBeenCalledWith(
+				expect.stringContaining("std_book = 'SUG'"),
+				[1, 'swete_lxx']
+			);
+
+			// Theodotion Susanna
+			mockQuery.mockResolvedValueOnce([
+				{
+					work_unit_id: 501,
+					corpus_id: 'swete_lxx',
+					std_book: 'SUS',
+					std_chapter: 1,
+					std_verse: 1,
+					std_subverse: '',
+					native_book: 'SusTh',
+					native_chapter: 1,
+					native_verse: 1,
+					verse_label: 'SusTh 1:1',
+					body: 'καὶ ἦν ἀνὴρ οἰκῶν ἐν Βαβυλῶνι',
+					tokens_json: null
+				}
+			]);
+
+			const susThResults = await getChapterVerses('SusTh', 1, ['LXX'], false, 'LXX');
+			expect(susThResults).toHaveLength(1);
+			expect(susThResults[0].base_label).toBe('SUS 1:1');
+			expect(mockQuery).toHaveBeenCalledWith(
+				expect.stringContaining('WHERE std_book = ? AND std_chapter = ?'),
+				['SUS', 1, 'swete_lxx']
+			);
 		});
 	});
 });

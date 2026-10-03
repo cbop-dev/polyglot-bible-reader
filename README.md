@@ -1,18 +1,24 @@
 # Polyglot Bible Reader
 
-An interactive, high-performance web application for side-by-side reading, comparative analysis, and morphological study across the **Hebrew Bible (BHS)**, **Septuagint (LXX)**, and **Greek New Testament (SBLGNT)**, complete with versification mapping, instant lexical and morphological lookups, and customizable reading themes.
+An interactive, high-performance web application--deployable as a static HTML/Javascript site--for side-by-side reading, comparative analysis, and morphological study across various publicly available ancient and modern versions of the Bible, including **Hebrew Bible (BHS/WLC)**, **Septuagint (Swete's LXX)**, and **Greek New Testament (OpenGNT)**, the **Vulgate** and a few English translations, complete with versification mapping, instant lexical and morphological lookups, and customizable reading themes.
+
+*This is still a work in progress. Some of the following features, especially the lemma and morphology information, may be inaccurate.* **Always check with a reliable scholarly source when doing academic/scholarly work!**
 
 ---
 
 ## Features
 
-- **Multilingual Side-by-Side Reading**: Synchronized parallel display of Hebrew (BHS) and Greek (LXX) for Old Testament books, and Greek New Testament (SBLGNT).
+- **Multilingual Side-by-Side Reading**: Synchronized parallel display of OT or NT books, aligning correctly difference chapter/verse schemes (e.g., BHS Ps 51 = LXX/Vulgate Ps 50, etc.)
 - **Versification Alignment (TVTMS)**: Cross-tradition verse synchronization powered by the STEPBible Tyndale Versification Mapping System.
 - **Deep Lexical & Morphological Inspection**: Interactive word clicking with modal display of lemmas, glosses, part-of-speech, and grammatical analysis.
 - **Adaptive Reading Themes**: Smooth, contrast-invariant piecewise color stop interpolation theme slider adapted from OpenScriptorium.
 - **Fast Static Performance**: Pre-rendered static data pipeline optimized for instant client-side navigation.
 
 ---
+
+## Inspiration
+
+This project was inspired by other parallel Bible readers online, such as (Parabible)[https://parabible.com] and (OpenScriptorium)[https://openscriptorium.org/]. (Special thanks to the developer of OpenScriptorium for his ideas and correspondence.)
 
 ## Data Provenance & Licensing
 
@@ -24,16 +30,12 @@ All data assets in this repository are derived from datasets with various types 
 
 ### Upstream Sources & Credits
 
-- **OpenScriptorium Project Database**:
-  - Source: [Openscriptorium.org](https://openscriptorium.org) / [OpenScriptorium on GitHub](https://github.com/OpenScriptorium).
-  - License: [ISC License](https://opensource.org/licenses/ISC).
-  - Some Biblical text datasets (KJV, WEB, Vulgate), chapter data, and alignments, and concordance databases were obtained from the Openscriptorium.org project database.
 - **Latin Vulgate (Biblia Sacra Vulgata)**:
-  - St. Jerome's Latin translation (c. 405 A.D.) and Clementine Vulgate (1592); Public Domain worldwide.
+  - St. Jerome's Latin translation (c. 405 A.D.) and Clementine Vulgate (1592); sourced from [scrollmapper/bible_databases](https://github.com/scrollmapper/bible_databases) (Public Domain worldwide).
 - **King James Version (KJV)**:
-  - Authorized King James Version (1611); Public Domain worldwide.
+  - Authorized King James Version (1611) with Apocrypha; sourced from [scrollmapper/bible_databases](https://github.com/scrollmapper/bible_databases) (Public Domain worldwide).
 - **World English Bible (WEB)**:
-  - Produced by Rainbow Missions, Inc. / Michael Paul Johnson; Public Domain worldwide.
+  - Produced by Rainbow Missions, Inc. / Michael Paul Johnson; sourced via [eBible.org](https://ebible.org) (Public Domain worldwide).
 - **Hebrew Bible (BHS)**:
   - Developed by the [Eep Talstra Centre for Bible and Computer](https://etcbc.nl) (Vrije Universiteit Amsterdam); source: [ETCBC/bhsa on GitHub](https://github.com/ETCBC/bhsa).
   - Morphology package curated by Eliran Wong: [eliranwong/BHS-morphology on GitHub](https://github.com/eliranwong/BHS-morphology).

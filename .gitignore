@@ -26,6 +26,17 @@ vite.config.ts.timestamp-*
 src/.unused/
 
 scripts/__pycache__/
+pipeline/__pycache__/
+pipeline/adapters/__pycache__/
+pipeline/swete_morphology/__pycache__/
+pipeline/cache/
+pipeline/build/
+pipeline/data/lxx/
+pipeline/data/bhs/
+pipeline/data/kjv/
+pipeline/data/brenton/
+pipeline/data/web/
+*.sqlite3
 
 .archive/
 
@@ -34,3 +45,4 @@ build2/www/404.html
 build2/www/sqlite/
 
 src/routes/page-backup.svelte
+

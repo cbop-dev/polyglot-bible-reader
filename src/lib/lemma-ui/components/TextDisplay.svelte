@@ -2,7 +2,7 @@
     import { onMount } from "svelte";
     import Button from "./ui/Button.svelte";
     import { Utils } from "$lib/utils/utils.js";
-    import { getVerseText } from "$lib/services/dbClient.ts";
+    import { getVerseText } from "$lib/services/dbClient";
 
     let {
         workUnitId,
@@ -32,7 +32,7 @@
             <h2 class="text-lg font-bold mb-2">{ref}</h2>
         {/if}
 
-        <p class="{lang === 'hebrew' ? 'hebrew font-hebrew text-2xl' : 'greek font-greek text-xl'} text-center py-2 text-ink leading-relaxed" dir={lang === 'hebrew' ? 'rtl' : 'ltr'}>{text}</p>
+        <p class="{lang === 'hebrew' ? 'hebrew font-hebrew text-2xl' : 'greek font-greek text-xl'} text-center py-2 text-ink leading-relaxed whitespace-pre-line" dir={lang === 'hebrew' ? 'rtl' : 'ltr'}>{text}</p>
         <div class="text-center mt-2">
             <Button
                 buttonColors="btn btn-secondary"

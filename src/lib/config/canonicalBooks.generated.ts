@@ -1,0 +1,1604 @@
+/**
+ * AUTO-GENERATED FILE - DO NOT EDIT MANUALLY.
+ * Generated from SQLite canonical_books table via pipeline/generate_canonical_books.py.
+ * Total Canonical Books: 90
+ */
+
+export interface CanonicalBook {
+	code: string; // Standard 3-letter USFM code (Primary Key)
+	slug: string; // Kebab-case URL and slug identifier
+	order: number; // Canonical sort order
+	standardAbbrev: string; // Preferred UI abbreviation
+	title: string; // Full English title
+	testament: 'ot' | 'nt' | 'apocrypha';
+	totalChapters: number;
+	nameHebrew?: string;
+	nameGreek?: string;
+	nameLatin?: string;
+	versionBooks?: Partial<Record<string, string>>;
+	extraAliases?: string[];
+}
+
+export const CANONICAL_BOOK_DEFINITIONS: CanonicalBook[] = [
+  {
+    "code": "GEN",
+    "slug": "genesis",
+    "order": 1,
+    "standardAbbrev": "Gen",
+    "title": "Genesis",
+    "testament": "ot",
+    "totalChapters": 50,
+    "extraAliases": [
+      "gen",
+      "genesis"
+    ]
+  },
+  {
+    "code": "EXO",
+    "slug": "exodus",
+    "order": 2,
+    "standardAbbrev": "Exod",
+    "title": "Exodus",
+    "testament": "ot",
+    "totalChapters": 40,
+    "extraAliases": [
+      "exo",
+      "exod",
+      "exodus"
+    ]
+  },
+  {
+    "code": "LEV",
+    "slug": "leviticus",
+    "order": 3,
+    "standardAbbrev": "Lev",
+    "title": "Leviticus",
+    "testament": "ot",
+    "totalChapters": 27,
+    "extraAliases": [
+      "lev",
+      "leviticus"
+    ]
+  },
+  {
+    "code": "NUM",
+    "slug": "numbers",
+    "order": 4,
+    "standardAbbrev": "Num",
+    "title": "Numbers",
+    "testament": "ot",
+    "totalChapters": 36,
+    "extraAliases": [
+      "num",
+      "numbers"
+    ]
+  },
+  {
+    "code": "DEU",
+    "slug": "deuteronomy",
+    "order": 5,
+    "standardAbbrev": "Deut",
+    "title": "Deuteronomy",
+    "testament": "ot",
+    "totalChapters": 34,
+    "extraAliases": [
+      "deu",
+      "deut",
+      "deuteronomy"
+    ]
+  },
+  {
+    "code": "JOS",
+    "slug": "joshua",
+    "order": 6,
+    "standardAbbrev": "Josh",
+    "title": "Joshua",
+    "testament": "ot",
+    "totalChapters": 24,
+    "extraAliases": [
+      "jos",
+      "josh",
+      "joshua"
+    ]
+  },
+  {
+    "code": "JDG",
+    "slug": "judges",
+    "order": 7,
+    "standardAbbrev": "Judg",
+    "title": "Judges",
+    "testament": "ot",
+    "totalChapters": 21,
+    "extraAliases": [
+      "jdg",
+      "judg",
+      "judges"
+    ]
+  },
+  {
+    "code": "RUT",
+    "slug": "ruth",
+    "order": 8,
+    "standardAbbrev": "Ruth",
+    "title": "Ruth",
+    "testament": "ot",
+    "totalChapters": 4,
+    "extraAliases": [
+      "rut",
+      "ruth"
+    ]
+  },
+  {
+    "code": "1SA",
+    "slug": "1-samuel",
+    "order": 9,
+    "standardAbbrev": "1Sam",
+    "title": "1 Samuel",
+    "testament": "ot",
+    "totalChapters": 31,
+    "extraAliases": [
+      "1 Kingdoms",
+      "1 kingdoms",
+      "1 samuel",
+      "1Kgdms",
+      "1Sam",
+      "1_Sam",
+      "1kgdms",
+      "1sa",
+      "1sam",
+      "1samuel",
+      "I Kingdoms",
+      "i sam",
+      "i samuel"
+    ]
+  },
+  {
+    "code": "2SA",
+    "slug": "2-samuel",
+    "order": 10,
+    "standardAbbrev": "2Sam",
+    "title": "2 Samuel",
+    "testament": "ot",
+    "totalChapters": 24,
+    "extraAliases": [
+      "2 Kingdoms",
+      "2 kingdoms",
+      "2 samuel",
+      "2Kgdms",
+      "2Sam",
+      "2_Sam",
+      "2kgdms",
+      "2sa",
+      "2sam",
+      "2samuel",
+      "II Kingdoms",
+      "ii sam",
+      "ii samuel"
+    ]
+  },
+  {
+    "code": "1KI",
+    "slug": "1-kings",
+    "order": 11,
+    "standardAbbrev": "1Kgs",
+    "title": "1 Kings",
+    "testament": "ot",
+    "totalChapters": 22,
+    "extraAliases": [
+      "1 kings",
+      "1Kgs",
+      "1_Kgs",
+      "1kgs",
+      "1ki",
+      "1kings",
+      "3 Kingdoms",
+      "3 kingdoms",
+      "3Kgdms",
+      "3kgdms",
+      "III Kingdoms",
+      "i kgs",
+      "i kings"
+    ]
+  },
+  {
+    "code": "2KI",
+    "slug": "2-kings",
+    "order": 12,
+    "standardAbbrev": "2Kgs",
+    "title": "2 Kings",
+    "testament": "ot",
+    "totalChapters": 25,
+    "extraAliases": [
+      "2 kings",
+      "2Kgs",
+      "2_Kgs",
+      "2kgs",
+      "2ki",
+      "2kings",
+      "4 Kingdoms",
+      "4 kingdoms",
+      "4Kgdms",
+      "4kgdms",
+      "IV Kingdoms",
+      "ii kgs",
+      "ii kings"
+    ]
+  },
+  {
+    "code": "1CH",
+    "slug": "1-chronicles",
+    "order": 13,
+    "standardAbbrev": "1Chr",
+    "title": "1 Chronicles",
+    "testament": "ot",
+    "totalChapters": 29,
+    "extraAliases": [
+      "1 Chron",
+      "1 chronicles",
+      "1_Chr",
+      "1ch",
+      "1chr",
+      "1chronicles",
+      "I Chron",
+      "I Chronicles",
+      "i chr",
+      "i chronicles"
+    ]
+  },
+  {
+    "code": "2CH",
+    "slug": "2-chronicles",
+    "order": 14,
+    "standardAbbrev": "2Chr",
+    "title": "2 Chronicles",
+    "testament": "ot",
+    "totalChapters": 36,
+    "extraAliases": [
+      "2 Chron",
+      "2 chronicles",
+      "2_Chr",
+      "2ch",
+      "2chr",
+      "2chronicles",
+      "II Chron",
+      "II Chronicles",
+      "ii chr",
+      "ii chronicles"
+    ]
+  },
+  {
+    "code": "EZR",
+    "slug": "ezra",
+    "order": 15,
+    "standardAbbrev": "Ezra",
+    "title": "Ezra",
+    "testament": "ot",
+    "totalChapters": 10,
+    "extraAliases": [
+      "1 Ezra",
+      "1 esdras (vulgate)",
+      "1Esdr (Vulgate)",
+      "I Esdras",
+      "ezr",
+      "ezra"
+    ]
+  },
+  {
+    "code": "NEH",
+    "slug": "nehemiah",
+    "order": 16,
+    "standardAbbrev": "Neh",
+    "title": "Nehemiah",
+    "testament": "ot",
+    "totalChapters": 13,
+    "extraAliases": [
+      "2 Ezra",
+      "2 esdras (vulgate)",
+      "2Esdr (Vulgate)",
+      "II Esdras",
+      "neh",
+      "nehemiah"
+    ]
+  },
+  {
+    "code": "EST",
+    "slug": "esther",
+    "order": 17,
+    "standardAbbrev": "Esth",
+    "title": "Esther",
+    "testament": "ot",
+    "totalChapters": 10,
+    "extraAliases": [
+      "est",
+      "esth",
+      "esther"
+    ]
+  },
+  {
+    "code": "JOB",
+    "slug": "job",
+    "order": 18,
+    "standardAbbrev": "Job",
+    "title": "Job",
+    "testament": "ot",
+    "totalChapters": 42,
+    "extraAliases": [
+      "job"
+    ]
+  },
+  {
+    "code": "PSA",
+    "slug": "psalms",
+    "order": 19,
+    "standardAbbrev": "Ps",
+    "title": "Psalms",
+    "testament": "ot",
+    "totalChapters": 150,
+    "extraAliases": [
+      "Psa",
+      "Psalm",
+      "Psalmi",
+      "ps",
+      "psa",
+      "psalm",
+      "psalms"
+    ]
+  },
+  {
+    "code": "PRO",
+    "slug": "proverbs",
+    "order": 20,
+    "standardAbbrev": "Prov",
+    "title": "Proverbs",
+    "testament": "ot",
+    "totalChapters": 31,
+    "extraAliases": [
+      "pro",
+      "prov",
+      "proverbs"
+    ]
+  },
+  {
+    "code": "ECC",
+    "slug": "ecclesiastes",
+    "order": 21,
+    "standardAbbrev": "Eccl",
+    "title": "Ecclesiastes",
+    "testament": "ot",
+    "totalChapters": 12,
+    "versionBooks": {
+      "BHS": "Qoh",
+      "LXX": "Qoh",
+      "KJV": "Eccl",
+      "WEB": "Eccl",
+      "Vulgate": "Eccl",
+      "Brenton": "Eccl"
+    },
+    "extraAliases": [
+      "Ecclesiastes",
+      "Qoh",
+      "Qoheleth",
+      "ecc",
+      "eccl",
+      "ecclesiastes",
+      "qoh"
+    ]
+  },
+  {
+    "code": "SNG",
+    "slug": "song-of-solomon",
+    "order": 22,
+    "standardAbbrev": "Song",
+    "title": "Song of Songs",
+    "testament": "ot",
+    "totalChapters": 8,
+    "versionBooks": {
+      "BHS": "Cant",
+      "LXX": "Cant",
+      "KJV": "Song",
+      "WEB": "Song",
+      "Vulgate": "Song",
+      "Brenton": "Song"
+    },
+    "extraAliases": [
+      "Cant",
+      "Canticles",
+      "Song of Solomon",
+      "Song of Songs",
+      "cant",
+      "canticles",
+      "sng",
+      "song",
+      "song of solomon"
+    ]
+  },
+  {
+    "code": "ISA",
+    "slug": "isaiah",
+    "order": 23,
+    "standardAbbrev": "Isa",
+    "title": "Isaiah",
+    "testament": "ot",
+    "totalChapters": 66,
+    "extraAliases": [
+      "isa",
+      "isaiah"
+    ]
+  },
+  {
+    "code": "JER",
+    "slug": "jeremiah",
+    "order": 24,
+    "standardAbbrev": "Jer",
+    "title": "Jeremiah",
+    "testament": "ot",
+    "totalChapters": 52,
+    "extraAliases": [
+      "jer",
+      "jeremiah"
+    ]
+  },
+  {
+    "code": "LAM",
+    "slug": "lamentations",
+    "order": 25,
+    "standardAbbrev": "Lam",
+    "title": "Lamentations",
+    "testament": "ot",
+    "totalChapters": 5,
+    "extraAliases": [
+      "lam",
+      "lamentations"
+    ]
+  },
+  {
+    "code": "EZK",
+    "slug": "ezekiel",
+    "order": 26,
+    "standardAbbrev": "Ezek",
+    "title": "Ezekiel",
+    "testament": "ot",
+    "totalChapters": 48,
+    "extraAliases": [
+      "ezek",
+      "ezekiel",
+      "ezk"
+    ]
+  },
+  {
+    "code": "DAN",
+    "slug": "daniel",
+    "order": 27,
+    "standardAbbrev": "Dan",
+    "title": "Daniel",
+    "testament": "ot",
+    "totalChapters": 12,
+    "versionBooks": {
+      "LXX": "DanTh",
+      "KJV": "Dan",
+      "WEB": "Dan",
+      "Brenton": "Dan"
+    },
+    "extraAliases": [
+      "DanTh",
+      "Daniel (Theodotion)",
+      "dan",
+      "daniel",
+      "danth"
+    ]
+  },
+  {
+    "code": "HOS",
+    "slug": "hosea",
+    "order": 28,
+    "standardAbbrev": "Hos",
+    "title": "Hosea",
+    "testament": "ot",
+    "totalChapters": 14,
+    "extraAliases": [
+      "hos",
+      "hosea"
+    ]
+  },
+  {
+    "code": "JOL",
+    "slug": "joel",
+    "order": 29,
+    "standardAbbrev": "Joel",
+    "title": "Joel",
+    "testament": "ot",
+    "totalChapters": 3,
+    "extraAliases": [
+      "joe",
+      "joel",
+      "jol"
+    ]
+  },
+  {
+    "code": "AMO",
+    "slug": "amos",
+    "order": 30,
+    "standardAbbrev": "Amos",
+    "title": "Amos",
+    "testament": "ot",
+    "totalChapters": 9,
+    "extraAliases": [
+      "amo",
+      "amos"
+    ]
+  },
+  {
+    "code": "OBA",
+    "slug": "obadiah",
+    "order": 31,
+    "standardAbbrev": "Obad",
+    "title": "Obadiah",
+    "testament": "ot",
+    "totalChapters": 1,
+    "extraAliases": [
+      "oba",
+      "obad",
+      "obadiah"
+    ]
+  },
+  {
+    "code": "JON",
+    "slug": "jonah",
+    "order": 32,
+    "standardAbbrev": "Jonah",
+    "title": "Jonah",
+    "testament": "ot",
+    "totalChapters": 4,
+    "extraAliases": [
+      "jon",
+      "jonah"
+    ]
+  },
+  {
+    "code": "MIC",
+    "slug": "micah",
+    "order": 33,
+    "standardAbbrev": "Mic",
+    "title": "Micah",
+    "testament": "ot",
+    "totalChapters": 7,
+    "extraAliases": [
+      "mic",
+      "micah"
+    ]
+  },
+  {
+    "code": "NAM",
+    "slug": "nahum",
+    "order": 34,
+    "standardAbbrev": "Nah",
+    "title": "Nahum",
+    "testament": "ot",
+    "totalChapters": 3,
+    "extraAliases": [
+      "nah",
+      "nahum",
+      "nam"
+    ]
+  },
+  {
+    "code": "HAB",
+    "slug": "habakkuk",
+    "order": 35,
+    "standardAbbrev": "Hab",
+    "title": "Habakkuk",
+    "testament": "ot",
+    "totalChapters": 3,
+    "extraAliases": [
+      "hab",
+      "habakkuk"
+    ]
+  },
+  {
+    "code": "ZEP",
+    "slug": "zephaniah",
+    "order": 36,
+    "standardAbbrev": "Zeph",
+    "title": "Zephaniah",
+    "testament": "ot",
+    "totalChapters": 3,
+    "extraAliases": [
+      "zep",
+      "zeph",
+      "zephaniah"
+    ]
+  },
+  {
+    "code": "HAG",
+    "slug": "haggai",
+    "order": 37,
+    "standardAbbrev": "Hag",
+    "title": "Haggai",
+    "testament": "ot",
+    "totalChapters": 2,
+    "extraAliases": [
+      "hag",
+      "haggai"
+    ]
+  },
+  {
+    "code": "ZEC",
+    "slug": "zechariah",
+    "order": 38,
+    "standardAbbrev": "Zech",
+    "title": "Zechariah",
+    "testament": "ot",
+    "totalChapters": 14,
+    "extraAliases": [
+      "zec",
+      "zech",
+      "zechariah"
+    ]
+  },
+  {
+    "code": "MAL",
+    "slug": "malachi",
+    "order": 39,
+    "standardAbbrev": "Mal",
+    "title": "Malachi",
+    "testament": "ot",
+    "totalChapters": 4,
+    "extraAliases": [
+      "mal",
+      "malachi"
+    ]
+  },
+  {
+    "code": "TOB",
+    "slug": "tobit",
+    "order": 40,
+    "standardAbbrev": "Tob",
+    "title": "Tobit",
+    "testament": "apocrypha",
+    "totalChapters": 14,
+    "versionBooks": {
+      "LXX": "TobBA",
+      "KJV": "Tob",
+      "WEB": "Tob",
+      "Vulgate": "Tob",
+      "Brenton": "Tob"
+    },
+    "extraAliases": [
+      "TobBA",
+      "TobS",
+      "Tobit (BA)",
+      "Tobit (Sinaiticus)",
+      "tob",
+      "tobba",
+      "tobit",
+      "tobs"
+    ]
+  },
+  {
+    "code": "JDT",
+    "slug": "judith",
+    "order": 41,
+    "standardAbbrev": "Jdt",
+    "title": "Judith",
+    "testament": "apocrypha",
+    "totalChapters": 16,
+    "extraAliases": [
+      "jdt",
+      "judith"
+    ]
+  },
+  {
+    "code": "ESG",
+    "slug": "esther-greek",
+    "order": 42,
+    "standardAbbrev": "AddEsth",
+    "title": "Greek Esther",
+    "testament": "apocrypha",
+    "totalChapters": 10,
+    "versionBooks": {
+      "LXX": "Esth",
+      "KJV": "AddEsth",
+      "WEB": "AddEsth",
+      "Brenton": "AddEsth"
+    },
+    "extraAliases": [
+      "addest",
+      "addesth",
+      "esg",
+      "esther (greek)",
+      "esther greek"
+    ]
+  },
+  {
+    "code": "WIS",
+    "slug": "wisdom-of-solomon",
+    "order": 43,
+    "standardAbbrev": "Wis",
+    "title": "Wisdom of Solomon",
+    "testament": "apocrypha",
+    "totalChapters": 19,
+    "extraAliases": [
+      "wis",
+      "wisdom",
+      "wisdom of solomon"
+    ]
+  },
+  {
+    "code": "SIR",
+    "slug": "sirach",
+    "order": 44,
+    "standardAbbrev": "Sir",
+    "title": "Sirach",
+    "testament": "apocrypha",
+    "totalChapters": 51,
+    "extraAliases": [
+      "Ecclesiasticus",
+      "Sir",
+      "ecclesiasticus",
+      "sir",
+      "sirach"
+    ]
+  },
+  {
+    "code": "BAR",
+    "slug": "baruch",
+    "order": 45,
+    "standardAbbrev": "Bar",
+    "title": "Baruch",
+    "testament": "apocrypha",
+    "totalChapters": 5,
+    "extraAliases": [
+      "bar",
+      "baruch"
+    ]
+  },
+  {
+    "code": "LJE",
+    "slug": "letter-of-jeremiah",
+    "order": 46,
+    "standardAbbrev": "EpJer",
+    "title": "Letter of Jeremiah",
+    "testament": "apocrypha",
+    "totalChapters": 1,
+    "extraAliases": [
+      "epjer",
+      "letter of jeremiah",
+      "lje"
+    ]
+  },
+  {
+    "code": "S3Y",
+    "slug": "prayer-of-azariah",
+    "order": 47,
+    "standardAbbrev": "PrAzar",
+    "title": "Prayer of Azariah",
+    "testament": "apocrypha",
+    "totalChapters": 1,
+    "extraAliases": [
+      "prayer of azariah",
+      "s3y"
+    ]
+  },
+  {
+    "code": "SUS",
+    "slug": "susanna",
+    "order": 48,
+    "standardAbbrev": "Sus",
+    "title": "Susanna",
+    "testament": "apocrypha",
+    "totalChapters": 1,
+    "versionBooks": {
+      "LXX": "SusTh",
+      "KJV": "Sus",
+      "WEB": "Sus",
+      "Brenton": "Sus"
+    },
+    "extraAliases": [
+      "SusTh",
+      "Susanna (Theodotion)",
+      "sus",
+      "susanna",
+      "susth"
+    ]
+  },
+  {
+    "code": "BEL",
+    "slug": "bel-and-the-dragon",
+    "order": 49,
+    "standardAbbrev": "Bel",
+    "title": "Bel and the Dragon",
+    "testament": "apocrypha",
+    "totalChapters": 1,
+    "versionBooks": {
+      "LXX": "BelTh",
+      "KJV": "Bel",
+      "WEB": "Bel",
+      "Brenton": "Bel"
+    },
+    "extraAliases": [
+      "Bel and the Dragon (Theodotion)",
+      "BelTh",
+      "bel",
+      "bel and the dragon",
+      "belth"
+    ]
+  },
+  {
+    "code": "1MA",
+    "slug": "1-maccabees",
+    "order": 50,
+    "standardAbbrev": "1Mac",
+    "title": "1 Maccabees",
+    "testament": "apocrypha",
+    "totalChapters": 16,
+    "versionBooks": {
+      "LXX": "1Mac",
+      "KJV": "1Mac",
+      "WEB": "1Mac",
+      "Vulgate": "1Mac",
+      "Brenton": "1Mac"
+    },
+    "extraAliases": [
+      "1 Macc",
+      "1 Maccabees",
+      "1 maccabees",
+      "1Mac",
+      "1Macc",
+      "1ma",
+      "1mac",
+      "1macc",
+      "1maccabees",
+      "I Maccabees",
+      "i macc",
+      "i maccabees"
+    ]
+  },
+  {
+    "code": "2MA",
+    "slug": "2-maccabees",
+    "order": 51,
+    "standardAbbrev": "2Mac",
+    "title": "2 Maccabees",
+    "testament": "apocrypha",
+    "totalChapters": 15,
+    "versionBooks": {
+      "LXX": "2Mac",
+      "KJV": "2Mac",
+      "WEB": "2Mac",
+      "Vulgate": "2Mac",
+      "Brenton": "2Mac"
+    },
+    "extraAliases": [
+      "2 Macc",
+      "2 Maccabees",
+      "2 maccabees",
+      "2Mac",
+      "2Macc",
+      "2ma",
+      "2mac",
+      "2macc",
+      "2maccabees",
+      "II Maccabees",
+      "ii macc",
+      "ii maccabees"
+    ]
+  },
+  {
+    "code": "3MA",
+    "slug": "3-maccabees",
+    "order": 52,
+    "standardAbbrev": "3Mac",
+    "title": "3 Maccabees",
+    "testament": "apocrypha",
+    "totalChapters": 7,
+    "versionBooks": {
+      "LXX": "3Mac",
+      "Brenton": "3Mac"
+    },
+    "extraAliases": [
+      "3 Macc",
+      "3 Maccabees",
+      "3 maccabees",
+      "3Mac",
+      "3Macc",
+      "3ma",
+      "3mac",
+      "3macc",
+      "3maccabees",
+      "III Maccabees",
+      "iii maccabees"
+    ]
+  },
+  {
+    "code": "4MA",
+    "slug": "4-maccabees",
+    "order": 53,
+    "standardAbbrev": "4Mac",
+    "title": "4 Maccabees",
+    "testament": "apocrypha",
+    "totalChapters": 18,
+    "versionBooks": {
+      "LXX": "4Mac",
+      "Brenton": "4Mac"
+    },
+    "extraAliases": [
+      "4 Macc",
+      "4 Maccabees",
+      "4 maccabees",
+      "4Mac",
+      "4Macc",
+      "4ma",
+      "4mac",
+      "4macc",
+      "4maccabees",
+      "IV Maccabees",
+      "iv maccabees"
+    ]
+  },
+  {
+    "code": "1ES",
+    "slug": "1-esdras",
+    "order": 54,
+    "standardAbbrev": "1Esdr",
+    "title": "1 Esdras",
+    "testament": "apocrypha",
+    "totalChapters": 9,
+    "extraAliases": [
+      "1 Esdr",
+      "1 Esdras",
+      "1 esdras",
+      "1Esd",
+      "1es",
+      "1esdr",
+      "3 Ezra",
+      "3 esdras",
+      "EsdrA",
+      "Greek Ezra",
+      "i esdras"
+    ]
+  },
+  {
+    "code": "2ES",
+    "slug": "2-esdras",
+    "order": 55,
+    "standardAbbrev": "2Esdr",
+    "title": "2 Esdras",
+    "testament": "apocrypha",
+    "totalChapters": 16,
+    "extraAliases": [
+      "2 Esdr",
+      "2 Esdras",
+      "2 esdras",
+      "2Esd",
+      "2es",
+      "2esdr",
+      "4 Ezra",
+      "4 esdras",
+      "EsdrB",
+      "Ezra-Nehemiah (Greek)",
+      "ii esdras"
+    ]
+  },
+  {
+    "code": "MAN",
+    "slug": "prayer-of-manasseh",
+    "order": 56,
+    "standardAbbrev": "PrMan",
+    "title": "Prayer of Manasseh",
+    "testament": "apocrypha",
+    "totalChapters": 1,
+    "extraAliases": [
+      "man",
+      "prayer of manasseh",
+      "prayer of manasses",
+      "prman"
+    ]
+  },
+  {
+    "code": "PS2",
+    "slug": "psalm-151",
+    "order": 57,
+    "standardAbbrev": "Ps151",
+    "title": "Psalm 151",
+    "testament": "apocrypha",
+    "totalChapters": 1,
+    "extraAliases": [
+      "additional psalm",
+      "ps151",
+      "ps2",
+      "psalm 151"
+    ]
+  },
+  {
+    "code": "ODA",
+    "slug": "odes",
+    "order": 58,
+    "standardAbbrev": "Od",
+    "title": "Odes",
+    "testament": "apocrypha",
+    "totalChapters": 14,
+    "extraAliases": [
+      "od",
+      "oda",
+      "odes"
+    ]
+  },
+  {
+    "code": "PSS",
+    "slug": "psalms-of-solomon",
+    "order": 59,
+    "standardAbbrev": "PsSol",
+    "title": "Psalms of Solomon",
+    "testament": "apocrypha",
+    "totalChapters": 18,
+    "extraAliases": [
+      "Psalms of Solomon",
+      "Pss. Sol.",
+      "PssSol",
+      "psalms of solomon",
+      "pss",
+      "pssol",
+      "psssol"
+    ]
+  },
+  {
+    "code": "DAG",
+    "slug": "daniel-old-greek",
+    "order": 60,
+    "standardAbbrev": "Dan",
+    "title": "Daniel (Old Greek)",
+    "testament": "apocrypha",
+    "totalChapters": 12,
+    "versionBooks": {
+      "LXX": "Dan",
+      "Brenton": "Dan"
+    },
+    "extraAliases": [
+      "DanOG",
+      "Daniel (Old Greek)",
+      "Greek Daniel",
+      "dag",
+      "daniel (old greek)"
+    ]
+  },
+  {
+    "code": "MAT",
+    "slug": "matthew",
+    "order": 60,
+    "standardAbbrev": "Matt",
+    "title": "Matthew",
+    "testament": "nt",
+    "totalChapters": 28,
+    "extraAliases": [
+      "mat",
+      "matt",
+      "matthew"
+    ]
+  },
+  {
+    "code": "MRK",
+    "slug": "mark",
+    "order": 61,
+    "standardAbbrev": "Mark",
+    "title": "Mark",
+    "testament": "nt",
+    "totalChapters": 16,
+    "extraAliases": [
+      "mark",
+      "mrk"
+    ]
+  },
+  {
+    "code": "SUG",
+    "slug": "susanna-old-greek",
+    "order": 61,
+    "standardAbbrev": "Sus",
+    "title": "Susanna (Old Greek)",
+    "testament": "apocrypha",
+    "totalChapters": 1,
+    "versionBooks": {
+      "LXX": "Sus",
+      "Brenton": "Sus"
+    },
+    "extraAliases": [
+      "SusOG",
+      "Susanna (Old Greek)",
+      "sug"
+    ]
+  },
+  {
+    "code": "BLG",
+    "slug": "bel-and-the-dragon-old-greek",
+    "order": 62,
+    "standardAbbrev": "Bel",
+    "title": "Bel and the Dragon (Old Greek)",
+    "testament": "apocrypha",
+    "totalChapters": 1,
+    "versionBooks": {
+      "LXX": "Bel",
+      "Brenton": "Bel"
+    },
+    "extraAliases": [
+      "Bel and the Dragon (Old Greek)",
+      "BelOG",
+      "blg"
+    ]
+  },
+  {
+    "code": "LUK",
+    "slug": "luke",
+    "order": 62,
+    "standardAbbrev": "Luke",
+    "title": "Luke",
+    "testament": "nt",
+    "totalChapters": 24,
+    "extraAliases": [
+      "luk",
+      "luke"
+    ]
+  },
+  {
+    "code": "JHN",
+    "slug": "john",
+    "order": 63,
+    "standardAbbrev": "John",
+    "title": "John",
+    "testament": "nt",
+    "totalChapters": 21,
+    "extraAliases": [
+      "jhn",
+      "john"
+    ]
+  },
+  {
+    "code": "LAO",
+    "slug": "laodiceans",
+    "order": 63,
+    "standardAbbrev": "Lao",
+    "title": "Laodiceans",
+    "testament": "apocrypha",
+    "totalChapters": 1,
+    "extraAliases": [
+      "Epistle to Laodiceans",
+      "Laodiceans",
+      "lao",
+      "laodiceans"
+    ]
+  },
+  {
+    "code": "ACT",
+    "slug": "acts",
+    "order": 64,
+    "standardAbbrev": "Acts",
+    "title": "Acts",
+    "testament": "nt",
+    "totalChapters": 28,
+    "extraAliases": [
+      "act",
+      "acts"
+    ]
+  },
+  {
+    "code": "ROM",
+    "slug": "romans",
+    "order": 65,
+    "standardAbbrev": "Rom",
+    "title": "Romans",
+    "testament": "nt",
+    "totalChapters": 16,
+    "extraAliases": [
+      "rom",
+      "romans"
+    ]
+  },
+  {
+    "code": "1CO",
+    "slug": "1-corinthians",
+    "order": 66,
+    "standardAbbrev": "1_Cor",
+    "title": "1 Corinthians",
+    "testament": "nt",
+    "totalChapters": 16,
+    "extraAliases": [
+      "1 corinthians",
+      "1_cor",
+      "1co",
+      "1cor",
+      "1corinthians",
+      "i cor",
+      "i corinthians"
+    ]
+  },
+  {
+    "code": "2CO",
+    "slug": "2-corinthians",
+    "order": 67,
+    "standardAbbrev": "2_Cor",
+    "title": "2 Corinthians",
+    "testament": "nt",
+    "totalChapters": 13,
+    "extraAliases": [
+      "2 corinthians",
+      "2_cor",
+      "2co",
+      "2cor",
+      "2corinthians",
+      "ii cor",
+      "ii corinthians"
+    ]
+  },
+  {
+    "code": "GAL",
+    "slug": "galatians",
+    "order": 68,
+    "standardAbbrev": "Gal",
+    "title": "Galatians",
+    "testament": "nt",
+    "totalChapters": 6,
+    "extraAliases": [
+      "gal",
+      "galatians"
+    ]
+  },
+  {
+    "code": "EPH",
+    "slug": "ephesians",
+    "order": 69,
+    "standardAbbrev": "Eph",
+    "title": "Ephesians",
+    "testament": "nt",
+    "totalChapters": 6,
+    "extraAliases": [
+      "eph",
+      "ephesians"
+    ]
+  },
+  {
+    "code": "PHP",
+    "slug": "philippians",
+    "order": 70,
+    "standardAbbrev": "Phil",
+    "title": "Philippians",
+    "testament": "nt",
+    "totalChapters": 4,
+    "extraAliases": [
+      "phil",
+      "philippians",
+      "php"
+    ]
+  },
+  {
+    "code": "COL",
+    "slug": "colossians",
+    "order": 71,
+    "standardAbbrev": "Col",
+    "title": "Colossians",
+    "testament": "nt",
+    "totalChapters": 4,
+    "extraAliases": [
+      "col",
+      "colossians"
+    ]
+  },
+  {
+    "code": "1TH",
+    "slug": "1-thessalonians",
+    "order": 72,
+    "standardAbbrev": "1_Thess",
+    "title": "1 Thessalonians",
+    "testament": "nt",
+    "totalChapters": 5,
+    "extraAliases": [
+      "1 thessalonians",
+      "1_thess",
+      "1th",
+      "1thess",
+      "i thess",
+      "i thessalonians"
+    ]
+  },
+  {
+    "code": "2TH",
+    "slug": "2-thessalonians",
+    "order": 73,
+    "standardAbbrev": "2_Thess",
+    "title": "2 Thessalonians",
+    "testament": "nt",
+    "totalChapters": 3,
+    "extraAliases": [
+      "2 thessalonians",
+      "2_thess",
+      "2th",
+      "2thess",
+      "ii thess",
+      "ii thessalonians"
+    ]
+  },
+  {
+    "code": "1TI",
+    "slug": "1-timothy",
+    "order": 74,
+    "standardAbbrev": "1_Tim",
+    "title": "1 Timothy",
+    "testament": "nt",
+    "totalChapters": 6,
+    "extraAliases": [
+      "1 timothy",
+      "1_tim",
+      "1ti",
+      "1tim",
+      "i tim",
+      "i timothy"
+    ]
+  },
+  {
+    "code": "2TI",
+    "slug": "2-timothy",
+    "order": 75,
+    "standardAbbrev": "2_Tim",
+    "title": "2 Timothy",
+    "testament": "nt",
+    "totalChapters": 4,
+    "extraAliases": [
+      "2 timothy",
+      "2_tim",
+      "2ti",
+      "2tim",
+      "ii tim",
+      "ii timothy"
+    ]
+  },
+  {
+    "code": "TIT",
+    "slug": "titus",
+    "order": 76,
+    "standardAbbrev": "Titus",
+    "title": "Titus",
+    "testament": "nt",
+    "totalChapters": 3,
+    "extraAliases": [
+      "tit",
+      "titus"
+    ]
+  },
+  {
+    "code": "PHM",
+    "slug": "philemon",
+    "order": 77,
+    "standardAbbrev": "Phlm",
+    "title": "Philemon",
+    "testament": "nt",
+    "totalChapters": 1,
+    "extraAliases": [
+      "philemon",
+      "phlm",
+      "phm"
+    ]
+  },
+  {
+    "code": "HEB",
+    "slug": "hebrews",
+    "order": 78,
+    "standardAbbrev": "Heb",
+    "title": "Hebrews",
+    "testament": "nt",
+    "totalChapters": 13,
+    "extraAliases": [
+      "heb",
+      "hebrews"
+    ]
+  },
+  {
+    "code": "JAS",
+    "slug": "james",
+    "order": 79,
+    "standardAbbrev": "Jas",
+    "title": "James",
+    "testament": "nt",
+    "totalChapters": 5,
+    "extraAliases": [
+      "james",
+      "jas"
+    ]
+  },
+  {
+    "code": "1PE",
+    "slug": "1-peter",
+    "order": 80,
+    "standardAbbrev": "1_Pet",
+    "title": "1 Peter",
+    "testament": "nt",
+    "totalChapters": 5,
+    "extraAliases": [
+      "1 peter",
+      "1_pet",
+      "1pe",
+      "1pet",
+      "i pet",
+      "i peter"
+    ]
+  },
+  {
+    "code": "2PE",
+    "slug": "2-peter",
+    "order": 81,
+    "standardAbbrev": "2_Pet",
+    "title": "2 Peter",
+    "testament": "nt",
+    "totalChapters": 3,
+    "extraAliases": [
+      "2 peter",
+      "2_pet",
+      "2pe",
+      "2pet",
+      "ii pet",
+      "ii peter"
+    ]
+  },
+  {
+    "code": "1JN",
+    "slug": "1-john",
+    "order": 82,
+    "standardAbbrev": "1_John",
+    "title": "1 John",
+    "testament": "nt",
+    "totalChapters": 5,
+    "extraAliases": [
+      "1 john",
+      "1_john",
+      "1jn",
+      "1john",
+      "i john"
+    ]
+  },
+  {
+    "code": "2JN",
+    "slug": "2-john",
+    "order": 83,
+    "standardAbbrev": "2_John",
+    "title": "2 John",
+    "testament": "nt",
+    "totalChapters": 1,
+    "extraAliases": [
+      "2 john",
+      "2_john",
+      "2jn",
+      "2john",
+      "ii john"
+    ]
+  },
+  {
+    "code": "3JN",
+    "slug": "3-john",
+    "order": 84,
+    "standardAbbrev": "3_John",
+    "title": "3 John",
+    "testament": "nt",
+    "totalChapters": 1,
+    "extraAliases": [
+      "3 john",
+      "3_john",
+      "3jn",
+      "3john",
+      "iii john"
+    ]
+  },
+  {
+    "code": "JUD",
+    "slug": "jude",
+    "order": 85,
+    "standardAbbrev": "Jude",
+    "title": "Jude",
+    "testament": "nt",
+    "totalChapters": 1,
+    "extraAliases": [
+      "jud",
+      "jude"
+    ]
+  },
+  {
+    "code": "REV",
+    "slug": "revelation",
+    "order": 86,
+    "standardAbbrev": "Rev",
+    "title": "Revelation",
+    "testament": "nt",
+    "totalChapters": 22,
+    "extraAliases": [
+      "rev",
+      "revelation",
+      "revelation of john"
+    ]
+  }
+];
+
+/**
+ * Normalizes any string to a clean alphanumeric key for fast lookup.
+ */
+export function cleanKey(str?: string | null): string {
+	if (!str) return '';
+	return str.trim().toLowerCase().replace(/[\s\-_.]+/g, '');
+}
+
+const CODE_TO_CANONICAL = new Map<string, CanonicalBook>();
+const NORM_TO_CANONICAL = new Map<string, CanonicalBook>();
+
+function initIndices() {
+	for (const book of CANONICAL_BOOK_DEFINITIONS) {
+		CODE_TO_CANONICAL.set(book.code, book);
+		NORM_TO_CANONICAL.set(cleanKey(book.code), book);
+		NORM_TO_CANONICAL.set(cleanKey(book.slug), book);
+		NORM_TO_CANONICAL.set(cleanKey(book.standardAbbrev), book);
+		NORM_TO_CANONICAL.set(cleanKey(book.title), book);
+
+		if (book.extraAliases) {
+			for (const alias of book.extraAliases) {
+				const c = cleanKey(alias);
+				if (!NORM_TO_CANONICAL.has(c)) {
+					NORM_TO_CANONICAL.set(c, book);
+				}
+			}
+		}
+
+		if (book.versionBooks) {
+			for (const vb of Object.values(book.versionBooks)) {
+				if (vb) {
+					const c = cleanKey(vb);
+					if (!NORM_TO_CANONICAL.has(c)) {
+						NORM_TO_CANONICAL.set(c, book);
+					}
+				}
+			}
+		}
+	}
+}
+
+initIndices();
+
+/**
+ * Resolves any book identifier, title, synonym, or abbreviation to its Canonical Book Definition.
+ */
+export function normalizeBookName(input?: string | null): CanonicalBook | null {
+	if (!input) return null;
+	const c = cleanKey(input);
+	return NORM_TO_CANONICAL.get(c) || null;
+}
+
+/**
+ * Resolves any book identifier to its 3-letter USFM code.
+ */
+export function resolveBookCode(input?: string | null, version?: string): string {
+	if (!input) return '';
+	const clean = cleanKey(input);
+
+	// Dual recensions in LXX
+	if (version === 'LXX') {
+		if (clean === 'sus') return 'SUG';
+		if (clean === 'susth') return 'SUS';
+		if (clean === 'dan') return 'DAG';
+		if (clean === 'danth') return 'DAN';
+		if (clean === 'bel') return 'BLG';
+		if (clean === 'belth') return 'BEL';
+	}
+
+	const book = NORM_TO_CANONICAL.get(clean);
+	if (book) return book.code;
+	const upper = input.trim().toUpperCase();
+	if (upper.length === 3) return upper;
+	return '';
+}
+
+/**
+ * Resolves any book identifier to its canonical DB slug.
+ */
+export function getCanonicalSlug(input?: string | null): string | null {
+	return normalizeBookName(input)?.slug || null;
+}
+
+/**
+ * Get canonical book by exact 3-letter USFM code.
+ */
+export function getCanonicalBook(code?: string | null): CanonicalBook | null {
+	if (!code) return null;
+	return CODE_TO_CANONICAL.get(code.trim().toUpperCase()) || null;
+}

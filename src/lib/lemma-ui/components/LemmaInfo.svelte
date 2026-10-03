@@ -18,6 +18,7 @@
 	import {
 		getWordFrequencyByBook,
 		getConcordance,
+		getLemmaTotalCount,
 		type BookFrequency,
 		type ConcordanceOccurrence
 	} from '$lib/services/dbClient';
@@ -27,6 +28,7 @@
 	let { lemma }: { lemma: any } = $props();
 
 	let selectedSegment = $state('stem');
+	let totalCount = $state<number | null>(lemma?.total_count ?? lemma?.total ?? null);
 	let showStats = $state(false);
 	let showReferences = $state(false);
 	let isFetchingStats = $state(false);
@@ -65,39 +67,61 @@
 	);
 	const lang = $derived(isHebrew ? 'hebrew' : 'greek');
 	const corpusLabel = $derived(
-		lemma?.colVersion || (isHebrew ? 'BHS' : lemma?.corpus === 'sblgnt' ? 'SBLGNT' : 'LXX')
+		lemma?.colVersion || (isHebrew ? 'BHS' : (lemma?.corpus === 'ognt' || lemma?.corpus === 'sblgnt' || lemma?.corpus === 'opengnt') ? 'OpenGNT' : 'LXX')
 	);
 
 	// Reset segment and stats when active word changes
 	function resetLemma() {
-		
 		selectedSegment = 'stem';
 		bookFrequencies = [];
 		concordanceOccurrences = [];
+		totalCount = lemma?.total_count ?? lemma?.total ?? null;
 	}
 
 	function switchSegment(segmentId: string){
 		selectedSegment = segmentId;
-			// Reset stats when switching between prefix and stem segments
+		// Reset stats when switching between prefix and stem segments
 		bookFrequencies = [];
-		showReferences=false;
+		showReferences = false;
 		concordanceOccurrences = [];
-		showStats=false;
+		showStats = false;
+		totalCount = null;
 	}
-
 
 	const parsedHebrewMorph = $derived.by(() => {
 		if (!isHebrew || !lemma?.morph) return null;
 		return parseHebrewMorphSegments(lemma.morph);
 	});
 
-
+	const lookupKey = $derived(currentLemmaData?.normalized || currentLemmaData?.plain || currentLemmaData?.lemma || currentLemmaData?.word || '');
 
 	const totalOccurrences = $derived(
-		bookFrequencies.reduce((sum, f) => sum + f.count, 0) || currentLemmaData?.total || 0
+		totalCount !== null && totalCount !== undefined
+			? totalCount
+			: (bookFrequencies.reduce((sum, f) => sum + f.count, 0) || currentLemmaData?.total_count || currentLemmaData?.total || 0)
 	);
 
-	const lookupKey = $derived(currentLemmaData?.normalized || currentLemmaData?.plain || currentLemmaData?.lemma || currentLemmaData?.word || '');
+	$effect(() => {
+		const data = currentLemmaData;
+		const workId = data?.work_id || lemma?.work_id;
+		const key = lookupKey;
+		const strongs = data?.strongs;
+
+		if (selectedSegment === 'stem' && (lemma?.total_count !== undefined || lemma?.total !== undefined)) {
+			totalCount = lemma?.total_count ?? lemma?.total ?? 0;
+			return;
+		}
+
+		if (workId) {
+			getLemmaTotalCount(workId, key, strongs)
+				.then((cnt) => {
+					totalCount = cnt;
+				})
+				.catch((err) => {
+					console.warn('[LemmaInfo] Error loading total_count:', err);
+				});
+		}
+	});
 
 	async function loadStats() {
 		if (bookFrequencies.length > 0 || isFetchingStats) return;
@@ -106,6 +130,10 @@
 			const workId = currentLemmaData?.work_id || lemma?.work_id;
 			const freqs = await getWordFrequencyByBook(workId, lookupKey, currentLemmaData?.strongs);
 			bookFrequencies = freqs;
+			if (freqs && freqs.length > 0) {
+				const sum = freqs.reduce((acc, f) => acc + f.count, 0);
+				if (sum > 0) totalCount = sum;
+			}
 		} catch (err) {
 			console.warn('[LemmaInfo] Error loading frequencies:', err);
 		} finally {
@@ -114,13 +142,15 @@
 	}
 
 	async function loadConcordance() {
-//		mylog("loadConcordance()", true);
 		if (concordanceOccurrences.length > 0 || isFetchingReferences) return;
 		isFetchingReferences = true;
 		try {
 			const workId = currentLemmaData?.work_id || lemma?.work_id;
 			const occs = await getConcordance(workId, lookupKey, 0, currentLemmaData?.strongs);
 			concordanceOccurrences = occs;
+			if (occs && occs.length > 0 && (!totalCount || totalCount === 0)) {
+				totalCount = occs.length;
+			}
 		} catch (err) {
 			console.warn('[LemmaInfo] Error loading concordance:', err);
 		} finally {
@@ -177,7 +207,7 @@
 		resetLemma();
 	});
 
-	$inspect('lemma', lemma)
+	//$inspect('lemma', lemma)
 </script>
 
 <div class="items-center text-center">
@@ -299,7 +329,7 @@
 			{:else}
 				<Icon svg={BookSvg} />
 			{/if}
-			See {currentLemmaData?.total ?? ''} Occurrences
+			See {totalOccurrences} Occurrences
 		</OptionButton>
 	</div>
 

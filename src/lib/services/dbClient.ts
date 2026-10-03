@@ -1,6 +1,6 @@
 import { getDbWorker } from './dbWorker';
 import { mylog } from '$lib/lemma-ui/env/env';
-import { normalizeBookName, getMappedReference } from '$lib/config/bookMapping.js';
+import { normalizeBookName } from '$lib/config/bookMapping.js';
 
 export interface WorkRow {
 	id: number;
@@ -29,6 +29,7 @@ export interface VerseResult {
 	version: string;
 	work_unit_id: number;
 	verse_label: string;
+	native_citation?: string;
 	body: string;
 	words?: WordRow[];
 }
@@ -42,6 +43,9 @@ export interface WordRow {
 	normalized: string;
 	strongs_number: string;
 	morph_code: string;
+	lemma?: string;
+	gloss?: string;
+	trailer?: string;
 }
 
 export interface LexemeRow {
@@ -84,35 +88,208 @@ export interface LexiconEntryRow {
 	definition: string;
 }
 
-// Mapping from UI version acronyms to database work slugs
+// Mapping from UI version acronyms to database corpus IDs
 export const VERSION_MAP: Record<string, string> = {
 	BHS: 'wlc',
-	LXX: 'swete-lxx',
-	SBLGNT: 'sblgnt',
-	Vulgate: 'vulgate-clementine',
+	bhs: 'wlc',
+	wlc: 'wlc',
+	LXX: 'swete_lxx',
+	lxx: 'swete_lxx',
+	'swete-lxx': 'swete_lxx',
+	swete_lxx: 'swete_lxx',
+	OpenGNT: 'ognt',
+	opengnt: 'ognt',
+	OGNT: 'ognt',
+	ognt: 'ognt',
+	SBLGNT: 'ognt',
+	sblgnt: 'ognt',
+	Vulgate: 'vulgate',
+	vulgate: 'vulgate',
+	'vulgate-clementine': 'vulgate',
 	KJV: 'kjv',
+	kjv: 'kjv',
 	WEB: 'webbe',
-	Brenton: 'brenton-lxx'
+	web: 'webbe',
+	webbe: 'webbe',
+	Brenton: 'brenton-lxx',
+	brenton: 'brenton-lxx',
+	'brenton-lxx': 'brenton-lxx'
 };
 
-// Reverse mapping from work slugs to UI version acronyms
+// Reverse mapping from corpus IDs to UI version acronyms
 export const SLUG_TO_VERSION: Record<string, string> = {
-	'wlc': 'BHS',
+	wlc: 'BHS',
+	swete_lxx: 'LXX',
 	'swete-lxx': 'LXX',
-	'sblgnt': 'SBLGNT',
+	ognt: 'OpenGNT',
+	sblgnt: 'OpenGNT',
+	vulgate: 'Vulgate',
 	'vulgate-clementine': 'Vulgate',
-	'kjv': 'KJV',
-	'webbe': 'WEB',
+	kjv: 'KJV',
+	webbe: 'WEB',
 	'brenton-lxx': 'Brenton'
 };
 
-// Versions that have word-level tokens in the words table
+// Versions that have word-level tokens in tokens_json
 export const VERSIONS_WITH_WORDS = new Set<string>([
-	'BHS', 'wlc',
-	'LXX', 'swete-lxx',
+	'BHS', 'bhs', 'wlc',
+	'LXX', 'lxx', 'swete_lxx', 'swete-lxx',
+	'OpenGNT', 'opengnt', 'OGNT', 'ognt',
 	'SBLGNT', 'sblgnt',
 	'KJV', 'kjv'
 ]);
+
+// USFM 3-letter codes by alias
+export const USFM_ALIASES: Record<string, string> = {
+	// OT
+	genesis: 'GEN', gen: 'GEN', ge: 'GEN',
+	exodus: 'EXO', exod: 'EXO', exo: 'EXO',
+	leviticus: 'LEV', lev: 'LEV',
+	numbers: 'NUM', num: 'NUM',
+	deuteronomy: 'DEU', deut: 'DEU', deu: 'DEU', dt: 'DEU',
+	joshua: 'JOS', josh: 'JOS', jos: 'JOS',
+	judges: 'JDG', judg: 'JDG', jdg: 'JDG', jdgs: 'JDG', judgs: 'JDG',
+	ruth: 'RUT', rut: 'RUT',
+	'1samuel': '1SA', '1sam': '1SA', '1sa': '1SA', '1kingdoms': '1SA', '1kgdms': '1SA', isamuel: '1SA', isam: '1SA',
+	'2samuel': '2SA', '2sam': '2SA', '2sa': '2SA', '2kingdoms': '2SA', '2kgdms': '2SA', iisamuel: '2SA', iisam: '2SA',
+	'1kings': '1KI', '1kgs': '1KI', '1ki': '1KI', '3kingdoms': '1KI', '3kgdms': '1KI', ikings: '1KI', ikgs: '1KI',
+	'2kings': '2KI', '2kgs': '2KI', '2ki': '2KI', '4kingdoms': '2KI', '4kgdms': '2KI', iikings: '2KI', iikgs: '2KI',
+	'1chronicles': '1CH', '1chr': '1CH', '1ch': '1CH', '1chron': '1CH', ichronicles: '1CH', ichr: '1CH',
+	'2chronicles': '2CH', '2chr': '2CH', '2ch': '2CH', '2chron': '2CH', iichronicles: '2CH', iichr: '2CH',
+	ezra: 'EZR', ezr: 'EZR',
+	nehemiah: 'NEH', neh: 'NEH',
+	esther: 'EST', esth: 'EST', est: 'EST',
+	job: 'JOB',
+	psalms: 'PSA', psalm: 'PSA', ps: 'PSA', psa: 'PSA', psalmi: 'PSA', 'psalms-lxx': 'PSA', 'psalmslxx': 'PSA',
+	proverbs: 'PRO', prov: 'PRO', pro: 'PRO',
+	ecclesiastes: 'ECC', eccl: 'ECC', ecc: 'ECC', qoh: 'ECC', qoheleth: 'ECC',
+	'songofsolomon': 'SNG', song: 'SNG', cant: 'SNG', canticles: 'SNG', sng: 'SNG', 'songofsongs': 'SNG',
+	isaiah: 'ISA', isa: 'ISA', is: 'ISA',
+	jeremiah: 'JER', jer: 'JER', 'jeremiah-lxx': 'JER', 'jeremiahlxx': 'JER',
+	lamentations: 'LAM', lam: 'LAM',
+	ezekiel: 'EZK', ezek: 'EZK', ezk: 'EZK',
+	daniel: 'DAN', dan: 'DAN', danth: 'DAN',
+	hosea: 'HOS', hos: 'HOS',
+	joel: 'JOL', joe: 'JOL', jol: 'JOL',
+	amos: 'AMO', amo: 'AMO',
+	obadiah: 'OBA', obad: 'OBA', oba: 'OBA',
+	jonah: 'JON', jon: 'JON',
+	micah: 'MIC', mic: 'MIC',
+	nahum: 'NAM', nah: 'NAM', nam: 'NAM',
+	habakkuk: 'HAB', hab: 'HAB',
+	zephaniah: 'ZEP', zeph: 'ZEP', zep: 'ZEP',
+	haggai: 'HAG', hag: 'HAG',
+	zechariah: 'ZEC', zech: 'ZEC', zec: 'ZEC',
+	malachi: 'MAL', mal: 'MAL',
+
+	// Deuterocanon / Apocrypha
+	tobit: 'TOB', tob: 'TOB', tobba: 'TOB', tobs: 'TOB',
+	judith: 'JDT', jdt: 'JDT',
+	'esther(greek)': 'ESG', 'esthergreek': 'ESG', esg: 'ESG', addesth: 'ESG',
+	wisdomofsolomon: 'WIS', wisdom: 'WIS', wis: 'WIS', wisd: 'WIS',
+	sirach: 'SIR', sir: 'SIR', ecclesiasticus: 'SIR',
+	baruch: 'BAR', bar: 'BAR',
+	letterofjeremiah: 'LJE', lje: 'LJE', epjer: 'LJE',
+	prayerofazariah: 'S3Y', s3y: 'S3Y', prazar: 'S3Y',
+	susanna: 'SUS', sus: 'SUS', susth: 'SUS', sug: 'SUG',
+	belandthedragon: 'BEL', bel: 'BEL', belth: 'BEL', blg: 'BLG',
+	'1maccabees': '1MA', '1mac': '1MA', '1ma': '1MA', '1macc': '1MA', imaccabees: '1MA', imac: '1MA',
+	'2maccabees': '2MA', '2mac': '2MA', '2ma': '2MA', '2macc': '2MA', iimaccabees: '2MA', iimac: '2MA',
+	'3maccabees': '3MA', '3mac': '3MA', '3ma': '3MA', '3macc': '3MA', iiimaccabees: '3MA',
+	'4maccabees': '4MA', '4mac': '4MA', '4ma': '4MA', '4macc': '4MA', ivmaccabees: '4MA',
+	'1esdras': '1ES', '1esdr': '1ES', '1es': '1ES', iesdras: '1ES',
+	'2esdras': '2ES', '2esdr': '2ES', '2es': '2ES', iiesdras: '2ES',
+	prayerofmanasseh: 'MAN', prman: 'MAN', man: 'MAN', prayerofmanasses: 'MAN',
+	psalm151: 'PS2', addps: 'PS2', ps151: 'PS2', ps2: 'PS2', additionalpsalm: 'PS2',
+	odes: 'ODA', oda: 'ODA', od: 'ODA',
+	psalmsofsolomon: 'PSS', pss: 'PSS', pssol: 'PSS', psssol: 'PSS',
+	laodiceans: 'LAO', lao: 'LAO',
+
+	// NT
+	matthew: 'MAT', matt: 'MAT', mat: 'MAT', mt: 'MAT',
+	mark: 'MRK', mrk: 'MRK', mk: 'MRK',
+	luke: 'LUK', luk: 'LUK', lk: 'LUK',
+	john: 'JHN', jhn: 'JHN', jn: 'JHN',
+	acts: 'ACT', act: 'ACT', ac: 'ACT',
+	romans: 'ROM', rom: 'ROM', ro: 'ROM',
+	'1corinthians': '1CO', '1cor': '1CO', '1co': '1CO', icorinthians: '1CO', icor: '1CO',
+	'2corinthians': '2CO', '2cor': '2CO', '2co': '2CO', iicorinthians: '2CO', iicor: '2CO',
+	galatians: 'GAL', gal: 'GAL', ga: 'GAL',
+	ephesians: 'EPH', eph: 'EPH', ep: 'EPH',
+	philippians: 'PHP', php: 'PHP', phil: 'PHP',
+	colossians: 'COL', col: 'COL',
+	'1thessalonians': '1TH', '1thess': '1TH', '1th': '1TH', ithessalonians: '1TH',
+	'2thessalonians': '2TH', '2thess': '2TH', '2th': '2TH', iithessalonians: '2TH',
+	'1timothy': '1TI', '1tim': '1TI', '1ti': '1TI', itimothy: '1TI',
+	'2timothy': '2TI', '2tim': '2TI', '2ti': '2TI', iitimothy: '2TI',
+	titus: 'TIT', tit: 'TIT',
+	philemon: 'PHM', phm: 'PHM', phlm: 'PHM',
+	hebrews: 'HEB', heb: 'HEB',
+	james: 'JAS', jas: 'JAS', jm: 'JAS',
+	'1peter': '1PE', '1pet': '1PE', '1pe': '1PE', ipeter: '1PE',
+	'2peter': '2PE', '2pet': '2PE', '2pe': '2PE', iipeter: '2PE',
+	'1john': '1JN', '1jn': '1JN', ijohn: '1JN',
+	'2john': '2JN', '2jn': '2JN', iijohn: '2JN',
+	'3john': '3JN', '3jn': '3JN', iiijohn: '3JN',
+	jude: 'JUD', jud: 'JUD', jd: 'JUD',
+	revelation: 'REV', rev: 'REV', re: 'REV', revelationofjohn: 'REV'
+};
+
+export const BOOK_ALIASES = USFM_ALIASES;
+
+export function resolveBookCode(input?: string | null, version?: string): string {
+	if (!input) return '';
+	const clean = input.trim().toLowerCase().replace(/[\s\-_]+/g, '');
+
+	// Version-aware resolution for LXX dual recensions
+	if (version === 'LXX') {
+		if (clean === 'sus') return 'SUG';
+		if (clean === 'susth') return 'SUS';
+		if (clean === 'dan') return 'DAG';
+		if (clean === 'danth') return 'DAN';
+		if (clean === 'bel') return 'BLG';
+		if (clean === 'belth') return 'BEL';
+	}
+
+	if (USFM_ALIASES[clean]) return USFM_ALIASES[clean];
+	const upper = input.trim().toUpperCase();
+	if (upper.length === 3) return upper;
+	return '';
+}
+
+const CORPUS_WORK_IDS: Record<string, number> = {
+	vulgate: 1,
+	'vulgate-clementine': 1,
+	wlc: 2,
+	bhs: 2,
+	swete_lxx: 24,
+	'swete-lxx': 24,
+	lxx: 24,
+	ognt: 40,
+	opengnt: 40,
+	sblgnt: 40,
+	kjv: 5,
+	webbe: 6,
+	'brenton-lxx': 7
+};
+
+export function getCorpusWorkId(corpusId: string): number {
+	const c = corpusId.toLowerCase();
+	return CORPUS_WORK_IDS[c] || 1;
+}
+
+export function workIdToCorpusId(workId: number): string {
+	switch (workId) {
+		case 2: return 'wlc';
+		case 24: return 'swete_lxx';
+		case 40: return 'ognt';
+		case 1: return 'vulgate';
+		case 5: return 'kjv';
+		case 6: return 'webbe';
+		case 7: return 'brenton-lxx';
+		default: return 'wlc';
+	}
+}
 
 // Cached canonical works
 let canonicalWorksCache: CanonicalWorkRow[] | null = null;
@@ -126,7 +303,6 @@ export function _clearDbClientCache() {
  */
 export async function query<T = any>(sql: string, params: any[] = []): Promise<T[]> {
 	const worker = await getDbWorker();
-//	mylog(`query db:`, true);
 	return (worker.db as any).query(sql, params);
 }
 
@@ -136,9 +312,32 @@ export async function queryOne<T = any>(sql: string, params: any[] = []): Promis
 }
 
 /**
- * Fetch all available works in the database.
+ * Fetch all available works in the database from corpora table.
  */
 export async function getWorks(): Promise<WorkRow[]> {
+	try {
+		const rows = await query<{
+			id: string;
+			title: string;
+			language: string;
+			category: string;
+		}>('SELECT id, title, language, category FROM corpora ORDER BY id');
+
+		if (rows && rows.length > 0) {
+			return rows.map((r, idx) => ({
+				id: idx + 1,
+				slug: r.id,
+				title: r.title,
+				native_title: null,
+				language: r.language,
+				work_type: r.category,
+				publication_year: null
+			}));
+		}
+	} catch (e) {
+		console.warn('[dbClient] Failed to query corpora, falling back to works table:', e);
+	}
+
 	return query<WorkRow>(
 		'SELECT id, slug, title, native_title, language, work_type, publication_year FROM works ORDER BY id'
 	);
@@ -149,108 +348,52 @@ export async function getWorks(): Promise<WorkRow[]> {
  */
 export async function getCanonicalWorks(): Promise<CanonicalWorkRow[]> {
 	if (canonicalWorksCache) return canonicalWorksCache;
-	const rows = await query<CanonicalWorkRow>(
+
+	try {
+		const rows = await query<{
+			code: string;
+			order_index: number;
+			testament: string;
+			name_english: string;
+			total_chapters: number;
+		}>('SELECT code, order_index, testament, name_english, total_chapters FROM canonical_books ORDER BY order_index');
+
+		if (rows && rows.length > 0) {
+			canonicalWorksCache = rows.map((r) => ({
+				id: r.order_index,
+				slug: r.name_english.toLowerCase().replace(/\s+/g, '-'),
+				title: r.name_english,
+				book_key: r.code,
+				testament: r.testament.toLowerCase(),
+				sbl_abbreviation: r.code
+			}));
+			return canonicalWorksCache;
+		}
+	} catch (e) {
+		console.warn('[dbClient] Failed to query canonical_books, falling back to canonical_works:', e);
+	}
+
+	const fallback = await query<CanonicalWorkRow>(
 		'SELECT id, slug, title, book_key, testament, sbl_abbreviation FROM canonical_works ORDER BY id'
 	);
-//	mylog(`dbClient.getCanonicalWorks(): [${rows.map((w)=>w.id+"="+w.slug).join(',')}]`,true);
-	canonicalWorksCache = rows;
-	return rows;
+	canonicalWorksCache = fallback;
+	return fallback;
 }
-
-function cleanNorm(str?: string | null): string {
-	if (!str) return '';
-	return str.trim().toLowerCase().replace(/[\s\-_]+/g, '');
-}
-
-export const BOOK_ALIASES: Record<string, string> = {
-	qoh: 'ecclesiastes',
-	eccl: 'ecclesiastes',
-	cant: 'song-of-solomon',
-	song: 'song-of-solomon',
-	pssol: 'psalms-of-solomon',
-	epjer: 'letter-of-jeremiah',
-	'1mac': '1-maccabees',
-	'2mac': '2-maccabees',
-	'3mac': '3-maccabees',
-	'4mac': '4-maccabees',
-	'1esdr': '1-esdras',
-	'2esdr': '2-esdras',
-	tobba: 'tobit',
-	tobs: 'tobit',
-	tob: 'tobit',
-	danth: 'daniel',
-	susth: 'susanna',
-	sus: 'susanna',
-	belth: 'bel-and-the-dragon',
-	bel: 'bel-and-the-dragon',
-	addesth: 'esther-greek',
-	prman: 'prayer-of-manasseh',
-	prazar: 'prayer-of-azariah',
-	addps: 'psalm-151',
-	ps151: 'psalm-151'
-};
-
-export const LXX_VARIANT_BOOKS: Record<string, string> = {
-	psalms: 'psalms-lxx',
-	jeremiah: 'jeremiah-lxx',
-	job: 'job-lxx',
-	esther:'esther-greek'
-};
 
 /**
  * Resolve any book identifier (abbreviation, slug, or title) to its canonical_work_id.
- * If version is provided (e.g. 'LXX' or 'Brenton'), resolves variant canonical works
- * (e.g. 'psalms-lxx', 'jeremiah-lxx', 'job-lxx').
  */
 export async function resolveCanonicalWorkId(
 	bookIdentifier: string,
 	version?: string
 ): Promise<number | null> {
 	if (!bookIdentifier) return null;
+	const code = resolveBookCode(bookIdentifier);
+	if (!code) return null;
+
 	const books = await getCanonicalWorks();
-	const norm = cleanNorm(bookIdentifier);
-	const canonical = normalizeBookName(bookIdentifier);
-	let targetSlug = canonical ? cleanNorm(canonical.slug) : cleanNorm(BOOK_ALIASES[norm] || norm);
-
-	const isLxx = version === 'LXX' || version === 'Brenton' || version === 'swete-lxx' || version === 'brenton-lxx';
-	if (isLxx) {
-		if (LXX_VARIANT_BOOKS[targetSlug]) {
-			targetSlug = cleanNorm(LXX_VARIANT_BOOKS[targetSlug]);
-		} else if (targetSlug === 'ezra' || targetSlug === 'nehemiah') {
-			targetSlug = '2-esdras';
-		}
-	}
-
-	// Exact slug match (e.g. '1-corinthians' -> '1corinthians')
-	const bySlug = books.find((b) => cleanNorm(b.slug) === targetSlug);
-	if (bySlug) return bySlug.id;
-
-	// SBL abbreviation match (e.g. '1 Cor', 'Gen', 'Matt')
-	const byAbbrev = books.find((b) => b.sbl_abbreviation && cleanNorm(b.sbl_abbreviation) === norm);
-	if (byAbbrev) {
-		if (isLxx && LXX_VARIANT_BOOKS[cleanNorm(byAbbrev.slug)]) {
-			const lxxSlug = cleanNorm(LXX_VARIANT_BOOKS[cleanNorm(byAbbrev.slug)]);
-			const lxxBook = books.find((b) => cleanNorm(b.slug) === lxxSlug);
-			if (lxxBook) return lxxBook.id;
-		}
-		return byAbbrev.id;
-	}
-
-	// Title match (e.g. '1 Corinthians')
-	const byTitle = books.find((b) => cleanNorm(b.title) === norm);
-	if (byTitle) {
-		if (isLxx && LXX_VARIANT_BOOKS[cleanNorm(byTitle.slug)]) {
-			const lxxSlug = cleanNorm(LXX_VARIANT_BOOKS[cleanNorm(byTitle.slug)]);
-			const lxxBook = books.find((b) => cleanNorm(b.slug) === lxxSlug);
-			if (lxxBook) return lxxBook.id;
-		}
-		return byTitle.id;
-	}
-
-	// Partial match on slug
-	const byPartial = books.find((b) => cleanNorm(b.slug).includes(targetSlug));
-	if (byPartial) return byPartial.id;
-
+	const match = books.find((b) => b.book_key === code || b.sbl_abbreviation === code);
+	if (match) return match.id;
 	return null;
 }
 
@@ -258,8 +401,37 @@ export async function resolveCanonicalWorkId(
  * Fetch all available chapter numbers for a canonical book and version.
  */
 export async function getBookChapters(bookIdentifier: string, version?: string): Promise<number[]> {
+	const clean = (bookIdentifier || '').trim().toLowerCase().replace(/[\s\-_]+/g, '');
+	if (clean === '2esdr' || clean === '2esdras') {
+		return Array.from({ length: 23 }, (_, i) => i + 1);
+	}
+
+	const code = resolveBookCode(bookIdentifier, version);
+	if (!code) return [];
+
+	if (version) {
+		const corpusId = VERSION_MAP[version] || version.toLowerCase();
+		try {
+			const rows = await query<{ std_chapter: number }>(
+				'SELECT DISTINCT std_chapter FROM text_units WHERE std_book = ? AND corpus_id = ? ORDER BY std_chapter',
+				[code, corpusId]
+			);
+			if (rows.length > 0) return rows.map((r) => r.std_chapter);
+		} catch (e) {}
+	}
+
+	try {
+		const row = await queryOne<{ total_chapters: number }>(
+			'SELECT total_chapters FROM canonical_books WHERE code = ?',
+			[code]
+		);
+		if (row && row.total_chapters > 0) {
+			return Array.from({ length: row.total_chapters }, (_, i) => i + 1);
+		}
+	} catch (e) {}
+
+	// Fallback to legacy canonical_refs if canonical_books is not available
 	const cwId = await resolveCanonicalWorkId(bookIdentifier, version);
-//	mylog(`getBookChapters(${version??''}.${bookIdentifier}): cwId=${cwId}`, true);
 	if (!cwId) return [];
 	const rows = await query<{ chapter: number }>(`
 		SELECT DISTINCT CAST(substr(hierarchy, 1, instr(hierarchy, ',') - 1) AS INTEGER) AS chapter
@@ -277,7 +449,10 @@ export interface TranslatedReference {
 }
 
 /**
- * Translates a reference from one version's versification to another using versification_mappings.
+ * Translates a reference from one version's versification to another using authentic text_units alignment.
+ * Cross-tradition mappings (e.g. 2 Esdras <-> Ezra/Nehemiah, Psalm offsets, Jeremiah chapter shifts)
+ * are handled entirely by standard coordinates in SQLite text_units without hardcoded client routing.
+ * Returns null if the reference cannot be translated to the target version.
  */
 export async function translateReference(
 	book: string,
@@ -287,72 +462,44 @@ export async function translateReference(
 	toVersion: string
 ): Promise<TranslatedReference | null> {
 	if (!book) return null;
+	const fromCorpus = VERSION_MAP[fromVersion] || fromVersion.toLowerCase();
+	const toCorpus = VERSION_MAP[toVersion] || toVersion.toLowerCase();
+	if (fromCorpus === toCorpus) return { book, chapter, verse };
 
-	// 1. Check declarative cross-tradition alignment rules first
-	const inMem = getMappedReference(toVersion, book, chapter, verse);
-	if (inMem && !inMem.omitted && (inMem.mappedBook !== book || inMem.mappedChapter !== String(chapter))) {
-		return {
-			book: inMem.mappedBook,
-			chapter: parseInt(inMem.mappedChapter, 10),
-			verse: parseInt(inMem.mappedVerse, 10) || 1
-		};
+	const code = resolveBookCode(book, fromVersion);
+	const resolvedBook = normalizeBookName(book)?.standardAbbrev || book;
+	if (!code && !resolvedBook) return null;
+
+	try {
+		const rows = await query<{ native_book: string; native_chapter: number; native_verse: number }>(`
+			SELECT b.native_book, b.native_chapter, b.native_verse
+			FROM text_units a
+			JOIN text_units b ON a.std_book = b.std_book AND a.std_chapter = b.std_chapter AND a.std_verse = b.std_verse
+			WHERE a.corpus_id = ? 
+			  AND (a.native_book = ? COLLATE NOCASE OR a.std_book = ?)
+			  AND (a.native_chapter = ? OR a.std_chapter = ?) 
+			  AND (a.native_verse = ? OR a.std_verse = ?)
+			  AND b.corpus_id = ?
+			LIMIT 1
+		`, [fromCorpus, resolvedBook, code, chapter, chapter, verse, verse, toCorpus]);
+
+		if (rows.length > 0) {
+			return {
+				book: rows[0].native_book || book,
+				chapter: rows[0].native_chapter,
+				verse: rows[0].native_verse
+			};
+		}
+	} catch (err) {
+		console.warn('[translateReference] DB query error:', (err as any)?.message || err);
 	}
 
-	const fromCwId = await resolveCanonicalWorkId(book, fromVersion);
-	const toCwId = await resolveCanonicalWorkId(book, toVersion);
-
-	if (!fromCwId || !toCwId || fromCwId === toCwId) {
-		return { book, chapter, verse };
-	}
-
-	const hier = `${chapter},${verse}`;
-	// 1. Direct mapping
-	const directRows = await query<{ hierarchy: string }>(`
-		SELECT cr_to.hierarchy
-		FROM versification_mappings vm
-		JOIN canonical_refs cr_from ON vm.from_canonical_ref_id = cr_from.id
-		JOIN canonical_refs cr_to ON vm.to_canonical_ref_id = cr_to.id
-		WHERE cr_from.canonical_work_id = ? AND cr_from.hierarchy = ?
-		  AND cr_to.canonical_work_id = ?
-		LIMIT 1
-	`, [fromCwId, hier, toCwId]);
-
-	if (directRows.length > 0) {
-		const parts = directRows[0].hierarchy.split(',');
-		return { book, chapter: parseInt(parts[0], 10), verse: parseInt(parts[1], 10) || 1 };
-	}
-
-	// 2. Reverse mapping
-	const reverseRows = await query<{ hierarchy: string }>(`
-		SELECT cr_from.hierarchy
-		FROM versification_mappings vm
-		JOIN canonical_refs cr_to ON vm.to_canonical_ref_id = cr_to.id
-		JOIN canonical_refs cr_from ON vm.from_canonical_ref_id = cr_from.id
-		WHERE cr_to.canonical_work_id = ? AND cr_to.hierarchy = ?
-		  AND cr_from.canonical_work_id = ?
-		LIMIT 1
-	`, [fromCwId, hier, toCwId]);
-
-	if (reverseRows.length > 0) {
-		const parts = reverseRows[0].hierarchy.split(',');
-		return { book, chapter: parseInt(parts[0], 10), verse: parseInt(parts[1], 10) || 1 };
-	}
-
-	// 3. Fallback: check if the exact chapter/verse exists in target canonical work
-	const identityRows = await query<{ id: number }>(`
-		SELECT id FROM canonical_refs WHERE canonical_work_id = ? AND hierarchy = ? LIMIT 1
-	`, [toCwId, hier]);
-
-	if (identityRows.length > 0) {
-		return { book, chapter, verse };
-	}
-
-	return { book, chapter, verse };
+	return null;
 }
 
 /**
- * Load aligned parallel chapter verses for specified versions.
- * Integrates TVTMS versification mappings so divergent verses align side-by-side.
+ * Load aligned parallel chapter verses for specified versions directly from text_units.
+ * Coordinates are pre-aligned across traditions using universal standard hub coordinates.
  */
 export async function getChapterVerses(
 	bookIdentifier: string,
@@ -361,183 +508,187 @@ export async function getChapterVerses(
 	includeWords: boolean = true,
 	primaryVersion?: string
 ): Promise<VerseResult[]> {
-	const cwId = await resolveCanonicalWorkId(bookIdentifier, primaryVersion);
-	
-	if (!cwId) {
+	const clean = (bookIdentifier || '').trim().toLowerCase().replace(/[\s\-_]+/g, '');
+	let targetBook = resolveBookCode(bookIdentifier, primaryVersion);
+	let targetChapter = chapter;
+
+	// Cross-tradition 2 Esdras routing:
+	// Chapters 1-10 -> EZR (Ezra 1-10)
+	// Chapters 11-23 -> NEH (Nehemiah 1-13)
+	if (clean === '2esdr' || clean === '2esdras') {
+		if (chapter <= 10) {
+			targetBook = 'EZR';
+			targetChapter = chapter;
+		} else {
+			targetBook = 'NEH';
+			targetChapter = chapter - 10;
+		}
+	}
+
+	if (!targetBook) {
 		console.warn(`[DB] Book not found for identifier: ${bookIdentifier} (version: ${primaryVersion})`);
 		return [];
 	}
 
-	// Translate UI versions (e.g. 'BHS', 'LXX') to database work slugs (e.g. 'wlc', 'swete-lxx')
-	const workSlugs = versions.map((v) => VERSION_MAP[v] || v);
-	//mylog(`getChapterVerses.workSlugs:[${workSlugs.join(',')}]`, true);
-	const slugPlaceholders = workSlugs.map(() => '?').join(',');
+	// Map UI versions to database corpus IDs
+	const corpusIds = versions.map((v) => VERSION_MAP[v] || v.toLowerCase());
+	const placeholders = corpusIds.map(() => '?').join(',');
 
-	const sql = `
-		WITH target_refs AS (
-			SELECT id, ord, hierarchy, display_label
-			FROM canonical_refs
-			WHERE canonical_work_id = ? AND (hierarchy = ? OR hierarchy LIKE ?)
-		),
-		mapped_refs AS (
-			SELECT vm.to_canonical_ref_id AS target_cref_id, vm.from_canonical_ref_id AS aligned_cref_id
-			FROM versification_mappings vm
-			JOIN target_refs tr ON vm.to_canonical_ref_id = tr.id
-			UNION
-			SELECT vm.from_canonical_ref_id AS target_cref_id, vm.to_canonical_ref_id AS aligned_cref_id
-			FROM versification_mappings vm
-			JOIN target_refs tr ON vm.from_canonical_ref_id = tr.id
-		),
-		variant_identity_refs AS (
-			SELECT tr.id AS target_cref_id, cr_alt.id AS aligned_cref_id
-			FROM target_refs tr
-			JOIN canonical_works cw_main ON cw_main.id = ?
-			JOIN canonical_works cw_alt ON (
-				cw_alt.slug = cw_main.slug || '-lxx' OR cw_main.slug = cw_alt.slug || '-lxx'
-				OR cw_alt.slug = cw_main.slug || '-greek' OR cw_main.slug = cw_alt.slug || '-greek'
-			)
-			JOIN canonical_refs cr_alt ON cr_alt.canonical_work_id = cw_alt.id AND cr_alt.hierarchy = tr.hierarchy
-			WHERE NOT EXISTS (
-				SELECT 1 FROM mapped_refs mr
-				JOIN canonical_refs cr_mapped ON mr.aligned_cref_id = cr_mapped.id
-				WHERE mr.target_cref_id = tr.id AND cr_mapped.canonical_work_id = cw_alt.id
-			)
-		),
-		aligned_refs AS (
-			SELECT id AS target_cref_id, id AS aligned_cref_id, 0 AS priority FROM target_refs
-			UNION
-			SELECT target_cref_id, aligned_cref_id, 1 AS priority FROM mapped_refs
-			UNION
-			SELECT target_cref_id, aligned_cref_id, 2 AS priority FROM variant_identity_refs
-		),
-		candidate_verses AS (
+	try {
+		let bookWhereClause = 'std_book = ?';
+		const queryParams: any[] = [targetBook, targetChapter, ...corpusIds];
+
+		// For Greek Old Greek recensions where Greek text is SUG/DAG/BLG but parallels in Vulgate/KJV/MT use SUS/DAN/BEL
+		if (targetBook === 'SUG') {
+			bookWhereClause = "(std_book = 'SUG' OR (std_book = 'SUS' AND corpus_id != 'swete_lxx'))";
+			queryParams.shift();
+		} else if (targetBook === 'DAG') {
+			bookWhereClause = "(std_book = 'DAG' OR (std_book = 'DAN' AND corpus_id != 'swete_lxx'))";
+			queryParams.shift();
+		} else if (targetBook === 'BLG') {
+			bookWhereClause = "(std_book = 'BLG' OR (std_book = 'BEL' AND corpus_id != 'swete_lxx'))";
+			queryParams.shift();
+		}
+
+		const sql = `
 			SELECT 
-				tr.id AS base_cref_id,
-				tr.ord,
-				tr.hierarchy,
-				tr.display_label AS base_label,
-				w.slug AS version,
-				w.id AS work_id,
-				wu.id AS work_unit_id,
-				wu.label AS verse_label,
-				wu.body,
-				ROW_NUMBER() OVER (
-					PARTITION BY tr.id, w.id 
-					ORDER BY ar.priority, wu.id
-				) AS rn
-			FROM target_refs tr
-			JOIN aligned_refs ar ON ar.target_cref_id = tr.id
-			JOIN work_units wu ON wu.canonical_ref_id = ar.aligned_cref_id
-			JOIN works w ON wu.work_id = w.id
-			WHERE w.slug IN (${slugPlaceholders})
-		)
-		SELECT 
-			base_cref_id,
-			ord,
-			hierarchy,
-			base_label,
-			version,
-			work_unit_id,
-			verse_label,
-			body
-		FROM candidate_verses
-		WHERE rn = 1
-		ORDER BY ord, work_id;
-	`;
+				id AS work_unit_id,
+				corpus_id,
+				std_book,
+				std_chapter,
+				std_verse,
+				std_subverse,
+				native_book,
+				native_chapter,
+				native_verse,
+				native_citation AS verse_label,
+				text_content AS body,
+				tokens_json
+			FROM text_units
+			WHERE ${bookWhereClause} AND std_chapter = ? AND corpus_id IN (${placeholders})
+			ORDER BY std_verse, std_subverse, id
+		`;
 
-	const params = [cwId, String(chapter), `${chapter},%`, cwId, ...workSlugs];
-	const rows = await query<VerseResult>(sql, params);
+		const rows = await query<any>(sql, queryParams);
 
-	// Remap version slug back to UI version acronym (e.g. 'wlc' -> 'BHS')
-	for (const row of rows) {
-		row.version = SLUG_TO_VERSION[row.version] || row.version;
+		if (rows && rows.length > 0) {
+			const results: VerseResult[] = [];
+
+			for (const row of rows) {
+				const versionAcronym = SLUG_TO_VERSION[row.corpus_id] || row.corpus_id;
+				const subv = row.std_subverse ? String(row.std_subverse) : '';
+				const hierarchy = `${row.std_chapter},${row.std_verse}${subv}`;
+				const baseLabel = `${row.std_book} ${row.std_chapter}:${row.std_verse}${subv}`;
+
+				let words: WordRow[] | undefined = undefined;
+				if (includeWords && row.tokens_json) {
+					try {
+						const tokens = typeof row.tokens_json === 'string' ? JSON.parse(row.tokens_json) : row.tokens_json;
+						if (Array.isArray(tokens)) {
+							words = tokens.map((t: any, idx: number) => ({
+								id: (row.work_unit_id * 1000) + idx,
+								work_id: getCorpusWorkId(row.corpus_id),
+								work_unit_id: row.work_unit_id,
+								position: idx,
+								surface: t.word || '',
+								normalized: t.normalized || t.word || '',
+								strongs_number: t.strongs || '',
+								morph_code: t.morph || '',
+								lemma: t.lemma || '',
+								gloss: t.gloss || '',
+								trailer: t.trailer !== undefined ? t.trailer : undefined
+							}));
+						}
+					} catch (err) {
+						console.warn('[dbClient] Failed to parse tokens_json for unit', row.work_unit_id, err);
+					}
+				}
+
+				const nativeLabel = `${row.native_chapter}:${row.native_verse}${row.native_subverse ? String(row.native_subverse) : ''}`;
+
+				results.push({
+					base_cref_id: row.work_unit_id,
+					ord: (row.std_chapter * 1000) + row.std_verse,
+					hierarchy,
+					base_label: baseLabel,
+					version: versionAcronym,
+					work_unit_id: row.work_unit_id,
+					verse_label: nativeLabel,
+					native_citation: row.verse_label || (row.native_book ? `${row.native_book} ${nativeLabel}` : nativeLabel),
+					body: row.body,
+					words
+				});
+			}
+
+			return results;
+		}
+	} catch (e) {
+		console.warn('[dbClient] Failed to query text_units:', e);
 	}
 
-	if (includeWords && rows.length > 0) {
-		// Only fetch word tokens for versions that actually have word tokens in the words table
-		const targetRows = rows.filter((r) => VERSIONS_WITH_WORDS.has(r.version));
-		const wuIds = targetRows.map((r) => r.work_unit_id);
-		const words = await getWordsForWorkUnits(wuIds);
-		const wordsByUnit = new Map<number, WordRow[]>();
-		for (const w of words) {
-			const arr = wordsByUnit.get(w.work_unit_id) || [];
-			arr.push(w);
-			wordsByUnit.set(w.work_unit_id, arr);
-		}
-		for (const row of rows) {
-			row.words = wordsByUnit.get(row.work_unit_id) || [];
-		}
-	}
-
-	return rows;
+	return [];
 }
 
 /**
- * Fetch word tokens with morphology and Strong's IDs for given work unit IDs.
- * Groups contiguous work unit IDs into range scans (BETWEEN min AND max) combined
- * with UNION ALL so that SQLite executes fast sequential index range scans instead of
- * dozens of scattered point probes.
+ * Fetch word tokens for given work unit IDs.
+ * Queries tokens_json from text_units directly.
  */
 export async function getWordsForWorkUnits(workUnitIds: number[]): Promise<WordRow[]> {
 	if (!workUnitIds || workUnitIds.length === 0) return [];
 
-	// Deduplicate and sort IDs
 	const uniqueIds = Array.from(new Set(workUnitIds)).sort((a, b) => a - b);
 	if (uniqueIds.length === 0) return [];
-
-	// Group contiguous IDs into [start, end] ranges
-	const ranges: [number, number][] = [];
-	let rangeStart = uniqueIds[0];
-	let rangeEnd = uniqueIds[0];
-
-	for (let i = 1; i < uniqueIds.length; i++) {
-		const id = uniqueIds[i];
-		if (id === rangeEnd + 1) {
-			rangeEnd = id;
-		} else {
-			ranges.push([rangeStart, rangeEnd]);
-			rangeStart = id;
-			rangeEnd = id;
-		}
-	}
-	ranges.push([rangeStart, rangeEnd]);
-
-	// For a compact number of ranges (e.g. <= 12, typical for chapters across 1-4 versions),
-	// use UNION ALL of range queries for sequential index range scans
-	if (ranges.length <= 12) {
-		const selectParts = ranges.map(([start, end]) => {
-			if (start === end) {
-				return `SELECT id, work_id, work_unit_id, position, surface, normalized, strongs_number, morph_code FROM words WHERE work_unit_id = ?`;
-			}
-			return `SELECT id, work_id, work_unit_id, position, surface, normalized, strongs_number, morph_code FROM words WHERE work_unit_id BETWEEN ? AND ?`;
-		});
-
-		const params: number[] = [];
-		for (const [start, end] of ranges) {
-			if (start === end) {
-				params.push(start);
-			} else {
-				params.push(start, end);
-			}
-		}
-
-		const sql = `${selectParts.join('\nUNION ALL\n')}\nORDER BY work_unit_id, position;`;
-		return query<WordRow>(sql, params);
-	}
-
-	// Fallback for fragmented, scattered IDs
 	const placeholders = uniqueIds.map(() => '?').join(',');
-	const sql = `
+
+	try {
+		const rows = await query<{ id: number; corpus_id: string; tokens_json: string }>(`
+			SELECT id, corpus_id, tokens_json
+			FROM text_units
+			WHERE id IN (${placeholders})
+			ORDER BY id
+		`, uniqueIds);
+
+		const allWords: WordRow[] = [];
+		for (const row of rows) {
+			if (!row.tokens_json) continue;
+			try {
+				const tokens = typeof row.tokens_json === 'string' ? JSON.parse(row.tokens_json) : row.tokens_json;
+				if (Array.isArray(tokens)) {
+					tokens.forEach((t: any, idx: number) => {
+						allWords.push({
+							id: (row.id * 1000) + idx,
+							work_id: getCorpusWorkId(row.corpus_id),
+							work_unit_id: row.id,
+							position: idx,
+							surface: t.word || '',
+							normalized: t.normalized || t.word || '',
+							strongs_number: t.strongs || '',
+							morph_code: t.morph || '',
+							lemma: t.lemma || '',
+							gloss: t.gloss || '',
+							trailer: t.trailer !== undefined ? t.trailer : undefined
+						});
+					});
+				}
+			} catch (e) {}
+		}
+		if (allWords.length > 0) return allWords;
+	} catch (e) {
+		// Fallback to legacy words table
+	}
+
+	const fallbackSql = `
 		SELECT id, work_id, work_unit_id, position, surface, normalized, strongs_number, morph_code
 		FROM words
 		WHERE work_unit_id IN (${placeholders})
 		ORDER BY work_unit_id, position
 	`;
-	return query<WordRow>(sql, uniqueIds);
+	return query<WordRow>(fallbackSql, uniqueIds);
 }
 
 /**
- * Lookup lexeme entry by lemma, plain form, or lex_id in the lexemes table.
+ * Lookup lexeme entry by lemma, plain form, or strongs.
+ * Queries unabridged lexicon_entries table directly.
  */
 export async function getLemma(
 	corpus: string,
@@ -545,60 +696,168 @@ export async function getLemma(
 	strongs?: string
 ): Promise<LexemeRow | null> {
 	if (!identifier && !strongs) return null;
+	const dict = (corpus === 'bhs' || corpus === 'wlc' || corpus === 'hebrew') ? 'bdb' : 'lsj';
 
-	// 1. If strongs is provided, check strongs first
+	try {
+		if (strongs) {
+			const sClean = String(strongs).trim().toUpperCase();
+			const sCode = dict === 'bdb'
+				? (sClean.startsWith('H') ? sClean : `H${sClean}`)
+				: (sClean.startsWith('G') ? sClean : `G${sClean}`);
+
+			const row = await queryOne<{
+				id: number;
+				dictionary: string;
+				strongs_id: string;
+				lemma: string;
+				gloss: string;
+				consonant_key: string;
+			}>(`
+				SELECT id, dictionary, strongs_id, lemma, gloss, consonant_key
+				FROM lexicon_entries
+				WHERE dictionary = ? AND strongs_id = ?
+				LIMIT 1
+			`, [dict, sCode]);
+
+			if (row) {
+				return {
+					id: row.id,
+					corpus: dict,
+					lex_id: row.id,
+					lemma: row.lemma,
+					gloss: row.gloss,
+					pos: null,
+					strongs: row.strongs_id,
+					beta: '',
+					plain: row.consonant_key || '',
+					total: 0
+				};
+			}
+		}
+
+		const str = String(identifier).trim();
+		if (str) {
+			const row = await queryOne<{
+				id: number;
+				dictionary: string;
+				strongs_id: string;
+				lemma: string;
+				gloss: string;
+				consonant_key: string;
+			}>(`
+				SELECT id, dictionary, strongs_id, lemma, gloss, consonant_key
+				FROM lexicon_entries
+				WHERE dictionary = ? AND (lemma = ? OR consonant_key = ?)
+				LIMIT 1
+			`, [dict, str, str]);
+
+			if (row) {
+				return {
+					id: row.id,
+					corpus: dict,
+					lex_id: row.id,
+					lemma: row.lemma,
+					gloss: row.gloss,
+					pos: null,
+					strongs: row.strongs_id,
+					beta: '',
+					plain: row.consonant_key || '',
+					total: 0
+				};
+			}
+		}
+	} catch (e) {
+		// Fallback to legacy lexemes table
+	}
+
+	// Legacy lexemes query fallback
 	if (strongs) {
 		const sCode = String(strongs).trim();
-		if (sCode) {
-			const sWithPrefix = corpus === 'bhs'
-				? (sCode.toUpperCase().startsWith('H') ? sCode.toUpperCase() : `H${sCode}`)
-				: (sCode.toUpperCase().startsWith('G') ? sCode.toUpperCase() : `G${sCode}`);
-			const sNumOnly = sCode.replace(/^[HG]/i, '');
+		const sWithPrefix = corpus === 'bhs'
+			? (sCode.toUpperCase().startsWith('H') ? sCode.toUpperCase() : `H${sCode}`)
+			: (sCode.toUpperCase().startsWith('G') ? sCode.toUpperCase() : `G${sCode}`);
+		const sNumOnly = sCode.replace(/^[HG]/i, '');
 
-			const sql = `
-				SELECT id, corpus, lex_id, lemma, gloss, pos, strongs, beta, plain, total
-				FROM lexemes
-				WHERE corpus = ? AND (strongs = ? OR strongs = ?)
-				LIMIT 1
-			`;
-			const rows = await query<LexemeRow>(sql, [corpus, sWithPrefix, sNumOnly]);
-			if (rows.length > 0) return rows[0];
-		}
-	}
-
-	const isNumeric = typeof identifier === 'number' || /^\d+$/.test(String(identifier));
-	let sql: string;
-	let params: any[];
-
-	if (isNumeric) {
-		sql = `
+		const rows = await query<LexemeRow>(`
 			SELECT id, corpus, lex_id, lemma, gloss, pos, strongs, beta, plain, total
 			FROM lexemes
-			WHERE corpus = ? AND lex_id = ?
+			WHERE corpus = ? AND (strongs = ? OR strongs = ?)
 			LIMIT 1
-		`;
-		params = [corpus, Number(identifier)];
-	} else {
-		sql = `
-			SELECT id, corpus, lex_id, lemma, gloss, pos, strongs, beta, plain, total
-			FROM lexemes
-			WHERE corpus = ? AND (lemma = ? OR plain = ?)
-			LIMIT 1
-		`;
-		params = [corpus, String(identifier), String(identifier)];
+		`, [corpus, sWithPrefix, sNumOnly]);
+		if (rows.length > 0) return rows[0];
 	}
 
-	const rows = await query<LexemeRow>(sql, params);
+	const rows = await query<LexemeRow>(`
+		SELECT id, corpus, lex_id, lemma, gloss, pos, strongs, beta, plain, total
+		FROM lexemes
+		WHERE corpus = ? AND (lemma = ? OR plain = ?)
+		LIMIT 1
+	`, [corpus, String(identifier), String(identifier)]);
 	return rows.length > 0 ? rows[0] : null;
 }
 
 /**
- * Retrieve frequency distribution of a lemma grouped by canonical biblical book.
+ * Retrieve total occurrence count of a lemma directly from lemma_stats.total_count.
  */
+export async function getLemmaTotalCount(
+	workId: number,
+	lemma: string,
+	strongs?: string
+): Promise<number> {
+	if (!workId) return 0;
+	const corpusId = workIdToCorpusId(workId);
+
+	try {
+		// 1. Check pre-computed lemma_stats by strongs first
+		if (strongs && strongs.trim()) {
+			const sNorm = strongs.trim().toUpperCase();
+			const sCode = sNorm.startsWith('H') || sNorm.startsWith('G')
+				? sNorm
+				: (workId === 2 ? `H${sNorm}` : `G${sNorm}`);
+
+			const statRow = await queryOne<{ total_count: number }>(`
+				SELECT total_count
+				FROM lemma_stats
+				WHERE (corpus_id = ? OR work_id = ?) AND (strongs = ? OR strongs = ?)
+				LIMIT 1
+			`, [corpusId, workId, sCode, sNorm]);
+
+			if (statRow && typeof statRow.total_count === 'number') {
+				return statRow.total_count;
+			}
+		}
+
+		// 2. Check pre-computed lemma_stats by lemma (including pseudo-strongs WORD:<lemma>)
+		if (lemma && lemma.trim()) {
+			const lTrim = lemma.trim();
+			const lNFC = lTrim.normalize('NFC');
+			const pseudoStrongs = `WORD:${lTrim}`;
+			const statRow = await queryOne<{ total_count: number }>(`
+				SELECT total_count
+				FROM lemma_stats
+				WHERE (corpus_id = ? OR work_id = ?) AND (lemma = ? OR lemma = ? OR strongs = ?)
+				LIMIT 1
+			`, [corpusId, workId, lTrim, lNFC, pseudoStrongs]);
+
+			if (statRow && typeof statRow.total_count === 'number') {
+				return statRow.total_count;
+			}
+		}
+
+		// 3. Fallback: count from indexed concordance_refs
+		if (lemma || strongs) {
+			const occs = await getConcordance(workId, lemma, 0, strongs);
+			return occs ? occs.length : 0;
+		}
+	} catch (e) {
+		// In non-browser / mock environment, gracefully return 0
+	}
+
+	return 0;
+}
+
 /**
  * Retrieve frequency distribution of a lemma grouped by canonical biblical book.
- * First queries the pre-computed lemma_stats table for instant O(1) response.
- * Falls back to dynamic query if not found.
  */
 export async function getWordFrequencyByBook(
 	workId: number,
@@ -606,16 +865,22 @@ export async function getWordFrequencyByBook(
 	strongs?: string
 ): Promise<BookFrequency[]> {
 	if (!workId) return [];
+	const corpusId = workIdToCorpusId(workId);
 
 	// 1. Check pre-computed lemma_stats by strongs first
-	if (strongs) {
+	if (strongs && strongs.trim()) {
 		const sNorm = strongs.trim().toUpperCase();
+		const sCode = sNorm.startsWith('H') || sNorm.startsWith('G')
+			? sNorm
+			: (workId === 2 ? `H${sNorm}` : `G${sNorm}`);
+
 		const statRow = await queryOne<{ book_counts_json: string; total_count: number }>(`
 			SELECT book_counts_json, total_count
 			FROM lemma_stats
-			WHERE work_id = ? AND strongs = ?
+			WHERE (corpus_id = ? OR work_id = ?) AND (strongs = ? OR strongs = ?)
 			LIMIT 1
-		`, [workId, sNorm]);
+		`, [corpusId, workId, sCode, sNorm]);
+
 		if (statRow?.book_counts_json) {
 			try {
 				return JSON.parse(statRow.book_counts_json);
@@ -624,16 +889,17 @@ export async function getWordFrequencyByBook(
 	}
 
 	// 2. Check pre-computed lemma_stats by lemma (including pseudo-strongs WORD:<lemma>)
-	if (lemma) {
+	if (lemma && lemma.trim()) {
 		const lTrim = lemma.trim();
 		const lNFC = lTrim.normalize('NFC');
 		const pseudoStrongs = `WORD:${lTrim}`;
 		const statRow = await queryOne<{ book_counts_json: string; total_count: number }>(`
 			SELECT book_counts_json, total_count
 			FROM lemma_stats
-			WHERE work_id = ? AND (lemma = ? OR lemma = ? OR strongs = ?)
+			WHERE (corpus_id = ? OR work_id = ?) AND (lemma = ? OR lemma = ? OR strongs = ?)
 			LIMIT 1
-		`, [workId, lTrim, lNFC, pseudoStrongs]);
+		`, [corpusId, workId, lTrim, lNFC, pseudoStrongs]);
+
 		if (statRow?.book_counts_json) {
 			try {
 				return JSON.parse(statRow.book_counts_json);
@@ -646,48 +912,36 @@ export async function getWordFrequencyByBook(
 		try {
 			const occs = await getConcordance(workId, lemma, 0, strongs);
 			if (occs && occs.length > 0) {
-				const bookCounts: { [book: string]: number } = {};
-				for (const o of occs) {
-					const ref = o.ref_label || o.display_label || '';
-					const bookMatch = ref.match(/^([1-3]?[A-Za-z]+)/);
-					const book = bookMatch ? bookMatch[1] : (ref.split(/\s+/)[0] || 'Unknown');
-					bookCounts[book] = (bookCounts[book] || 0) + 1;
+				const bookMap = new Map<string, { title: string; count: number }>();
+				for (const occ of occs) {
+					const ref = occ.ref_label || occ.display_label || '';
+					const parts = ref.split(' ');
+					const bAbbrev = parts[0] || 'Unknown';
+					const existing = bookMap.get(bAbbrev);
+					if (existing) {
+						existing.count++;
+					} else {
+						bookMap.set(bAbbrev, { title: bAbbrev, count: 1 });
+					}
 				}
-				return Object.entries(bookCounts).map(([abbrev, count]) => ({
-					title: abbrev,
-					sbl_abbreviation: abbrev,
-					count
-				}));
+				return Array.from(bookMap.entries())
+					.map(([bCode, val]) => ({
+						title: val.title,
+						sbl_abbreviation: bCode,
+						count: val.count
+					}))
+					.sort((a, b) => b.count - a.count);
 			}
-		} catch (err) {
-			console.warn('[dbClient] Failed to aggregate from concordance_refs:', err);
+		} catch (e) {
+			console.warn('[dbClient] Fallback concordance aggregation error:', e);
 		}
 	}
 
-	// 4. Ultimate fallback: query words table using indexed normalized column
-	const cleanLemma = lemma?.trim() || '';
-	if (!cleanLemma) return [];
-	const sql = `
-		SELECT 
-			COALESCE(cw_parent.title, cw.title) AS title, 
-			COALESCE(cw_parent.sbl_abbreviation, cw.sbl_abbreviation) AS sbl_abbreviation, 
-			count(*) as count
-		FROM words wd
-		JOIN work_units wu ON wd.work_unit_id = wu.id
-		JOIN canonical_refs cr ON wu.canonical_ref_id = cr.id
-		JOIN canonical_works cw ON cr.canonical_work_id = cw.id
-		LEFT JOIN canonical_works cw_parent ON cw.slug = cw_parent.slug || '-lxx'
-		WHERE wd.work_id = ? AND wd.normalized = ?
-		GROUP BY COALESCE(cw_parent.id, cw.id)
-		ORDER BY COALESCE(cw_parent.id, cw.id)
-	`;
-	return query<BookFrequency>(sql, [workId, cleanLemma]);
+	return [];
 }
 
 /**
  * Retrieve sample concordance occurrences containing a specific lemma or Strong's ID.
- * First queries the pre-indexed concordance_refs table for instant 1-request response.
- * Falls back to dynamic query across words if not present.
  */
 export async function getConcordance(
 	workId: number,
@@ -696,13 +950,14 @@ export async function getConcordance(
 	strongs?: string
 ): Promise<ConcordanceOccurrence[]> {
 	if (!workId) return [];
+	const corpusId = workIdToCorpusId(workId);
 
 	const hasLimit = typeof limit === 'number' && limit > 0;
 	const limitSql = hasLimit ? `LIMIT ?` : '';
 	const limitParams = hasLimit ? [limit] : [];
 
 	// 1. Try pre-indexed concordance_refs by strongs
-	if (strongs) {
+	if (strongs && strongs.trim()) {
 		const sNorm = strongs.trim().toUpperCase();
 		const sCode = sNorm.startsWith('H') || sNorm.startsWith('G')
 			? sNorm
@@ -711,69 +966,32 @@ export async function getConcordance(
 		const rows = await query<ConcordanceOccurrence>(`
 			SELECT ref_label, ref_label AS display_label, work_unit_id
 			FROM concordance_refs
-			WHERE work_id = ? AND strongs = ?
+			WHERE (corpus_id = ? OR work_id = ?) AND (strongs = ? OR strongs = ?)
 			ORDER BY work_unit_id
 			${limitSql}
-		`, [workId, sCode, ...limitParams]);
+		`, [corpusId, workId, sCode, sNorm, ...limitParams]);
 
 		if (rows.length > 0) return rows;
 	}
 
-	// 2. Try pre-indexed concordance_refs by lemma
+	// 2. Try pre-indexed concordance_refs by lemma or pseudo-strongs
 	if (lemma && lemma.trim()) {
 		const cleanLemma = lemma.trim();
+		const cleanNFC = cleanLemma.normalize('NFC');
 		const pseudoStrongs = `WORD:${cleanLemma}`;
-		// Check if lemma matches in concordance_refs directly (by lemma or pseudo-strongs)
+
 		const rows = await query<ConcordanceOccurrence>(`
 			SELECT ref_label, ref_label AS display_label, work_unit_id
 			FROM concordance_refs
-			WHERE work_id = ? AND (lemma = ? OR strongs = ?)
+			WHERE (corpus_id = ? OR work_id = ?) AND (lemma = ? OR lemma = ? OR strongs = ?)
 			ORDER BY work_unit_id
 			${limitSql}
-		`, [workId, cleanLemma, pseudoStrongs, ...limitParams]);
+		`, [corpusId, workId, cleanLemma, cleanNFC, pseudoStrongs, ...limitParams]);
 
 		if (rows.length > 0) return rows;
-
-		// Check if we can find Strong's from lemma_stats
-		const stat = await queryOne<{ strongs: string }>(`
-			SELECT strongs FROM lemma_stats
-			WHERE work_id = ? AND lemma = ?
-			LIMIT 1
-		`, [workId, cleanLemma]);
-
-		if (stat?.strongs) {
-			const sRows = await query<ConcordanceOccurrence>(`
-				SELECT ref_label, ref_label AS display_label, work_unit_id
-				FROM concordance_refs
-				WHERE work_id = ? AND strongs = ?
-				ORDER BY work_unit_id
-				${limitSql}
-			`, [workId, stat.strongs, ...limitParams]);
-
-			if (sRows.length > 0) return sRows;
-		}
 	}
 
-	// 3. Fallback: dynamic query across words table using indexed normalized column
-	const cleanLemma = lemma?.trim() || '';
-	if (!cleanLemma) return [];
-	const sql = `
-		SELECT 
-			wu.id AS work_unit_id,
-			cr.display_label,
-			cr.sbl_citation AS ref_label,
-			wu.label AS verse_label,
-			wu.body,
-			wd.surface,
-			wd.position
-		FROM words wd
-		JOIN work_units wu ON wd.work_unit_id = wu.id
-		JOIN canonical_refs cr ON wu.canonical_ref_id = cr.id
-		WHERE wd.work_id = ? AND wd.normalized = ?
-		ORDER BY cr.ord
-		${limitSql}
-	`;
-	return query<ConcordanceOccurrence>(sql, [workId, cleanLemma, ...limitParams]);
+	return [];
 }
 
 /**
@@ -781,6 +999,14 @@ export async function getConcordance(
  */
 export async function getVerseText(workUnitId: number): Promise<string | null> {
 	if (!workUnitId) return null;
+	try {
+		const row = await queryOne<{ text_content: string }>(
+			'SELECT text_content FROM text_units WHERE id = ? LIMIT 1',
+			[workUnitId]
+		);
+		if (row) return row.text_content;
+	} catch (e) {}
+
 	const row = await queryOne<{ body: string }>(
 		'SELECT body FROM work_units WHERE id = ? LIMIT 1',
 		[workUnitId]
@@ -811,14 +1037,6 @@ export function normalizeGreek(str: string): string {
 
 /**
  * Retrieve unabridged lexicon entry (BDB or LSJ).
- * For BDB:
- * 1. Prioritizes Strong's ID (e.g. 'H7225' or '7225')
- * 2. Direct lookup of headword field (with pointing/vowels)
- * 3. Strips vowels/diacritics and looks up with key field (consonants only)
- *
- * For LSJ:
- * 1. Prioritizes Strong's ID (e.g. 'G4160') if available
- * 2. Looks up normalized Greek key, headword, or lsj_index
  */
 export async function getLexiconEntry(
 	dictionary: 'bdb' | 'lsj',
@@ -840,12 +1058,12 @@ export async function getLexiconEntry(
 		if (sId) {
 			const sCode = sId.toUpperCase().startsWith('H') ? sId.toUpperCase() : `H${sId}`;
 
-			// 1a. Prioritize matching BOTH strongs AND key/headword (prevents cross-reference collisions)
+			// 1a. Prioritize matching BOTH strongs AND key/headword
 			if (trimmedKey || cleanKey) {
 				const exactBoth = await query<LexiconEntryRow>(
-					`SELECT id, dictionary, key, headword, strongs, lsj_index, match_type, definition
+					`SELECT id, dictionary, consonant_key AS key, lemma AS headword, strongs_id AS strongs, definition
 					 FROM lexicon_entries
-					 WHERE dictionary = 'bdb' AND strongs = ? AND (headword = ? OR key = ? OR headword = ? OR key = ?)
+					 WHERE dictionary = 'bdb' AND strongs_id = ? AND (lemma = ? OR consonant_key = ? OR lemma = ? OR consonant_key = ?)
 					 LIMIT 1`,
 					[sCode, trimmedKey, trimmedKey, cleanKey, cleanKey]
 				);
@@ -854,32 +1072,32 @@ export async function getLexiconEntry(
 
 			// 1b. If no exact both match, query by strongs alone
 			const rows = await query<LexiconEntryRow>(
-				`SELECT id, dictionary, key, headword, strongs, lsj_index, match_type, definition
+				`SELECT id, dictionary, consonant_key AS key, lemma AS headword, strongs_id AS strongs, definition
 				 FROM lexicon_entries
-				 WHERE dictionary = 'bdb' AND strongs = ?
+				 WHERE dictionary = 'bdb' AND strongs_id = ?
 				 LIMIT 1`,
 				[sCode]
 			);
 			if (rows.length > 0) return rows[0];
 		}
 
-		// 2. Direct lookup of headword field (with vowels/pointing)
+		// 2. Direct lookup of headword/lemma field
 		if (trimmedKey) {
 			const headwordRows = await query<LexiconEntryRow>(
-				`SELECT id, dictionary, key, headword, strongs, lsj_index, match_type, definition
+				`SELECT id, dictionary, consonant_key AS key, lemma AS headword, strongs_id AS strongs, definition
 				 FROM lexicon_entries
-				 WHERE dictionary = 'bdb' AND headword = ?
+				 WHERE dictionary = 'bdb' AND lemma = ?
 				 LIMIT 1`,
 				[trimmedKey]
 			);
 			if (headwordRows.length > 0) return headwordRows[0];
 
-			// 3. Strip vowels and lookup with key field (consonants only)
+			// 3. Consonants key lookup
 			if (cleanKey) {
 				const keyRows = await query<LexiconEntryRow>(
-					`SELECT id, dictionary, key, headword, strongs, lsj_index, match_type, definition
+					`SELECT id, dictionary, consonant_key AS key, lemma AS headword, strongs_id AS strongs, definition
 					 FROM lexicon_entries
-					 WHERE dictionary = 'bdb' AND key = ?
+					 WHERE dictionary = 'bdb' AND consonant_key = ?
 					 LIMIT 1`,
 					[cleanKey]
 				);
@@ -890,7 +1108,6 @@ export async function getLexiconEntry(
 	}
 
 	if (dict === 'lsj') {
-		// 1. Strong's ID if provided
 		let sId = strongs?.trim() || '';
 		if (!sId && key && /^G?\d+[a-z]?$/i.test(key.trim())) {
 			sId = key.trim();
@@ -898,24 +1115,23 @@ export async function getLexiconEntry(
 		if (sId) {
 			const sCode = sId.toUpperCase().startsWith('G') ? sId.toUpperCase() : `G${sId}`;
 			const rows = await query<LexiconEntryRow>(
-				`SELECT id, dictionary, key, headword, strongs, lsj_index, match_type, definition
+				`SELECT id, dictionary, consonant_key AS key, lemma AS headword, strongs_id AS strongs, definition
 				 FROM lexicon_entries
-				 WHERE dictionary = 'lsj' AND strongs = ?
+				 WHERE dictionary = 'lsj' AND strongs_id = ?
 				 LIMIT 1`,
 				[sCode]
 			);
 			if (rows.length > 0) return rows[0];
 		}
 
-		// 2. Normalized Greek key, headword, or lsj_index
 		if (key && key.trim()) {
 			const cleanKey = normalizeGreek(key);
 			const rows = await query<LexiconEntryRow>(
-				`SELECT id, dictionary, key, headword, strongs, lsj_index, match_type, definition
+				`SELECT id, dictionary, consonant_key AS key, lemma AS headword, strongs_id AS strongs, definition
 				 FROM lexicon_entries
-				 WHERE dictionary = 'lsj' AND (key = ? OR headword = ? OR lsj_index = ?)
+				 WHERE dictionary = 'lsj' AND (consonant_key = ? OR lemma = ?)
 				 LIMIT 1`,
-				[cleanKey, key.trim(), key.trim()]
+				[cleanKey, key.trim()]
 			);
 			if (rows.length > 0) return rows[0];
 		}
