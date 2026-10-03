@@ -102,7 +102,7 @@ onclick={() => readerState.closeAllPopups()}
 <div class="relative flex flex-col gap-1 max-w-full mx-auto {readerState.versionGrid[0].length==1 ?'lg:max-w-1/2':''}">
     {#if readerState.isLoading }
     <span class="inline self-center w-8 h-8 border-4 border-link border-t-transparent rounded-full animate-spin m-3"></span>
-    <p class="text-center text-ink-soft py-10">Loading Book and Chapter...</p>
+    <p class="text-center text-ink-soft py-10">{readerState.loadingMessage}</p>
     {:else}
     
     {#each readerState.verseKeys as v (v)}

@@ -175,7 +175,11 @@ gap-2 sm:gap-4 -mx-3 px-1 sm:-mx-4 sm:px-4 md:-mx-8 md:px-3">
         onclick={(e) => {  e.stopPropagation(); const prev = readerState.versionDropdownOpen; readerState.closeAllPopups(); readerState.versionDropdownOpen = !prev; }}
       >
         <span class="truncate">{readerState.selectedVersion}</span>
-        <span class="text-[10px] sm:text-xs text-ink-soft ml-0.5">▼</span>
+        {#if readerState.isLoading}
+          <span class="w-3 h-3 border-2 border-link border-t-transparent rounded-full animate-spin ml-0.5 shrink-0" aria-label="Loading"></span>
+        {:else}
+          <span class="text-[10px] sm:text-xs text-ink-soft ml-0.5">▼</span>
+        {/if}
       </button>
       
       {#if readerState.versionDropdownOpen}

@@ -252,4 +252,38 @@ describe('realign cell', ()=>{
         expect(rs.activeWord).toBeDefined();
         expect(rs.activeWord?.gloss).toBe('human, mankind');
     });
+
+    it('immediately activates selected version, closes dropdown, and sets loading state before async lookup resolves', async () => {
+        let resolveChapters: (val: any) => void;
+        let resolveVerses: (val: any) => void;
+        const pendingChapters = new Promise((resolve) => {
+            resolveChapters = resolve;
+        });
+        const pendingVerses = new Promise((resolve) => {
+            resolveVerses = resolve;
+        });
+
+        vi.spyOn(dbClient, 'getBookChapters').mockImplementation(() => pendingChapters as any);
+        vi.spyOn(dbClient, 'getChapterVerses').mockImplementation(() => pendingVerses as any);
+
+        const rs = new ReaderState();
+        rs.versionDropdownOpen = true;
+
+        // Kick off selectVersion without awaiting immediately
+        const selectPromise = rs.selectVersion('Vulgate');
+
+        // Immediately after invocation:
+        expect(rs.selectedVersion).toBe('Vulgate');
+        expect(rs.versionDropdownOpen).toBe(false);
+        expect(rs.isLoading).toBe(true);
+        expect(rs.loadingMessage).toBe('Loading Vulgate...');
+
+        // Now resolve the async calls
+        resolveChapters!([1, 2]);
+        resolveVerses!([]);
+        await selectPromise;
+
+        expect(rs.isLoading).toBe(false);
+        expect(rs.loadingMessage).toBe('Loading Book and Chapter...');
+    });
 });

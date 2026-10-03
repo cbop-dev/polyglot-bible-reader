@@ -46,6 +46,7 @@ export class ReaderState {
 	chapterVerseKeys = $state<string[]>([]);
 	bookChapters = $state<number[]>([]);
 	isLoading = $state<boolean>(false);
+	loadingMessage = $state<string>('Loading Book and Chapter...');
 	private _loadSeq = 0;
 	meditationMode=$state<boolean>(false); //like "Zen" mode, but better
 	showGridHeader=$derived(this.gridHeaderExpanded && !this.meditationMode);
@@ -199,6 +200,7 @@ export class ReaderState {
 					this.realignAll();
 				}
 				this.isLoading = false;
+				this.loadingMessage = 'Loading Book and Chapter...';
 			}
 		}
 	}
@@ -470,65 +472,80 @@ export class ReaderState {
 		const prevBook = this.selectedBook;
 		const prevChapter = this.selectedChapter;
 
-		const books = getVersionBooks(matchingVersion);
-		const currentCh = parseInt(prevChapter, 10) || 1;
-
-		let resolvedBook = '';
-		let resolvedChapter = prevChapter;
-
-		// 1. Attempt reference translation directly via SQLite text_units
-		try {
-			const translated = await translateReference(prevBook, currentCh, 1, oldVersion, matchingVersion);
-			if (translated?.book) {
-				const match = books.find((b) => b.toLowerCase() === translated.book.toLowerCase());
-				if (match) {
-					resolvedBook = match;
-					resolvedChapter = String(translated.chapter);
-				}
-			}
-		} catch (e) {
-			console.warn('[ReaderState] Reference translation error:', e);
-		}
-
-		// 2. Fallback: check naming map for current book in target version (e.g. Qoh -> Eccl)
-		if (!resolvedBook) {
-			const mapped = getBookForVersion(prevBook, matchingVersion);
-			if (mapped) {
-				const match = books.find((b) => b.toLowerCase() === mapped.toLowerCase());
-				if (match) {
-					resolvedBook = match;
-				}
-			}
-		}
-
-		// 3. Fallback: check if the current book name itself exists in target version
-		if (!resolvedBook) {
-			const match = books.find((b) => b.toLowerCase() === prevBook.toLowerCase());
-			if (match) {
-				resolvedBook = match;
-			}
-		}
-
-		// 4. Final fallback: book does not exist in target version (e.g. OT book -> OpenGNT),
-		// so switch to the first available book in target version
-		if (!resolvedBook) {
-			resolvedBook = books[0] || 'Gen';
-			resolvedChapter = '1';
-			mylog(`selectVersion(${version}): book '${prevBook}' not available in ${matchingVersion}, defaulting to '${resolvedBook}'`, true);
-		}
-
-		// Update state atomically after resolution
+		// Immediately update the Version button and close the dropdown
 		this.selectedVersion = matchingVersion;
 		this.versionDropdownOpen = false;
-		this.ensureVisibleContainsSelectedVersion();
-		this.ensureVisibleCompatibleWithSelectedVersion(false);
-		this.selectedBook = resolvedBook;
-		this.selectedChapter = resolvedChapter;
+		if (reload) {
+			this.isLoading = true;
+			this.loadingMessage = `Loading ${matchingVersion}...`;
+		}
 
-		if (realign) this.realignAll();
-		if (reload) await this.loadCurrentChapter();
+		// Yield to event loop to allow immediate UI paint before background DB queries
+		await new Promise((resolve) => setTimeout(resolve, 0));
 
-		return true;
+		try {
+			const books = getVersionBooks(matchingVersion);
+			const currentCh = parseInt(prevChapter, 10) || 1;
+
+			let resolvedBook = '';
+			let resolvedChapter = prevChapter;
+
+			// 1. Attempt reference translation directly via SQLite text_units
+			try {
+				const translated = await translateReference(prevBook, currentCh, 1, oldVersion, matchingVersion);
+				if (translated?.book) {
+					const match = books.find((b) => b.toLowerCase() === translated.book.toLowerCase());
+					if (match) {
+						resolvedBook = match;
+						resolvedChapter = String(translated.chapter);
+					}
+				}
+			} catch (e) {
+				console.warn('[ReaderState] Reference translation error:', e);
+			}
+
+			// 2. Fallback: check naming map for current book in target version (e.g. Qoh -> Eccl)
+			if (!resolvedBook) {
+				const mapped = getBookForVersion(prevBook, matchingVersion);
+				if (mapped) {
+					const match = books.find((b) => b.toLowerCase() === mapped.toLowerCase());
+					if (match) {
+						resolvedBook = match;
+					}
+				}
+			}
+
+			// 3. Fallback: check if the current book name itself exists in target version
+			if (!resolvedBook) {
+				const match = books.find((b) => b.toLowerCase() === prevBook.toLowerCase());
+				if (match) {
+					resolvedBook = match;
+				}
+			}
+
+			// 4. Final fallback: book does not exist in target version (e.g. OT book -> OpenGNT),
+			// so switch to the first available book in target version
+			if (!resolvedBook) {
+				resolvedBook = books[0] || 'Gen';
+				resolvedChapter = '1';
+				mylog(`selectVersion(${version}): book '${prevBook}' not available in ${matchingVersion}, defaulting to '${resolvedBook}'`, true);
+			}
+
+			this.ensureVisibleContainsSelectedVersion();
+			this.ensureVisibleCompatibleWithSelectedVersion(false);
+			this.selectedBook = resolvedBook;
+			this.selectedChapter = resolvedChapter;
+
+			if (realign) this.realignAll();
+			if (reload) await this.loadCurrentChapter();
+
+			return true;
+		} finally {
+			if (!reload && this.isLoading) {
+				this.isLoading = false;
+				this.loadingMessage = 'Loading Book and Chapter...';
+			}
+		}
 	}
 
 	async selectBook(book: string, reload=true): Promise<boolean> {
@@ -540,6 +557,10 @@ export class ReaderState {
 			this.selectedBook = book;
 			this.selectedChapter = '1';
 			this.bookDropdownOpen = false;
+			if (reload) {
+				this.isLoading = true;
+				this.loadingMessage = `Loading ${book} 1...`;
+			}
 			ret = true;
 			if (reload) await this.loadCurrentChapter();
 		}
@@ -554,8 +575,12 @@ export class ReaderState {
 	async selectChapter(chapter: string, reload=true): Promise<boolean> {
 		let ret = false;
 		this.selectedChapter = chapter;
-		ret = true;
 		this.chapterDropdownOpen = false;
+		if (reload) {
+			this.isLoading = true;
+			this.loadingMessage = `Loading ${this.selectedBook} ${chapter}...`;
+		}
+		ret = true;
 		if (reload) await this.loadCurrentChapter();
 		return ret;
 	}
