@@ -187,14 +187,7 @@
 			const bookPart = parts.slice(0, -1).join(' ');
 			const cvPart = parts[parts.length - 1];
 			const [ch, v] = cvPart.split(':');
-			readerState.closeAllPopups();
-			readerState.selectBook(bookPart);
-			if (ch) readerState.selectChapter(ch);
-			if (v) {
-				setTimeout(() => {
-					readerState.scrollToVerse(v);
-				}, 200);
-			}
+			readerState.navigateToReference(bookPart, ch || '1', v);
 		}
 	}
 

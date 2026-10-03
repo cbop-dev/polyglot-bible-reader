@@ -286,4 +286,40 @@ describe('realign cell', ()=>{
         expect(rs.isLoading).toBe(false);
         expect(rs.loadingMessage).toBe('Loading Book and Chapter...');
     });
+
+    it('normalizes book identifiers in selectBook (e.g. 2PE -> 2_Pet in OpenGNT)', async () => {
+        const rs = new ReaderState();
+        await rs.selectVersion('OpenGNT', false);
+
+        // USFM code '2PE'
+        const ok1 = await rs.selectBook('2PE', false);
+        expect(ok1).toBe(true);
+        expect(rs.selectedBook).toBe('2_Pet');
+
+        // Full title '2 Peter'
+        const ok2 = await rs.selectBook('2 Peter', false);
+        expect(ok2).toBe(true);
+        expect(rs.selectedBook).toBe('2_Pet');
+
+        // Version-specific book naming: ECC -> Qoh in BHS vs Eccl in KJV
+        await rs.selectVersion('BHS', false);
+        const okBhs = await rs.selectBook('ECC', false);
+        expect(okBhs).toBe(true);
+        expect(rs.selectedBook).toBe('Qoh');
+
+        await rs.selectVersion('KJV', false);
+        const okKjv = await rs.selectBook('ECC', false);
+        expect(okKjv).toBe(true);
+        expect(rs.selectedBook).toBe('Eccl');
+    });
+
+    it('smoothly navigates to reference using navigateToReference without double-loading', async () => {
+        const rs = new ReaderState();
+        await rs.selectVersion('OpenGNT', false);
+
+        const ok = await rs.navigateToReference('2PE', '2', '15');
+        expect(ok).toBe(true);
+        expect(rs.selectedBook).toBe('2_Pet');
+        expect(rs.selectedChapter).toBe('2');
+    });
 });

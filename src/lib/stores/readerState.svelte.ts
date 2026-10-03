@@ -1,6 +1,6 @@
 import { getVersionBooks, myDataSets } from '$lib/config/versions';
 import { mylog } from '$lib/lemma-ui/env/env';
-import { getBookForVersion } from '$lib/config/bookMapping.js';
+import { getBookForVersion, normalizeBookName, formatBookAbbreviation } from '$lib/config/bookMapping.js';
 import type { HebrewDiacriticMode } from '$lib/utils/diacritics';
 import { loadChapterFromDb, loadChaptersForBook } from '$lib/services/bibleDataLoader';
 //import { availableBibles } from '$lib/services/bible-datasets';
@@ -137,7 +137,7 @@ export class ReaderState {
 		return {
 			exists: false,
 			omitted: true,
-			label: `${getBookForVersion(this.selectedBook,this.selectedVersion)} ${this.selectedChapter}:${verseKey}`,
+			label: `${formatBookAbbreviation(getBookForVersion(this.selectedBook, this.selectedVersion))} ${this.selectedChapter}:${verseKey}`,
 			isDivergent: false,
 			verseData: undefined
 		};
@@ -196,7 +196,7 @@ export class ReaderState {
 		} finally {
 			if (seq === this._loadSeq) {
 				if(realign){
-					mylog("loadCurrentChapter: realigning!", true);
+//					mylog("loadCurrentChapter: realigning!", true);
 					this.realignAll();
 				}
 				this.isLoading = false;
@@ -265,7 +265,7 @@ export class ReaderState {
 			this.versionGrid=newGrid;
 			changed = true;
 			if(fixAlignment) {
-				mylog(`realigning!`, true);
+//				mylog(`realigning!`, true);
 				this.realignAll();
 			}
 			if (reload)
@@ -328,7 +328,7 @@ export class ReaderState {
 				
 			} 
 			else{
-				mylog(`found alignment for ${rIdx}, ${cIdx}, but not version!`, true);
+//				mylog(`found alignment for ${rIdx}, ${cIdx}, but not version!`, true);
 			}
 		
 		}
@@ -460,14 +460,14 @@ export class ReaderState {
 	 * @returns {Promise<boolean>} true if a valid version was given and selectedVersion was changed.
 	 */
 	async selectVersion(version: string, reload = true, realign = true): Promise<boolean> {
-		mylog(`selectVersion(${version})`, true);
+//		mylog(`selectVersion(${version})`, true);
 		const matchingVersion = getCorrectVersionName(version);
 		if (!matchingVersion) {
-			mylog(`selectVersion(${version}): No matching version found`, true);
+//			mylog(`selectVersion(${version}): No matching version found`, true);
 			return false;
 		}
 
-		mylog(`selectVersion(${version}): matchingVersion found: ${matchingVersion}`, true);
+//		mylog(`selectVersion(${version}): matchingVersion found: ${matchingVersion}`, true);
 		const oldVersion = this.selectedVersion;
 		const prevBook = this.selectedBook;
 		const prevChapter = this.selectedChapter;
@@ -528,7 +528,7 @@ export class ReaderState {
 			if (!resolvedBook) {
 				resolvedBook = books[0] || 'Gen';
 				resolvedChapter = '1';
-				mylog(`selectVersion(${version}): book '${prevBook}' not available in ${matchingVersion}, defaulting to '${resolvedBook}'`, true);
+//				mylog(`selectVersion(${version}): book '${prevBook}' not available in ${matchingVersion}, defaulting to '${resolvedBook}'`, true);
 			}
 
 			this.ensureVisibleContainsSelectedVersion();
@@ -549,27 +549,64 @@ export class ReaderState {
 	}
 
 	async selectBook(book: string, reload=true): Promise<boolean> {
-		mylog(`Trying to select book ${book} in version ${this.selectedVersion}...`, true);
+//		mylog(`Trying to select book ${book} in version ${this.selectedVersion}...`, true);
 		let ret = false;
-		const validBook = getVersionBooks(this.selectedVersion).find((b)=>b.toLocaleLowerCase()==book.trim().toLocaleLowerCase()) ? true : false;
-//		mylog(`found book '${book}' in version '${this.selectedVersion}!  Version books=[${getVersionBooks(this.selectedVersion).join(',')}]`, true);
-		if (validBook){	
-			this.selectedBook = book;
+		const books = getVersionBooks(this.selectedVersion);
+		if (!books || books.length === 0) return false;
+
+		// 1. Direct match in version books (case-insensitive)
+		let matchedBook = books.find((b) => b.toLocaleLowerCase() === book.trim().toLocaleLowerCase());
+
+		// 2. Resolve version-specific book abbreviation (e.g. '2PE' -> '2_Pet', 'ECC' -> 'Qoh')
+		if (!matchedBook) {
+			const versionMapped = getBookForVersion(book, this.selectedVersion);
+			if (versionMapped) {
+				matchedBook = books.find((b) => b.toLocaleLowerCase() === versionMapped.toLocaleLowerCase());
+			}
+		}
+
+		// 3. Fallback: match by canonical code
+		if (!matchedBook) {
+			const canon = normalizeBookName(book);
+			if (canon) {
+				matchedBook = books.find((b) => {
+					const bCanon = normalizeBookName(b);
+					return bCanon && bCanon.code === canon.code;
+				});
+			}
+		}
+
+		if (matchedBook) {
+			this.selectedBook = matchedBook;
 			this.selectedChapter = '1';
 			this.bookDropdownOpen = false;
 			if (reload) {
 				this.isLoading = true;
-				this.loadingMessage = `Loading ${book} 1...`;
+				this.loadingMessage = `Loading ${matchedBook} 1...`;
 			}
 			ret = true;
 			if (reload) await this.loadCurrentChapter();
-		}
-		else{
-//			mylog(`Did NOT find book '${book}' in version '${this.selectedVersion}! Version books=[${getVersionBooks(this.selectedVersion).join(',')}]`, true);
+		} else {
+//			mylog(`Did NOT find book '${book}' in version '${this.selectedVersion}! Version books=[${books.join(',')}]`, true);
 		}
 		if (!ret) mylog(`Did not successfully select the book ${book}!`, true);
 		return ret;
 	}
+
+	async navigateToReference(book: string, chapter: string, verse?: string): Promise<boolean> {
+		this.closeAllPopups();
+		const bookSelected = await this.selectBook(book, false);
+		if (!bookSelected) return false;
+
+		const chSelected = await this.selectChapter(chapter, true);
+		if (verse) {
+			setTimeout(() => {
+				this.scrollToVerse(verse);
+			}, 200);
+		}
+		return chSelected;
+	}
+
 
 	
 	async selectChapter(chapter: string, reload=true): Promise<boolean> {
@@ -578,7 +615,7 @@ export class ReaderState {
 		this.chapterDropdownOpen = false;
 		if (reload) {
 			this.isLoading = true;
-			this.loadingMessage = `Loading ${this.selectedBook} ${chapter}...`;
+			this.loadingMessage = `Loading ${formatBookAbbreviation(this.selectedBook)} ${chapter}...`;
 		}
 		ret = true;
 		if (reload) await this.loadCurrentChapter();

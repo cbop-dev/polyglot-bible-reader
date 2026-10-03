@@ -90,6 +90,12 @@ VERSION_BOOKS = {
     "4MA": {
         "LXX": "4Mac", "Brenton": "4Mac"
     },
+    "EZR": {
+        "LXX": "2Esdr",
+    },
+    "NEH": {
+        "LXX": "2Esdr",
+    },
 }
 
 # Slugs mapping
@@ -213,6 +219,48 @@ def generate_typescript():
         ORDER BY order_index, code
     """)
     rows = cur.fetchall()
+
+    corpus_to_version = {
+        "wlc": "BHS",
+        "swete_lxx": "LXX",
+        "ognt": "OpenGNT",
+        "kjv": "KJV",
+        "vulgate": "Vulgate",
+        "webbe": "WEB",
+        "brenton-lxx": "Brenton",
+    }
+
+    version_available_books = {}
+    for cid, ver in corpus_to_version.items():
+        cur.execute("""
+            SELECT tu.std_book, cb.order_index
+            FROM text_units tu
+            JOIN canonical_books cb ON tu.std_book = cb.code
+            WHERE tu.corpus_id = ?
+            GROUP BY tu.std_book, cb.order_index
+            ORDER BY cb.order_index
+        """, (cid,))
+        rows_ver = cur.fetchall()
+
+        books_for_ver = []
+        for std_code, order_idx in rows_ver:
+            if ver == "LXX" and std_code == "TOB":
+                if "TobBA" not in books_for_ver:
+                    books_for_ver.append("TobBA")
+                if "TobS" not in books_for_ver:
+                    books_for_ver.append("TobS")
+                continue
+            if ver == "LXX" and std_code in ("EZR", "NEH"):
+                if "2Esdr" not in books_for_ver:
+                    books_for_ver.append("2Esdr")
+                continue
+
+            abbrev = VERSION_BOOKS.get(std_code, {}).get(ver, STANDARD_ABBREVS.get(std_code, std_code))
+            if abbrev not in books_for_ver:
+                books_for_ver.append(abbrev)
+
+        version_available_books[ver] = books_for_ver
+
     conn.close()
 
     if len(rows) == 0:
@@ -279,6 +327,8 @@ def generate_typescript():
         "}",
         "",
         "export const CANONICAL_BOOK_DEFINITIONS: CanonicalBook[] = " + json.dumps(books_data, indent=2) + ";",
+        "",
+        "export const VERSION_AVAILABLE_BOOKS: Record<string, string[]> = " + json.dumps(version_available_books, indent=2) + ";",
         "",
         "/**",
         " * Normalizes any string to a clean alphanumeric key for fast lookup.",

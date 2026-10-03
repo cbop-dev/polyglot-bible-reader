@@ -6,6 +6,7 @@
     import { jumpToDiv } from "$lib/utils/ui-utils";
     import { getVerseText } from "$lib/services/dbClient";
     import { readerState } from "$lib/stores/readerState.svelte";
+    import { formatDisplayReference, formatBookAbbreviation } from "$lib/config/bookMapping.js";
 
     let {
         title = '',
@@ -24,15 +25,19 @@
 
     // Normalize input into unified list of { ref: string, workUnitId: number }
     let normalizedOccurrences = $derived.by(() => {
+        const activeVer = readerState.selectedVersion;
         if (occurrences && occurrences.length > 0) {
-            return occurrences.map((occ, idx) => ({
-                ref: occ.ref_label || occ.display_label || (refs && refs[idx]) || '',
-                workUnitId: occ.work_unit_id || (sectionIDs && sectionIDs[idx]) || 0
-            }));
+            return occurrences.map((occ, idx) => {
+                const rawRef = occ.display_label || occ.ref_label || (refs && refs[idx]) || '';
+                return {
+                    ref: formatDisplayReference(rawRef, activeVer),
+                    workUnitId: occ.work_unit_id || (sectionIDs && sectionIDs[idx]) || 0
+                };
+            });
         }
         if (refs && refs.length > 0) {
             return refs.map((ref, idx) => ({
-                ref,
+                ref: formatDisplayReference(ref, activeVer),
                 workUnitId: (sectionIDs && sectionIDs[idx]) || 0
             }));
         }
@@ -85,7 +90,7 @@
         if (!bcv) return '';
         let ret = (bcv.chap || '1') + ":" + (bcv.v || '1');
         if (!omitBook) {
-            ret = (bcv.book ? bcv.book.replaceAll(" ", "") + " " : '') + ret;
+            ret = (bcv.book ? formatBookAbbreviation(bcv.book) + " " : '') + ret;
         }
         return ret;
     }
@@ -104,7 +109,7 @@
         }
     }
 
-    function navigateToOccurrence(displayLabel) {
+    async function navigateToOccurrence(displayLabel: string) {
         if (!displayLabel) return;
         const parts = displayLabel.trim().split(' ');
         if (parts.length >= 2) {
@@ -112,14 +117,7 @@
             const cvPart = parts[parts.length - 1];
             const [ch, v] = cvPart.split(':');
             showText = false;
-            readerState.closeAllPopups();
-            readerState.selectBook(bookPart);
-            if (ch) readerState.selectChapter(ch);
-            if (v) {
-                setTimeout(() => {
-                    readerState.scrollToVerse(v);
-                }, 200);
-            }
+            await readerState.navigateToReference(bookPart, ch || '1', v);
         }
     }
 </script>
@@ -146,7 +144,7 @@
                 class="book-jump-btn"
                 onclick={() => jumpToDiv(book.replaceAll(" ", "_"))}
             >
-                {book}
+                {formatBookAbbreviation(book)}
             </button>
         {/each}
     </div>
@@ -155,13 +153,13 @@
 <div class="w-full">
 {#each groupedBookEntries as { book, bookRefs, combinedRefs }}
     <div id={book.replaceAll(" ","_")} class="relative bg-rule/30 text-ink font-bold px-3 py-1.5 rounded-lg my-2 flex items-center justify-center border border-rule/50">
-        <span class="text-center font-bold tracking-wide">{book}</span>
+        <span class="text-center font-bold tracking-wide">{formatBookAbbreviation(book)}</span>
         <div class="absolute right-2 flex items-center gap-1.5">
             <a href="#refs-top" onclick={()=>jumpToDiv("refs-top")} class="text-ink/70 hover:text-ink transition-colors p-1" title="Jump to top"><ArrowUp width={15} height={15}/></a>
             <CopyText copyText={combinedRefs}
                 btnSizeCssClass="btn-xs font-bold"
                 btnCssClass="bg-page hover:bg-rule text-ink border border-rule" 
-                tooltip="Copy {book} references"
+                tooltip="Copy {formatBookAbbreviation(book)} references"
                 width={15}
                 height={15}
             />

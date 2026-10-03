@@ -7,6 +7,7 @@
   import prayerOutlineSvg from '$lib/assets/prayer-outline.svg';
   import VersionButton from '$lib/components/ui/VersionButton.svelte';
   import { versionGroups, formatVersionLabel,getVersionLanguage } from '$lib/config/versions';
+  import { formatBookAbbreviation } from '$lib/config/bookMapping.js';
   import { readerState } from '$lib/stores/readerState.svelte';
   //import gridIcon from '$env/static/public'
   import { expandRefs } from '$lib/utils/bible-utils';
@@ -103,7 +104,7 @@ gap-2 sm:gap-4 -mx-3 px-1 sm:-mx-4 sm:px-4 md:-mx-8 md:px-3">
 
 <!-- show book / chapter in meditation mode-->
 {#if readerState.meditationMode}
-<div class="absolute right-1"><h2 class="inline block text-md/1 sm:text-lg/1 leading-0 font-bold ">{readerState.selectedBook} {readerState.selectedChapter}</h2>
+<div class="absolute right-1"><h2 class="inline block text-md/1 sm:text-lg/1 leading-0 font-bold ">{formatBookAbbreviation(readerState.selectedBook)} {readerState.selectedChapter}</h2>
   {#if size.current!='base'} <br class="leading-0"/><span class="text-xs leading-0">({readerState.visibleVersions.join('/') })</span>{/if}
 </div>
 {/if}
@@ -224,7 +225,7 @@ gap-2 sm:gap-4 -mx-3 px-1 sm:-mx-4 sm:px-4 md:-mx-8 md:px-3">
         class="border border-rule rounded p-1 sm:p-2 w-[4.5rem] sm:w-28 lg:w-32 text-xs sm:text-sm text-left bg-page flex justify-between items-center shadow-xs sm:shadow-sm cursor-pointer"
         onclick={(e) => { e.stopPropagation(); const prev = readerState.bookDropdownOpen; readerState.closeAllPopups(); readerState.bookDropdownOpen = !prev; }}
       >
-        <span class="truncate">{readerState.selectedBook}</span>
+        <span class="truncate">{formatBookAbbreviation(readerState.selectedBook)}</span>
         <span class="text-[10px] sm:text-xs text-ink-soft ml-0.5">▼</span>
       </button>
       
@@ -238,7 +239,7 @@ gap-2 sm:gap-4 -mx-3 px-1 sm:-mx-4 sm:px-4 md:-mx-8 md:px-3">
                   class="p-2 text-center text-sm rounded hover:bg-rule cursor-pointer {book === readerState.selectedBook ? 'bg-blue-500 text-white hover:bg-blue-600' : 'bg-page border'}"
                   onclick={() => readerState.selectBook(book)}
                 >
-                  {book}
+                  {formatBookAbbreviation(book)}
                 </button>
               {/each}
             </div>
@@ -263,7 +264,7 @@ gap-2 sm:gap-4 -mx-3 px-1 sm:-mx-4 sm:px-4 md:-mx-8 md:px-3">
       {#if readerState.chapterDropdownOpen}
         <div class="fixed inset-0 bg-black/20 z-40 flex items-center justify-center p-4" onclick={() => readerState.chapterDropdownOpen = false}>
           <div class="bg-page border border-rule rounded-lg shadow-xl p-4 z-50 max-h-[80vh] overflow-y-auto w-full max-w-lg" onclick={(e) => e.stopPropagation()}>
-            <h3 class="font-bold mb-4 text-lg border-b border-rule pb-2">{readerState.selectedBook} - Select Chapter</h3>
+            <h3 class="font-bold mb-4 text-lg border-b border-rule pb-2">{formatBookAbbreviation(readerState.selectedBook)} - Select Chapter</h3>
             <div class="grid grid-cols-5 md:grid-cols-8 gap-2">
               {#each readerState.availableChapters as ch}
                 <button 
@@ -295,7 +296,7 @@ gap-2 sm:gap-4 -mx-3 px-1 sm:-mx-4 sm:px-4 md:-mx-8 md:px-3">
       {#if readerState.verseDropdownOpen}
         <div class="fixed inset-0 bg-black/20 z-40 flex items-center justify-center p-4" onclick={() => readerState.verseDropdownOpen = false}>
           <div class="bg-page border border-rule rounded-lg shadow-xl p-4 z-50 max-h-[80vh] overflow-y-auto w-full max-w-lg" onclick={(e) => e.stopPropagation()}>
-            <h3 class="font-bold mb-4 text-lg border-b border-rule pb-2">{readerState.selectedBook} {readerState.selectedChapter} - Select Verse</h3>
+            <h3 class="font-bold mb-4 text-lg border-b border-rule pb-2">{formatBookAbbreviation(readerState.selectedBook)} {readerState.selectedChapter} - Select Verse</h3>
             <div class="grid grid-cols-5 md:grid-cols-8 gap-2">
               {#each readerState.verseKeys as v}
                 <button 

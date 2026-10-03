@@ -1,6 +1,6 @@
 import { getDbWorker } from './dbWorker';
 import { mylog } from '$lib/lemma-ui/env/env';
-import { normalizeBookName } from '$lib/config/bookMapping.js';
+import { normalizeBookName, getBookForVersion, formatDisplayReference, formatBookAbbreviation } from '$lib/config/bookMapping.js';
 
 export interface WorkRow {
 	id: number;
@@ -614,7 +614,7 @@ export async function getChapterVerses(
 					version: versionAcronym,
 					work_unit_id: row.work_unit_id,
 					verse_label: nativeLabel,
-					native_citation: row.verse_label || (row.native_book ? `${row.native_book} ${nativeLabel}` : nativeLabel),
+					native_citation: formatDisplayReference(row.verse_label || (row.native_book ? `${row.native_book} ${nativeLabel}` : nativeLabel), versionAcronym),
 					body: row.body,
 					words
 				});
@@ -867,6 +867,20 @@ export async function getWordFrequencyByBook(
 	if (!workId) return [];
 	const corpusId = workIdToCorpusId(workId);
 
+	const formatItems = (items: BookFrequency[]): BookFrequency[] => {
+		const ver = SLUG_TO_VERSION[corpusId] || corpusId;
+		return items.map((f) => {
+			const bCode = f.sbl_abbreviation || f.title;
+			const canon = normalizeBookName(bCode);
+			const abbrev = formatBookAbbreviation(getBookForVersion(bCode, ver));
+			return {
+				...f,
+				title: canon?.title || f.title,
+				sbl_abbreviation: abbrev || formatBookAbbreviation(f.sbl_abbreviation)
+			};
+		});
+	};
+
 	// 1. Check pre-computed lemma_stats by strongs first
 	if (strongs && strongs.trim()) {
 		const sNorm = strongs.trim().toUpperCase();
@@ -883,7 +897,7 @@ export async function getWordFrequencyByBook(
 
 		if (statRow?.book_counts_json) {
 			try {
-				return JSON.parse(statRow.book_counts_json);
+				return formatItems(JSON.parse(statRow.book_counts_json));
 			} catch {}
 		}
 	}
@@ -902,7 +916,7 @@ export async function getWordFrequencyByBook(
 
 		if (statRow?.book_counts_json) {
 			try {
-				return JSON.parse(statRow.book_counts_json);
+				return formatItems(JSON.parse(statRow.book_counts_json));
 			} catch {}
 		}
 	}
@@ -924,13 +938,14 @@ export async function getWordFrequencyByBook(
 						bookMap.set(bAbbrev, { title: bAbbrev, count: 1 });
 					}
 				}
-				return Array.from(bookMap.entries())
+				const items = Array.from(bookMap.entries())
 					.map(([bCode, val]) => ({
 						title: val.title,
 						sbl_abbreviation: bCode,
 						count: val.count
 					}))
 					.sort((a, b) => b.count - a.count);
+				return formatItems(items);
 			}
 		} catch (e) {
 			console.warn('[dbClient] Fallback concordance aggregation error:', e);
@@ -951,6 +966,7 @@ export async function getConcordance(
 ): Promise<ConcordanceOccurrence[]> {
 	if (!workId) return [];
 	const corpusId = workIdToCorpusId(workId);
+	const ver = SLUG_TO_VERSION[corpusId] || corpusId;
 
 	const hasLimit = typeof limit === 'number' && limit > 0;
 	const limitSql = hasLimit ? `LIMIT ?` : '';
@@ -971,7 +987,12 @@ export async function getConcordance(
 			${limitSql}
 		`, [corpusId, workId, sCode, sNorm, ...limitParams]);
 
-		if (rows.length > 0) return rows;
+		if (rows.length > 0) {
+			return rows.map((r) => ({
+				...r,
+				display_label: formatDisplayReference(r.ref_label, ver)
+			}));
+		}
 	}
 
 	// 2. Try pre-indexed concordance_refs by lemma or pseudo-strongs
@@ -988,7 +1009,12 @@ export async function getConcordance(
 			${limitSql}
 		`, [corpusId, workId, cleanLemma, cleanNFC, pseudoStrongs, ...limitParams]);
 
-		if (rows.length > 0) return rows;
+		if (rows.length > 0) {
+			return rows.map((r) => ({
+				...r,
+				display_label: formatDisplayReference(r.ref_label, ver)
+			}));
+		}
 	}
 
 	return [];

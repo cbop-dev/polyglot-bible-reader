@@ -1,3 +1,4 @@
+import { CANONICAL_BOOK_DEFINITIONS,normalizeBookName } from "./canonicalBooks.generated";
 
 export const biblesByLanguage={
   english:['KJV', 'Brenton'],
@@ -137,78 +138,26 @@ export function formatVersionLabel(opt: string, short=false): string {
   
 }
 
-export const bhsBooks = [
-  'Gen', 'Exod', 'Lev', 'Num', 'Deut', 'Josh', 'Judg', 'Ruth', '1Sam', '2Sam', '1Kgs', '2Kgs',
-  '1Chr', '2Chr', 'Ezra', 'Neh', 'Esth', 'Job', 'Ps', 'Prov', 'Qoh', 'Cant', 'Isa', 'Jer',
-  'Lam', 'Ezek', 'Dan', 'Hos', 'Joel', 'Amos', 'Obad', 'Jonah', 'Mic', 'Nah', 'Hab', 'Zeph',
-  'Hag', 'Zech', 'Mal'
-];
+import { VERSION_AVAILABLE_BOOKS } from './canonicalBooks.generated.js';
 
-export const lxxBooks = [
-  'Gen', 'Exod', 'Lev', 'Num', 'Deut', 'Josh', 'Judg', 'Ruth', '1Sam', '2Sam', '1Kgs', '2Kgs',
-  '1Chr', '2Chr', '1Esdr', '2Esdr', 'Esth', 'Jdt', 'TobBA', 'TobS', '1Mac', '2Mac', '3Mac', '4Mac',
-  'Ps', 'Od', 'Prov', 'Qoh', 'Cant', 'Job', 'Wis', 'Sir', 'PsSol', 'Hos', 'Mic', 'Amos', 'Joel',
-  'Jonah', 'Obad', 'Nah', 'Hab', 'Zeph', 'Hag', 'Zech', 'Mal', 'Isa', 'Jer', 'Bar', 'EpJer',
-  'Lam', 'Ezek', 'Bel', 'BelTh', 'Dan', 'DanTh', 'Sus', 'SusTh'
-];
-
-export const ntBooks = [
-  'Matt', 'Mark', 'Luke', 'John', 'Acts', 'Rom', '1_Cor', '2_Cor', 'Gal', 'Eph', 'Phil', 'Col',
-  '1_Thess', '2_Thess', '1_Tim', '2_Tim', 'Titus', 'Phlm', 'Heb', 'Jas', '1_Pet', '2_Pet',
-  '1_John', '2_John', '3_John', 'Jude', 'Rev'
-];
-
-export const kjvBooks = [
-  'Gen', 'Exod', 'Lev', 'Num', 'Deut', 'Josh', 'Judg', 'Ruth', '1Sam', '2Sam', '1Kgs', '2Kgs',
-  '1Chr', '2Chr', 'Ezra', 'Neh', 'Esth', 'Job', 'Ps', 'Prov', 'Eccl', 'Song', 'Isa', 'Jer',
-  'Lam', 'Ezek', 'Dan', 'Hos', 'Joel', 'Amos', 'Obad', 'Jonah', 'Mic', 'Nah', 'Hab', 'Zeph',
-  'Hag', 'Zech', 'Mal', 'Matt', 'Mark', 'Luke', 'John', 'Acts', 'Rom', '1_Cor', '2_Cor', 'Gal',
-  'Eph', 'Phil', 'Col', '1_Thess', '2_Thess', '1_Tim', '2_Tim', 'Titus', 'Phlm', 'Heb', 'Jas',
-  '1_Pet', '2_Pet', '1_John', '2_John', '3_John', 'Jude', 'Rev', 'Tob', 'Jdt', 'Wis', 'Sus',
-  'Bel', '1Mac', '2Mac', '1Esdr', 'PrMan', '2Esdr', 'AddEsth', 'Sir', 'Bar', 'PrAzar'
-];
-
-export const vulgateBooks = [
-  'Gen', 'Exod', 'Lev', 'Num', 'Deut', 'Josh', 'Judg', 'Ruth', '1Sam', '2Sam', '1Kgs', '2Kgs',
-  '1Chr', '2Chr', 'Ezra', 'Neh', 'Esth', 'Job', 'Ps', 'Prov', 'Eccl', 'Song', 'Isa', 'Jer',
-  'Lam', 'Ezek', 'Dan', 'Hos', 'Joel', 'Amos', 'Obad', 'Jonah', 'Mic', 'Nah', 'Hab', 'Zeph',
-  'Hag', 'Zech', 'Mal', 'Matt', 'Mark', 'Luke', 'John', 'Acts', 'Rom', '1_Cor', '2_Cor', 'Gal',
-  'Eph', 'Phil', 'Col', '1_Thess', '2_Thess', '1_Tim', '2_Tim', 'Titus', 'Phlm', 'Heb', 'Jas',
-  '1_Pet', '2_Pet', '1_John', '2_John', '3_John', 'Jude', 'Tob', 'Jdt', 'Wis', 'Sir', 'Bar',
-  '1Mac', '2Mac'
-];
-
-export const webBooks = [
-  'Gen', 'Exod', 'Lev', 'Num', 'Deut', 'Josh', 'Judg', 'Ruth', '1Sam', '2Sam', '1Kgs', '2Kgs',
-  '1Chr', '2Chr', 'Ezra', 'Neh', 'Esth', 'Job', 'Ps', 'Prov', 'Eccl', 'Song', 'Isa', 'Jer',
-  'Lam', 'Ezek', 'Dan', 'Hos', 'Joel', 'Amos', 'Obad', 'Jonah', 'Mic', 'Nah', 'Hab', 'Zeph',
-  'Hag', 'Zech', 'Mal', 'Matt', 'Mark', 'Luke', 'John', 'Acts', 'Rom', '1_Cor', '2_Cor', 'Gal',
-  'Eph', 'Phil', 'Col', '1_Thess', '2_Thess', '1_Tim', '2_Tim', 'Titus', 'Phlm', 'Heb', 'Jas',
-  '1_Pet', '2_Pet', '1_John', '2_John', '3_John', 'Jude', 'Rev', 'Tob', 'Jdt', 'AddEsth',
-  'Wis', 'Sir', 'Bar', '1Mac', '2Mac', '1Esdr', '2Esdr', 'PrMan'
-];
-
-export const brentonBooks = [
-  'Gen', 'Exod', 'Lev', 'Num', 'Deut', 'Josh', 'Judg', 'Ruth', '1Sam', '2Sam', '1Kgs', '2Kgs',
-  '1Chr', '2Chr', 'Ezra', 'Neh', 'Ps', 'Prov', 'Eccl', 'Song', 'Job', 'Isa', 'Jer', 'Lam',
-  'Ezek', 'Dan', 'Hos', 'Joel', 'Amos', 'Obad', 'Jonah', 'Mic', 'Nah', 'Hab', 'Zeph', 'Hag',
-  'Zech', 'Mal', '1Esdr', '2Esdr', 'Tob', 'Jdt', 'AddEsth', 'Wis', 'Sir', 'Bar', 'EpJer',
-  'Sus', 'Bel', '1Mac', '2Mac', '3Mac', '4Mac', 'PrMan'
-];
+export const bhsBooks = VERSION_AVAILABLE_BOOKS['BHS'] || [];
+export const lxxBooks = VERSION_AVAILABLE_BOOKS['LXX'] || [];
+export const ntBooks = VERSION_AVAILABLE_BOOKS['OpenGNT'] || [];
+export const kjvBooks = VERSION_AVAILABLE_BOOKS['KJV'] || [];
+export const vulgateBooks = VERSION_AVAILABLE_BOOKS['Vulgate'] || [];
+export const webBooks = VERSION_AVAILABLE_BOOKS['WEB'] || [];
+export const brentonBooks = VERSION_AVAILABLE_BOOKS['Brenton'] || [];
 
 export function getVersionBooks(version: string): string[] {
-  const clean = version?.trim().toLowerCase();
-  const resolved = VERSION_ALIASES[clean] || version;
-  switch (resolved) {
-    case 'BHS': return bhsBooks;
-    case 'LXX': return lxxBooks;
-    case 'OpenGNT':
-    case 'OGNT':
-    case 'SBLGNT': return ntBooks;
-    case 'KJV': return kjvBooks;
-    case 'Vulgate': return vulgateBooks;
-    case 'WEB': return webBooks;
-    case 'Brenton': return brentonBooks;
-    default: return ntBooks;
-  }
+  if (!version) return VERSION_AVAILABLE_BOOKS['OpenGNT'] || [];
+  const clean = version.trim().toLowerCase();
+  const resolved = VERSION_ALIASES[clean] || getCorrectVersionName(version) || version;
+  return VERSION_AVAILABLE_BOOKS[resolved] || VERSION_AVAILABLE_BOOKS['OpenGNT'] || [];
+}
+
+export function isBookInVersion(book: string, version: string): boolean {
+  const books = getVersionBooks(version);
+  if (!books || books.length === 0) return false;
+  const clean = book.trim().toLowerCase();
+  return books.some((b) => b.toLowerCase() === clean);
 }
