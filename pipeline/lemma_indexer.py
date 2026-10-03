@@ -77,13 +77,13 @@ def index_lemmas_and_concordance(conn: sqlite3.Connection):
     book_verse_counts: Dict[Tuple[str, str], int] = defaultdict(int)
 
     # In-memory aggregations:
-    # key: (corpus_id, work_id, strongs_key)
+    # key: (corpus_id, strongs_key)
     # val: dict of book_code -> count
-    lemma_book_counts: Dict[Tuple[str, int, str], Dict[str, int]] = defaultdict(lambda: defaultdict(int))
+    lemma_book_counts: Dict[Tuple[str, str], Dict[str, int]] = defaultdict(lambda: defaultdict(int))
     # best lemma string for this key
-    lemma_labels: Dict[Tuple[str, int, str], str] = {}
-    # concordance set: (corpus_id, work_id, strongs_key, lemma, native_citation, text_unit_id)
-    concordance_set: Set[Tuple[str, int, str, str, str, int]] = set()
+    lemma_labels: Dict[Tuple[str, str], str] = {}
+    # concordance set: (corpus_id, strongs_key, lemma, native_citation, text_unit_id)
+    concordance_set: Set[Tuple[str, str, str, str, int]] = set()
 
     verse_count = 0
     token_count = 0
@@ -91,7 +91,6 @@ def index_lemmas_and_concordance(conn: sqlite3.Connection):
     print("Aggregating tokens from text_units...")
     for tu_id, corpus_id, std_book, citation, tokens_json in cur:
         verse_count += 1
-        work_id = CORPUS_WORK_IDS.get(corpus_id, 1)
 
         try:
             tokens = json.loads(tokens_json)
@@ -108,9 +107,18 @@ def index_lemmas_and_concordance(conn: sqlite3.Connection):
         verse_keys_seen: Set[str] = set()
 
         for tok in tokens:
-            raw_strongs = tok.get("strongs")
-            lemma = tok.get("lemma") or tok.get("normalized") or tok.get("word") or ""
-            norm = tok.get("normalized") or ""
+            if isinstance(tok, list):
+                # Tuple format: [word, norm, strongs, morph, lemma, gloss, trailer, flags]
+                word = tok[0] if len(tok) > 0 else ""
+                norm = tok[1] if len(tok) > 1 else ""
+                raw_strongs = tok[2] if len(tok) > 2 else ""
+                morph = tok[3] if len(tok) > 3 else ""
+                lemma = tok[4] if len(tok) > 4 and tok[4] else (norm or word)
+                gloss = tok[5] if len(tok) > 5 else ""
+            else:
+                raw_strongs = tok.get("strongs")
+                lemma = tok.get("lemma") or tok.get("normalized") or tok.get("word") or ""
+                norm = tok.get("normalized") or ""
 
             # Extract distinct Strong's / key representations
             strongs_keys: List[str] = []
@@ -125,14 +133,14 @@ def index_lemmas_and_concordance(conn: sqlite3.Connection):
                 strongs_keys.append(f"WORD:{norm}")
 
             for sk in strongs_keys:
-                stat_key = (corpus_id, work_id, sk)
+                stat_key = (corpus_id, sk)
                 lemma_book_counts[stat_key][std_book] += 1
                 if stat_key not in lemma_labels or not lemma_labels[stat_key]:
                     lemma_labels[stat_key] = lemma
 
                 if sk not in verse_keys_seen:
                     verse_keys_seen.add(sk)
-                    concordance_set.add((corpus_id, work_id, sk, lemma, citation, tu_id))
+                    concordance_set.add((corpus_id, sk, lemma, citation, tu_id))
 
     print(
         f"Processed {verse_count:,} verses ({token_count:,} tokens) in {time.time() - start_time:.2f}s."
@@ -171,52 +179,37 @@ def index_lemmas_and_concordance(conn: sqlite3.Connection):
     cur.execute("DELETE FROM lemma_stats")
 
     lemma_rows = []
-    for (corpus_id, work_id, sk), book_counts in lemma_book_counts.items():
-        best_lemma = lemma_labels.get((corpus_id, work_id, sk), sk)
+    for (corpus_id, sk), book_counts in lemma_book_counts.items():
+        best_lemma = lemma_labels.get((corpus_id, sk), sk)
 
-        # Build list of books sorted by occurrence count descending, then canonical order
-        book_list = []
-        for b_code, count in book_counts.items():
-            order_idx, name_en = books_meta.get(b_code, (999, b_code))
-            book_words = book_word_counts.get((corpus_id, b_code), 0)
-            book_list.append({
-                "title": name_en,
-                "sbl_abbreviation": b_code,
-                "count": count,
-                "book_words": book_words,
-                "_order": order_idx,
-            })
-
-        # Sort: highest count first; tie-break on canonical book order
-        book_list.sort(key=lambda x: (-x["count"], x["_order"]))
-
-        # Remove internal sort key
-        for b in book_list:
-            del b["_order"]
-
-        total_count = sum(b["count"] for b in book_list)
+        # Build compact list of [book_code, count] sorted by count descending, then canonical order
+        sorted_books = sorted(
+            book_counts.items(),
+            key=lambda x: (-x[1], books_meta.get(x[0], (999, ""))[0])
+        )
+        book_list = [[b_code, count] for b_code, count in sorted_books]
+        total_count = sum(count for _, count in sorted_books)
 
         lemma_rows.append((
             corpus_id,
-            work_id,
             sk,
             best_lemma,
             total_count,
-            json.dumps(book_list, ensure_ascii=False),
+            json.dumps(book_list, separators=(",", ":")),
         ))
 
     cur.executemany(
         """
         INSERT INTO lemma_stats
-        (corpus_id, work_id, strongs, lemma, total_count, book_counts_json)
-        VALUES (?, ?, ?, ?, ?, ?)
+        (corpus_id, strongs, lemma, total_count, book_counts_json)
+        VALUES (?, ?, ?, ?, ?)
         """,
         lemma_rows,
     )
     conn.commit()
     print(f"Inserted {len(lemma_rows):,} rows into lemma_stats in {time.time() - t_stats:.2f}s.")
 
-    # 4. Populate concordance_refs table
+    # 5. Populate concordance_refs table
     print("Populating concordance_refs table...")
     t_conc = time.time()
     cur.execute("DELETE FROM concordance_refs")
@@ -231,8 +224,8 @@ def index_lemmas_and_concordance(conn: sqlite3.Connection):
             cur.executemany(
                 """
                 INSERT OR IGNORE INTO concordance_refs
-                (corpus_id, work_id, strongs, lemma, ref_label, work_unit_id)
-                VALUES (?, ?, ?, ?, ?, ?)
+                (corpus_id, strongs, lemma, ref_label, work_unit_id)
+                VALUES (?, ?, ?, ?, ?)
                 """,
                 batch,
             )
@@ -244,8 +237,8 @@ def index_lemmas_and_concordance(conn: sqlite3.Connection):
         cur.executemany(
             """
             INSERT OR IGNORE INTO concordance_refs
-            (corpus_id, work_id, strongs, lemma, ref_label, work_unit_id)
-            VALUES (?, ?, ?, ?, ?, ?)
+            (corpus_id, strongs, lemma, ref_label, work_unit_id)
+            VALUES (?, ?, ?, ?, ?)
             """,
             batch,
         )

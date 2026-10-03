@@ -322,6 +322,33 @@ describe('dbClient service', () => {
 			);
 		});
 
+		it('queries words for work units with compact tuple tokens', async () => {
+			mockQuery.mockResolvedValueOnce([
+				{
+					id: 101,
+					corpus_id: 'wlc',
+					tokens_json: JSON.stringify([
+						['בְּרֵאשִׁ֖ית', 'בראשית', 'H7225', 'Prep-b', 'רֵאשִׁית', 'in beginning', '־']
+					])
+				},
+				{
+					id: 201,
+					corpus_id: 'ognt',
+					tokens_json: JSON.stringify([
+						['Παῦλος', 'Παυλος', 'G3972', 'N-NSM-P', 'Παῦλος', 'Paul', ' ', 1]
+					])
+				}
+			]);
+
+			const words = await getWordsForWorkUnits([101, 201]);
+			expect(words).toHaveLength(2);
+			expect(words[0].surface).toBe('בְּרֵאשִׁ֖ית');
+			expect(words[0].strongs_number).toBe('H7225');
+			expect(words[0].trailer).toBe('־');
+			expect(words[1].surface).toBe('Παῦλος');
+			expect(words[1].indent).toBe(true);
+		});
+
 		it('retrieves lemma information by querying lexicon_entries', async () => {
 			mockQuery.mockResolvedValueOnce([
 				{
@@ -344,12 +371,13 @@ describe('dbClient service', () => {
 			);
 		});
 
-		it('retrieves word frequency by book from lemma_stats', async () => {
+		it('retrieves word frequency by book from lemma_stats (legacy and compact format)', async () => {
+			// Compact tuple format [[bookCode, count], ...]
 			mockQuery.mockResolvedValueOnce([
 				{
 					book_counts_json: JSON.stringify([
-						{ title: 'Matthew', sbl_abbreviation: 'MAT', count: 33 },
-						{ title: 'John', sbl_abbreviation: 'JHN', count: 40 }
+						['MAT', 33],
+						['JHN', 40]
 					]),
 					total_count: 73
 				}
@@ -361,7 +389,7 @@ describe('dbClient service', () => {
 			expect(freqs[1].count).toBe(40);
 			expect(mockQuery).toHaveBeenCalledWith(
 				expect.stringContaining('FROM lemma_stats'),
-				['ognt', 40, 'G3056', 'G3056']
+				['ognt', 'G3056', 'G3056']
 			);
 		});
 
@@ -376,7 +404,7 @@ describe('dbClient service', () => {
 			expect(total).toBe(917);
 			expect(mockQuery).toHaveBeenCalledWith(
 				expect.stringContaining('SELECT total_count'),
-				['ognt', 40, 'G2424', 'G2424']
+				['ognt', 'G2424', 'G2424']
 			);
 		});
 
@@ -394,7 +422,7 @@ describe('dbClient service', () => {
 			expect(conc[0].display_label).toBe('John 1:1');
 			expect(mockQuery).toHaveBeenCalledWith(
 				expect.stringContaining('FROM concordance_refs'),
-				['ognt', 40, 'G3056', 'G3056', 10]
+				['ognt', 'G3056', 'G3056', 10]
 			);
 		});
 

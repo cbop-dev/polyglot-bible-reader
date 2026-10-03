@@ -47,6 +47,52 @@ export interface WordRow {
 	lemma?: string;
 	gloss?: string;
 	trailer?: string;
+	indent?: boolean;
+	para_break?: boolean;
+}
+
+function unpackToken(t: any, rowId: number, corpusId: string, idx: number): WordRow {
+	if (Array.isArray(t)) {
+		// Tuple format: [word, norm, strongs, morph, lemma, gloss, trailer, flags]
+		const word = t[0] || '';
+		const norm = t[1] || word;
+		const strongs = t[2] || '';
+		const morph = t[3] || '';
+		const lemma = t[4] || '';
+		const gloss = t[5] || '';
+		const trailer = t[6] !== undefined ? t[6] : undefined;
+		const flags = typeof t[7] === 'number' ? t[7] : 0;
+		return {
+			id: (rowId * 1000) + idx,
+			work_id: getCorpusWorkId(corpusId),
+			work_unit_id: rowId,
+			position: idx,
+			surface: word,
+			normalized: norm,
+			strongs_number: strongs,
+			morph_code: morph,
+			lemma,
+			gloss,
+			trailer,
+			indent: (flags & 1) !== 0 ? true : undefined,
+			para_break: (flags & 2) !== 0 ? true : undefined
+		};
+	}
+	return {
+		id: (rowId * 1000) + idx,
+		work_id: getCorpusWorkId(corpusId),
+		work_unit_id: rowId,
+		position: idx,
+		surface: t.word || '',
+		normalized: t.normalized || t.word || '',
+		strongs_number: t.strongs || '',
+		morph_code: t.morph || '',
+		lemma: t.lemma || '',
+		gloss: t.gloss || '',
+		trailer: t.trailer !== undefined ? t.trailer : undefined,
+		indent: t.indent,
+		para_break: t.para_break
+	};
 }
 
 export interface LexemeRow {
@@ -594,19 +640,7 @@ export async function getChapterVerses(
 					try {
 						const tokens = typeof row.tokens_json === 'string' ? JSON.parse(row.tokens_json) : row.tokens_json;
 						if (Array.isArray(tokens)) {
-							words = tokens.map((t: any, idx: number) => ({
-								id: (row.work_unit_id * 1000) + idx,
-								work_id: getCorpusWorkId(row.corpus_id),
-								work_unit_id: row.work_unit_id,
-								position: idx,
-								surface: t.word || '',
-								normalized: t.normalized || t.word || '',
-								strongs_number: t.strongs || '',
-								morph_code: t.morph || '',
-								lemma: t.lemma || '',
-								gloss: t.gloss || '',
-								trailer: t.trailer !== undefined ? t.trailer : undefined
-							}));
+							words = tokens.map((t: any, idx: number) => unpackToken(t, row.work_unit_id, row.corpus_id, idx));
 						}
 					} catch (err) {
 						console.warn('[dbClient] Failed to parse tokens_json for unit', row.work_unit_id, err);
@@ -664,19 +698,7 @@ export async function getWordsForWorkUnits(workUnitIds: number[]): Promise<WordR
 				const tokens = typeof row.tokens_json === 'string' ? JSON.parse(row.tokens_json) : row.tokens_json;
 				if (Array.isArray(tokens)) {
 					tokens.forEach((t: any, idx: number) => {
-						allWords.push({
-							id: (row.id * 1000) + idx,
-							work_id: getCorpusWorkId(row.corpus_id),
-							work_unit_id: row.id,
-							position: idx,
-							surface: t.word || '',
-							normalized: t.normalized || t.word || '',
-							strongs_number: t.strongs || '',
-							morph_code: t.morph || '',
-							lemma: t.lemma || '',
-							gloss: t.gloss || '',
-							trailer: t.trailer !== undefined ? t.trailer : undefined
-						});
+						allWords.push(unpackToken(t, row.id, row.corpus_id, idx));
 					});
 				}
 			} catch (e) {}
@@ -827,9 +849,9 @@ export async function getLemmaTotalCount(
 			const statRow = await queryOne<{ total_count: number }>(`
 				SELECT total_count
 				FROM lemma_stats
-				WHERE (corpus_id = ? OR work_id = ?) AND (strongs = ? OR strongs = ?)
+				WHERE corpus_id = ? AND (strongs = ? OR strongs = ?)
 				LIMIT 1
-			`, [corpusId, workId, sCode, sNorm]);
+			`, [corpusId, sCode, sNorm]);
 
 			if (statRow && typeof statRow.total_count === 'number') {
 				return statRow.total_count;
@@ -844,9 +866,9 @@ export async function getLemmaTotalCount(
 			const statRow = await queryOne<{ total_count: number }>(`
 				SELECT total_count
 				FROM lemma_stats
-				WHERE (corpus_id = ? OR work_id = ?) AND (lemma = ? OR lemma = ? OR strongs = ?)
+				WHERE corpus_id = ? AND (lemma = ? OR lemma = ? OR strongs = ?)
 				LIMIT 1
-			`, [corpusId, workId, lTrim, lNFC, pseudoStrongs]);
+			`, [corpusId, lTrim, lNFC, pseudoStrongs]);
 
 			if (statRow && typeof statRow.total_count === 'number') {
 				return statRow.total_count;
@@ -876,17 +898,28 @@ export async function getWordFrequencyByBook(
 	if (!workId) return [];
 	const corpusId = workIdToCorpusId(workId);
 
-	const formatItems = (items: BookFrequency[]): BookFrequency[] => {
+	const formatItems = (raw: any): BookFrequency[] => {
+		if (!Array.isArray(raw)) return [];
 		const ver = SLUG_TO_VERSION[corpusId] || corpusId;
-		return items.map((f) => {
-			const bCode = f.sbl_abbreviation || f.title;
+		return raw.map((item: any) => {
+			let bCode = '';
+			let count = 0;
+			let bookWords = 0;
+			if (Array.isArray(item)) {
+				bCode = item[0] || '';
+				count = item[1] || 0;
+			} else {
+				bCode = item.sbl_abbreviation || item.title || '';
+				count = item.count || 0;
+				bookWords = item.book_words || 0;
+			}
 			const canon = normalizeBookName(bCode);
 			const abbrev = formatBookAbbreviation(getBookForVersion(bCode, ver));
-			const words = f.book_words || getStaticBookWordStats(corpusId, canon?.usfm || bCode)?.words || 0;
+			const words = bookWords || getStaticBookWordStats(corpusId, canon?.usfm || bCode)?.words || 0;
 			return {
-				...f,
-				title: canon?.title || f.title,
-				sbl_abbreviation: abbrev || formatBookAbbreviation(f.sbl_abbreviation),
+				title: canon?.title || bCode,
+				sbl_abbreviation: abbrev || formatBookAbbreviation(bCode),
+				count,
 				book_words: words
 			};
 		});
@@ -902,9 +935,9 @@ export async function getWordFrequencyByBook(
 		const statRow = await queryOne<{ book_counts_json: string; total_count: number }>(`
 			SELECT book_counts_json, total_count
 			FROM lemma_stats
-			WHERE (corpus_id = ? OR work_id = ?) AND (strongs = ? OR strongs = ?)
+			WHERE corpus_id = ? AND (strongs = ? OR strongs = ?)
 			LIMIT 1
-		`, [corpusId, workId, sCode, sNorm]);
+		`, [corpusId, sCode, sNorm]);
 
 		if (statRow?.book_counts_json) {
 			try {
@@ -921,9 +954,9 @@ export async function getWordFrequencyByBook(
 		const statRow = await queryOne<{ book_counts_json: string; total_count: number }>(`
 			SELECT book_counts_json, total_count
 			FROM lemma_stats
-			WHERE (corpus_id = ? OR work_id = ?) AND (lemma = ? OR lemma = ? OR strongs = ?)
+			WHERE corpus_id = ? AND (lemma = ? OR lemma = ? OR strongs = ?)
 			LIMIT 1
-		`, [corpusId, workId, lTrim, lNFC, pseudoStrongs]);
+		`, [corpusId, lTrim, lNFC, pseudoStrongs]);
 
 		if (statRow?.book_counts_json) {
 			try {
@@ -1032,10 +1065,10 @@ export async function getConcordance(
 		const rows = await query<ConcordanceOccurrence>(`
 			SELECT ref_label, ref_label AS display_label, work_unit_id
 			FROM concordance_refs
-			WHERE (corpus_id = ? OR work_id = ?) AND (strongs = ? OR strongs = ?)
+			WHERE corpus_id = ? AND (strongs = ? OR strongs = ?)
 			ORDER BY work_unit_id
 			${limitSql}
-		`, [corpusId, workId, sCode, sNorm, ...limitParams]);
+		`, [corpusId, sCode, sNorm, ...limitParams]);
 
 		if (rows.length > 0) {
 			return rows.map((r) => ({
@@ -1054,10 +1087,10 @@ export async function getConcordance(
 		const rows = await query<ConcordanceOccurrence>(`
 			SELECT ref_label, ref_label AS display_label, work_unit_id
 			FROM concordance_refs
-			WHERE (corpus_id = ? OR work_id = ?) AND (lemma = ? OR lemma = ? OR strongs = ?)
+			WHERE corpus_id = ? AND (lemma = ? OR lemma = ? OR strongs = ?)
 			ORDER BY work_unit_id
 			${limitSql}
-		`, [corpusId, workId, cleanLemma, cleanNFC, pseudoStrongs, ...limitParams]);
+		`, [corpusId, cleanLemma, cleanNFC, pseudoStrongs, ...limitParams]);
 
 		if (rows.length > 0) {
 			return rows.map((r) => ({

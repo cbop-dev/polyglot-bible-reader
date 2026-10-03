@@ -9,7 +9,6 @@
 	import Tabs from './ui/Tabs2.svelte';
 	import BarChart from './ui/BarChart.svelte';
 	import PieChart from './ui/PieChart.svelte';
-	import Grid from 'gridjs-svelte';
 	import LSJEntry from './LSJEntry.svelte';
 	import BDBEntry from './BDBEntry.svelte';
 	import TextsDisplay from './TextsDisplay.svelte';
@@ -245,18 +244,45 @@
 		};
 	});
 
-	const tableData = $derived.by(() => {
-		if (bookFrequencies.length === 0) return null;
-		return {
-			columns: ['Book', 'Count', 'Freq (#/1k)', 'Freq Ratio'],
-			data: bookFrequencies.map((f) => {
-				const freq = floatRound((1000 * f.count) / (f.book_words || 1), 3);
-				const avgFreq = sectionStats.freq.corpus;
-				const ratio = avgFreq > 0 ? floatRound(freq / avgFreq, 2) + 'x' : '-';
-				return [f.title, f.count, freq, ratio];
-			})
-		};
+	// Native Table Sorting & Pagination
+	let sortKey = $state<'title' | 'count' | 'freq' | 'ratio'>('count');
+	let sortAsc = $state(false);
+	let currentPage = $state(1);
+	const pageSize = 15;
+
+	function toggleSort(key: 'title' | 'count' | 'freq' | 'ratio') {
+		if (sortKey === key) {
+			sortAsc = !sortAsc;
+		} else {
+			sortKey = key;
+			sortAsc = key === 'title';
+		}
+		currentPage = 1;
+	}
+
+	const processedRows = $derived.by(() => {
+		const avgFreq = sectionStats.freq.corpus;
+		const rows = bookFrequencies.map((f) => {
+			const freq = floatRound((1000 * f.count) / (f.book_words || 1), 3);
+			const ratio = avgFreq > 0 ? floatRound(freq / avgFreq, 2) : 0;
+			return {
+				title: f.title,
+				count: f.count,
+				freq,
+				ratio
+			};
+		});
+
+		return rows.sort((a, b) => {
+			const cmp = sortKey === 'title' ? a.title.localeCompare(b.title) : a[sortKey] - b[sortKey];
+			return sortAsc ? cmp : -cmp;
+		});
 	});
+
+	const totalPages = $derived(Math.ceil(processedRows.length / pageSize) || 1);
+	const paginatedRows = $derived(
+		processedRows.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+	);
 
 	// Small Charts derived data
 	const pieChartData = $derived.by(() => {
@@ -580,16 +606,59 @@
 									/>
 								{/key}
 							</div>
-						{:else if chartOptionIndex === 2 && tableData}
+						{:else if chartOptionIndex === 2 && processedRows.length > 0}
 							<div class="my-3 text-left">
-								{#key tableData}
-									<Grid
-										data={tableData.data}
-										sort={true}
-										columns={tableData.columns}
-										pagination={{ limit: 15 }}
-									/>
-								{/key}
+								<div class="overflow-x-auto rounded-xl border border-rule bg-page shadow-xs">
+									<table class="w-full text-left text-sm border-collapse">
+										<thead class="bg-base-200/60 border-b border-rule text-xs font-semibold uppercase tracking-wider text-ink-soft select-none">
+											<tr>
+												<th class="py-2.5 px-3.5 cursor-pointer hover:text-link transition-colors" onclick={() => toggleSort('title')}>
+													Book {sortKey === 'title' ? (sortAsc ? '▲' : '▼') : ''}
+												</th>
+												<th class="py-2.5 px-3.5 text-right cursor-pointer hover:text-link transition-colors" onclick={() => toggleSort('count')}>
+													Count {sortKey === 'count' ? (sortAsc ? '▲' : '▼') : ''}
+												</th>
+												<th class="py-2.5 px-3.5 text-right cursor-pointer hover:text-link transition-colors" onclick={() => toggleSort('freq')}>
+													Freq (#/1k) {sortKey === 'freq' ? (sortAsc ? '▲' : '▼') : ''}
+												</th>
+												<th class="py-2.5 px-3.5 text-right cursor-pointer hover:text-link transition-colors" onclick={() => toggleSort('ratio')}>
+													Freq Ratio {sortKey === 'ratio' ? (sortAsc ? '▲' : '▼') : ''}
+												</th>
+											</tr>
+										</thead>
+										<tbody class="divide-y divide-rule/30">
+											{#each paginatedRows as row}
+												<tr class="hover:bg-base-200/40 transition-colors">
+													<td class="py-2.5 px-3.5 font-medium text-ink">{row.title}</td>
+													<td class="py-2.5 px-3.5 text-right text-ink font-semibold">{row.count}</td>
+													<td class="py-2.5 px-3.5 text-right text-ink-soft">{row.freq.toFixed(3)}</td>
+													<td class="py-2.5 px-3.5 text-right text-link font-medium">{row.ratio > 0 ? `${row.ratio.toFixed(2)}x` : '-'}</td>
+												</tr>
+											{/each}
+										</tbody>
+									</table>
+
+									{#if totalPages > 1}
+										<div class="flex items-center justify-between px-3.5 py-2.5 border-t border-rule bg-base-200/30 text-xs text-ink-soft">
+											<span>Showing {(currentPage - 1) * pageSize + 1}–{Math.min(currentPage * pageSize, processedRows.length)} of {processedRows.length} books</span>
+											<div class="flex items-center gap-1.5">
+												<button
+													type="button"
+													disabled={currentPage === 1}
+													onclick={() => currentPage--}
+													class="px-2.5 py-1 rounded border border-rule bg-page text-ink hover:bg-base-200/50 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors"
+												>Prev</button>
+												<span class="px-2 font-medium">{currentPage} / {totalPages}</span>
+												<button
+													type="button"
+													disabled={currentPage === totalPages}
+													onclick={() => currentPage++}
+													class="px-2.5 py-1 rounded border border-rule bg-page text-ink hover:bg-base-200/50 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors"
+												>Next</button>
+											</div>
+										</div>
+									{/if}
+								</div>
 							</div>
 						{/if}
 					</div>
@@ -630,83 +699,3 @@
 		</div>
 	{/if}
 </div>
-<style>
-	@import 'gridjs/dist/theme/mermaid.min.css';
-
-	:global(.gridjs-container) {
-		color: var(--color-ink, inherit) !important;
-	}
-	:global(.gridjs-wrapper) {
-		background-color: var(--color-page, transparent) !important;
-		border: 1px solid var(--color-rule, rgba(128, 128, 128, 0.2)) !important;
-		box-shadow: none !important;
-		border-radius: 0.5rem !important;
-	}
-	:global(.gridjs-table) {
-		background-color: var(--color-page, transparent) !important;
-		color: var(--color-ink, inherit) !important;
-	}
-	:global(.gridjs-tbody) {
-		background-color: var(--color-page, transparent) !important;
-	}
-	:global(.gridjs-th) {
-		background-color: var(--fallback-b2, rgba(128, 128, 128, 0.08)) !important;
-		color: var(--color-ink, inherit) !important;
-		border-color: var(--color-rule, rgba(128, 128, 128, 0.2)) !important;
-		font-weight: 600 !important;
-		font-size: 0.75rem !important;
-		text-transform: uppercase !important;
-		letter-spacing: 0.05em !important;
-		padding: 8px 14px !important;
-	}
-	:global(.gridjs-th-content) {
-		color: var(--color-ink, inherit) !important;
-	}
-	:global(.gridjs-td) {
-		background-color: var(--color-page, transparent) !important;
-		color: var(--color-ink, inherit) !important;
-		border-color: var(--color-rule, rgba(128, 128, 128, 0.15)) !important;
-		font-size: 0.875rem !important;
-		padding: 8px 14px !important;
-	}
-	:global(.gridjs-tr:hover td) {
-		background-color: var(--fallback-b2, rgba(128, 128, 128, 0.12)) !important;
-	}
-	:global(.gridjs-footer) {
-		background-color: var(--fallback-b2, rgba(128, 128, 128, 0.06)) !important;
-		color: var(--color-ink-soft, inherit) !important;
-		border-top: 1px solid var(--color-rule, rgba(128, 128, 128, 0.2)) !important;
-		border-bottom: none !important;
-		box-shadow: none !important;
-		padding: 8px 14px !important;
-		border-radius: 0 0 0.5rem 0.5rem !important;
-	}
-	:global(.gridjs-pagination .gridjs-summary) {
-		color: var(--color-ink-soft, inherit) !important;
-		font-size: 0.75rem !important;
-	}
-	:global(.gridjs-pagination .gridjs-pages button) {
-		background-color: var(--color-page, transparent) !important;
-		color: var(--color-ink, inherit) !important;
-		border-color: var(--color-rule, rgba(128, 128, 128, 0.25)) !important;
-		font-size: 0.75rem !important;
-		padding: 4px 10px !important;
-	}
-	:global(.gridjs-pagination .gridjs-pages button:hover:not(:disabled)) {
-		background-color: var(--fallback-b2, rgba(128, 128, 128, 0.15)) !important;
-		color: var(--color-ink, inherit) !important;
-	}
-	:global(.gridjs-pagination .gridjs-pages button.gridjs-currentPage) {
-		background-color: var(--color-link, #2563eb) !important;
-		color: #ffffff !important;
-		border-color: var(--color-link, #2563eb) !important;
-		font-weight: 600 !important;
-	}
-	:global(.gridjs-pagination .gridjs-pages button:disabled) {
-		opacity: 0.35 !important;
-		cursor: not-allowed !important;
-	}
-	:global(:root[data-theme='dark'] button.gridjs-sort) {
-		filter: invert(0.85);
-	}
-</style>

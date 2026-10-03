@@ -30,6 +30,28 @@ class WordToken:
             del d["extra"]
         return {k: v for k, v in d.items() if v is not None}
 
+    def to_tuple(self) -> List[Any]:
+        flags = 0
+        if self.indent:
+            flags |= 1
+        if self.para_break:
+            flags |= 2
+        tup = [
+            self.word or "",
+            self.normalized or "",
+            self.strongs or "",
+            self.morph or "",
+            self.lemma or "",
+            self.gloss or "",
+        ]
+        if self.trailer is not None or flags != 0:
+            tup.append(self.trailer if self.trailer is not None else " ")
+        if flags != 0:
+            tup.append(flags)
+        while tup and (tup[-1] == "" or tup[-1] is None):
+            tup.pop()
+        return tup
+
 
 @dataclass
 class VerseUnit:
@@ -57,7 +79,7 @@ class VerseUnit:
     def tokens_to_json(self) -> Optional[str]:
         if not self.tokens:
             return None
-        return json.dumps([t.to_dict() for t in self.tokens], ensure_ascii=False)
+        return json.dumps([t.to_tuple() for t in self.tokens], separators=(",", ":"), ensure_ascii=False)
 
 
 class BaseAdapter:

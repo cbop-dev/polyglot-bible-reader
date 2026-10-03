@@ -273,7 +273,9 @@ class DatabaseValidator:
         toks = json.loads(jhn1["tokens_json"])
         print(f"  OGNT John 1:1 token count: {len(toks)}")
         assert len(toks) > 10, "Expected > 10 tokens in John 1:1"
-        assert toks[0]["strongs"] == "G1722" and toks[0]["lemma"] == "ἐν"
+        t0_strongs = toks[0][2] if isinstance(toks[0], list) else toks[0]["strongs"]
+        t0_lemma = toks[0][4] if isinstance(toks[0], list) else toks[0]["lemma"]
+        assert t0_strongs == "G1722" and t0_lemma == "ἐν"
 
         # Check Genesis 1:1 in wlc (segmented into 11 morphemes with prefixes like בְּ and הַ)
         gen1 = cur.execute("""
@@ -285,7 +287,9 @@ class DatabaseValidator:
         toks_he = json.loads(gen1["tokens_json"])
         print(f"  WLC Genesis 1:1 morpheme token count: {len(toks_he)}")
         assert len(toks_he) == 11, f"Expected 11 morphemes in Genesis 1:1, got {len(toks_he)}"
-        assert toks_he[1]["strongs"] == "H7225" and "רֵאשִׁית" in toks_he[1]["lemma"]
+        t1_strongs = toks_he[1][2] if isinstance(toks_he[1], list) else toks_he[1]["strongs"]
+        t1_lemma = toks_he[1][4] if isinstance(toks_he[1], list) else toks_he[1]["lemma"]
+        assert t1_strongs == "H7225" and "רֵאשִׁית" in t1_lemma
 
         print("  Token JSON verification: PASSED!")
         return True
@@ -310,7 +314,8 @@ class DatabaseValidator:
         assert h7225["total_count"] >= 50, f"Expected H7225 total >= 50, got {h7225['total_count']}"
         b_list = json.loads(h7225["book_counts_json"])
         assert len(b_list) > 10, "Expected H7225 in > 10 books"
-        print(f"  Spot-check H7225 (Reshith): total={h7225['total_count']}, top_book={b_list[0]['title']}")
+        top_book = b_list[0]["title"] if isinstance(b_list[0], dict) else b_list[0][0]
+        print(f"  Spot-check H7225 (Reshith): total={h7225['total_count']}, top_book={top_book}")
 
         # 3. Spot check WLC H9003 (Preposition Beth בְּ)
         h9003 = cur.execute("SELECT * FROM lemma_stats WHERE corpus_id = 'wlc' AND strongs = 'H9003'").fetchone()

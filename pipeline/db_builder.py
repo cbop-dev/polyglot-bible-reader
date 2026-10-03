@@ -77,7 +77,6 @@ CREATE TABLE IF NOT EXISTS text_units (
     
     -- Content
     text_content TEXT NOT NULL,
-    text_xml TEXT,
     tokens_json TEXT
 );
 
@@ -90,14 +89,12 @@ CREATE TABLE IF NOT EXISTS lexicon_entries (
     consonant_key TEXT,
     transliteration TEXT,
     gloss TEXT NOT NULL,
-    morph_data TEXT,
     definition TEXT
 );
 
 -- 5. Pre-computed Lemma Statistics (O(1) Book Frequency Distributions)
 CREATE TABLE IF NOT EXISTS lemma_stats (
     corpus_id TEXT NOT NULL,
-    work_id INTEGER NOT NULL,
     strongs TEXT NOT NULL,
     lemma TEXT NOT NULL,
     total_count INTEGER NOT NULL,
@@ -108,7 +105,6 @@ CREATE TABLE IF NOT EXISTS lemma_stats (
 -- 6. Pre-indexed Concordance References (O(1) Occurrence Range Scans)
 CREATE TABLE IF NOT EXISTS concordance_refs (
     corpus_id TEXT NOT NULL,
-    work_id INTEGER NOT NULL,
     strongs TEXT NOT NULL,
     lemma TEXT NOT NULL,
     ref_label TEXT NOT NULL,
@@ -145,20 +141,8 @@ ON lexicon_entries(consonant_key);
 CREATE INDEX IF NOT EXISTS idx_lemma_stats_lemma 
 ON lemma_stats(corpus_id, lemma);
 
-CREATE INDEX IF NOT EXISTS idx_lemma_stats_work 
-ON lemma_stats(work_id, strongs);
-
-CREATE INDEX IF NOT EXISTS idx_lemma_stats_work_lemma 
-ON lemma_stats(work_id, lemma);
-
 CREATE INDEX IF NOT EXISTS idx_concordance_refs_lemma 
 ON concordance_refs(corpus_id, lemma, work_unit_id);
-
-CREATE INDEX IF NOT EXISTS idx_concordance_refs_work 
-ON concordance_refs(work_id, strongs, work_unit_id);
-
-CREATE INDEX IF NOT EXISTS idx_concordance_refs_work_lemma 
-ON concordance_refs(work_id, lemma, work_unit_id);
 """
 
 
@@ -342,7 +326,6 @@ class DatabaseBuilder:
                 entry.get("consonant_key", ""),
                 entry.get("transliteration", ""),
                 entry.get("gloss", ""),
-                "",  # morph_data
                 entry["definition"],
             ))
 
@@ -357,7 +340,6 @@ class DatabaseBuilder:
                 entry.get("consonant_key", ""),
                 entry.get("transliteration", ""),
                 entry["gloss"],
-                "",  # morph_data
                 entry["definition"],
             ))
 
@@ -365,8 +347,8 @@ class DatabaseBuilder:
         conn.executemany(
             """
             INSERT OR REPLACE INTO lexicon_entries
-            (strongs_id, dictionary, lemma, consonant_key, transliteration, gloss, morph_data, definition)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            (strongs_id, dictionary, lemma, consonant_key, transliteration, gloss, definition)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
             """,
             lex_rows,
         )
@@ -393,7 +375,6 @@ class DatabaseBuilder:
                 vu.native_subverse,
                 vu.native_citation,
                 vu.text,
-                vu.text_xml,
                 vu.tokens_to_json(),
             ))
             count += 1
@@ -404,8 +385,8 @@ class DatabaseBuilder:
                     INSERT INTO text_units
                     (corpus_id, std_book, std_chapter, std_verse, std_subverse,
                      native_book, native_chapter, native_verse, native_subverse,
-                     native_citation, text_content, text_xml, tokens_json)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                     native_citation, text_content, tokens_json)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     batch,
                 )
@@ -419,8 +400,8 @@ class DatabaseBuilder:
                 INSERT INTO text_units
                 (corpus_id, std_book, std_chapter, std_verse, std_subverse,
                  native_book, native_chapter, native_verse, native_subverse,
-                 native_citation, text_content, text_xml, tokens_json)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 native_citation, text_content, tokens_json)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 batch,
             )
