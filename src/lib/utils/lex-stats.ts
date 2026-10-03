@@ -3,6 +3,8 @@
  * Ported and enhanced from biblical-lexeme-explorer.
  */
 
+import { normalizeBookName } from '$lib/config/bookMapping.js';
+
 export function floatRound(val: number, decimals = 3): number {
 	if (!val || isNaN(val)) return 0;
 	const factor = Math.pow(10, decimals);
@@ -87,4 +89,54 @@ export class LemmaSectionStats {
 
 		this.percentageUse = cCount > 0 ? (100 * sCount) / cCount : 0;
 	}
+}
+
+export type ChartSortOption = 'canonical' | 'value-desc' | 'value-asc';
+
+export interface SortableBookItem {
+	title: string;
+	sbl_abbreviation?: string;
+	count: number;
+	book_words?: number;
+}
+
+/**
+ * Sorts an array of book frequencies either by canonical book order (default)
+ * or by data value (raw count or normalized frequency per 1k words).
+ */
+export function sortBookFrequencies<T extends SortableBookItem>(
+	items: T[],
+	sortOption: ChartSortOption = 'canonical',
+	metric: 'count' | 'freq' = 'count'
+): T[] {
+	if (!items || items.length === 0) return [];
+	const list = [...items];
+
+	const getOrder = (item: T): number => {
+		const book = normalizeBookName(item.sbl_abbreviation) || normalizeBookName(item.title);
+		return book?.order ?? 999;
+	};
+
+	const getVal = (item: T): number => {
+		if (metric === 'count') return item.count;
+		return (1000 * item.count) / (item.book_words || 1);
+	};
+
+	return list.sort((a, b) => {
+		if (sortOption === 'canonical') {
+			const ordA = getOrder(a);
+			const ordB = getOrder(b);
+			if (ordA !== ordB) return ordA - ordB;
+			return (a.sbl_abbreviation || a.title).localeCompare(b.sbl_abbreviation || b.title);
+		} else if (sortOption === 'value-desc') {
+			const diff = getVal(b) - getVal(a);
+			if (diff !== 0) return diff;
+			return getOrder(a) - getOrder(b);
+		} else if (sortOption === 'value-asc') {
+			const diff = getVal(a) - getVal(b);
+			if (diff !== 0) return diff;
+			return getOrder(a) - getOrder(b);
+		}
+		return 0;
+	});
 }

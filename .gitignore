@@ -47,3 +47,7 @@ build2/www/sqlite/
 
 src/routes/page-backup.svelte
 
+
+docs/pipeline-and-schema-migration-plan.md
+
+docs/versification-alignment-investigation.md

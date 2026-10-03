@@ -3,7 +3,8 @@ import {
 	calcTotalFrequency,
 	calcFreqRatio,
 	floatRound,
-	LemmaSectionStats
+	LemmaSectionStats,
+	sortBookFrequencies
 } from './lex-stats';
 
 describe('LexStats utilities', () => {
@@ -62,5 +63,41 @@ describe('LexStats utilities', () => {
 		expect(stats.freq.section).toBe(0);
 		expect(stats.freqRatio).toBe(0);
 		expect(stats.percentageUse).toBe(0);
+	});
+
+	describe('sortBookFrequencies', () => {
+		const sampleData = [
+			{ title: 'Exodus', sbl_abbreviation: 'Exod', count: 50, book_words: 25000 }, // order 2, freq = 2.0
+			{ title: 'Matthew', sbl_abbreviation: 'Matt', count: 10, book_words: 20000 }, // NT (order 40), freq = 0.5
+			{ title: 'Genesis', sbl_abbreviation: 'Gen', count: 30, book_words: 30000 }  // order 1, freq = 1.0
+		];
+
+		it('sorts by canonical book order by default', () => {
+			const sorted = sortBookFrequencies(sampleData, 'canonical');
+			expect(sorted.map((b) => b.sbl_abbreviation)).toEqual(['Gen', 'Exod', 'Matt']);
+		});
+
+		it('sorts by data value (count) descending', () => {
+			const sorted = sortBookFrequencies(sampleData, 'value-desc', 'count');
+			expect(sorted.map((b) => b.sbl_abbreviation)).toEqual(['Exod', 'Gen', 'Matt']);
+			expect(sorted.map((b) => b.count)).toEqual([50, 30, 10]);
+		});
+
+		it('sorts by data value (count) ascending', () => {
+			const sorted = sortBookFrequencies(sampleData, 'value-asc', 'count');
+			expect(sorted.map((b) => b.sbl_abbreviation)).toEqual(['Matt', 'Gen', 'Exod']);
+			expect(sorted.map((b) => b.count)).toEqual([10, 30, 50]);
+		});
+
+		it('sorts by data value (frequency) descending', () => {
+			// Exod: 2.0, Gen: 1.0, Matt: 0.5
+			const sorted = sortBookFrequencies(sampleData, 'value-desc', 'freq');
+			expect(sorted.map((b) => b.sbl_abbreviation)).toEqual(['Exod', 'Gen', 'Matt']);
+		});
+
+		it('sorts by data value (frequency) ascending', () => {
+			const sorted = sortBookFrequencies(sampleData, 'value-asc', 'freq');
+			expect(sorted.map((b) => b.sbl_abbreviation)).toEqual(['Matt', 'Gen', 'Exod']);
+		});
 	});
 });

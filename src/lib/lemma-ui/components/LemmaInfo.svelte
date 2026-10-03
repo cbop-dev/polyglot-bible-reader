@@ -27,7 +27,9 @@
 		calcTotalFrequency,
 		calcFreqRatio,
 		floatRound,
-		LemmaSectionStats
+		LemmaSectionStats,
+		sortBookFrequencies,
+		type ChartSortOption
 	} from '$lib/utils/lex-stats';
 	import { readerState } from '$lib/stores/readerState.svelte';
     import { mylog } from '../env/env';
@@ -45,6 +47,7 @@
 
 	let chartOptionIndex = $state(0);
 	const chartOptions = ['Lemma Count', 'Frequency (per 1k)', 'Data Table'];
+	let chartSortOption = $state<ChartSortOption>('canonical');
 
 	let chosenBook = $state(readerState.selectedBook || '');
 	let corpusWordsTotal = $state(0);
@@ -228,19 +231,27 @@
 	);
 
 	// Large Charts & Tables derived data
+	const sortedFrequenciesForCount = $derived.by(() => {
+		return sortBookFrequencies(bookFrequencies, chartSortOption, 'count');
+	});
+
+	const sortedFrequenciesForFreq = $derived.by(() => {
+		return sortBookFrequencies(bookFrequencies, chartSortOption, 'freq');
+	});
+
 	const countChartData = $derived.by(() => {
-		if (bookFrequencies.length === 0) return null;
+		if (sortedFrequenciesForCount.length === 0) return null;
 		return {
-			labels: bookFrequencies.map((f) => f.sbl_abbreviation || f.title),
-			nums: bookFrequencies.map((f) => f.count)
+			labels: sortedFrequenciesForCount.map((f) => f.sbl_abbreviation || f.title),
+			nums: sortedFrequenciesForCount.map((f) => f.count)
 		};
 	});
 
 	const freqChartData = $derived.by(() => {
-		if (bookFrequencies.length === 0) return null;
+		if (sortedFrequenciesForFreq.length === 0) return null;
 		return {
-			labels: bookFrequencies.map((f) => f.sbl_abbreviation || f.title),
-			nums: bookFrequencies.map((f) => floatRound((1000 * f.count) / (f.book_words || 1), 3))
+			labels: sortedFrequenciesForFreq.map((f) => f.sbl_abbreviation || f.title),
+			nums: sortedFrequenciesForFreq.map((f) => floatRound((1000 * f.count) / (f.book_words || 1), 3))
 		};
 	});
 
@@ -577,18 +588,35 @@
 				{:else if selectedStatsTab === 2}
 					<!-- Tab 2: Large Charts / Table -->
 					<div class="mt-2 mb-4 text-center">
-						<select
-							bind:value={chartOptionIndex}
-							class="border border-rule bg-page text-ink rounded-lg px-3 py-1.5 text-sm shadow-xs focus:outline-none focus:ring-2 focus:ring-link/30 inline-block self-center text-center cursor-pointer"
-						>
-							{#each chartOptions as name, index}
-								<option value={index}>{name}</option>
-							{/each}
-						</select>
+						<div class="flex flex-wrap items-center justify-center gap-3 mb-3">
+							<select
+								bind:value={chartOptionIndex}
+								class="border border-rule bg-page text-ink rounded-lg px-3 py-1.5 text-sm shadow-xs focus:outline-none focus:ring-2 focus:ring-link/30 inline-block self-center text-center cursor-pointer"
+							>
+								{#each chartOptions as name, index}
+									<option value={index}>{name}</option>
+								{/each}
+							</select>
+
+							{#if chartOptionIndex === 0 || chartOptionIndex === 1}
+								<div class="inline-flex items-center gap-1.5 text-xs text-ink-soft">
+									<label for="chart-sort-select" class="font-medium">Sort by:</label>
+									<select
+										id="chart-sort-select"
+										bind:value={chartSortOption}
+										class="border border-rule bg-page text-ink rounded-lg px-2.5 py-1.5 text-xs shadow-xs focus:outline-none focus:ring-2 focus:ring-link/30 cursor-pointer"
+									>
+										<option value="canonical">Canonical Book Order</option>
+										<option value="value-desc">Data Value (Highest First)</option>
+										<option value="value-asc">Data Value (Lowest First)</option>
+									</select>
+								</div>
+							{/if}
+						</div>
 
 						{#if chartOptionIndex === 0 && countChartData}
 							<div class="my-3">
-								{#key countChartData}
+								{#key `${chartSortOption}-${countChartData.labels.join(',')}`}
 									<BarChart barData={countChartData} horizontal={true} corpusAbbrev={corpusLabel} />
 								{/key}
 							</div>
@@ -597,7 +625,7 @@
 								<p class="text-xs text-ink-soft opacity-80 italic mb-2">
 									Normalized frequency per 1,000 words in each biblical book
 								</p>
-								{#key freqChartData}
+								{#key `${chartSortOption}-${freqChartData.labels.join(',')}`}
 									<BarChart
 										barData={freqChartData}
 										horizontal={true}
