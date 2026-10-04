@@ -72,7 +72,6 @@ SWETE_BOOK_MAP = {
     "Sol": "Cant",
     "Job": "Job",
     "Wis": "Wis",
-    "Sip": "SirProl",  # Sirach Prologue
     "Sir": "Sir",
     "Hos": "Hos",
     "Amo": "Amos",

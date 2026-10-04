@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { ReaderState, readerState } from './readerState.svelte';
 import * as dbClient from '$lib/services/dbClient';
+import * as bibleDataLoader from '$lib/services/bibleDataLoader';
 
 describe('findIncompatibleVersions', ()=>{
     it('check if finds ot versions (BHS, Brenton, LXX) when given nt (SBLGNT) version', ()=>{
@@ -321,5 +322,81 @@ describe('realign cell', ()=>{
         expect(ok).toBe(true);
         expect(rs.selectedBook).toBe('2_Pet');
         expect(rs.selectedChapter).toBe('2');
+    });
+
+    it('defaults Sirach to Chapter 0 in LXX and Chapter 1 in Vulgate/KJV without falsy coercion', async () => {
+        const rs = new ReaderState();
+
+        // In LXX, Sirach begins at Chapter 0 (Prologue)
+        await rs.selectVersion('LXX', false);
+        const okLxx = await rs.selectBook('Sir', false);
+        expect(okLxx).toBe(true);
+        expect(rs.selectedChapter).toBe('0');
+        expect(rs.availableChapters[0]).toBe(0);
+
+        // Switching primary version to Vulgate (which lacks Chapter 0) safely resets to Chapter 1
+        await rs.selectVersion('Vulgate', false);
+        expect(rs.selectedBook).toBe('Sir');
+        expect(rs.selectedChapter).toBe('1');
+        expect(rs.availableChapters[0]).toBe(1);
+
+        // In KJV, Sirach begins at Chapter 1
+        await rs.selectVersion('KJV', false);
+        await rs.selectBook('Sir', false);
+        expect(rs.selectedChapter).toBe('1');
+        expect(rs.availableChapters[0]).toBe(1);
+    });
+
+    it('preserves Chapter 0 when loading chapter data and utilizes LRU cache on repeat loads', async () => {
+        const mockVerses = Array.from({ length: 36 }, (_, i) => ({
+            id: i + 1,
+            work_unit_id: `sir_0_${i + 1}`,
+            ord: i + 1,
+            hierarchy: `0,${i + 1}`,
+            body: `Verse ${i + 1} text`,
+            version: 'LXX',
+            native_citation: `0:${i + 1}`
+        }));
+
+        const mockLoadResult: bibleDataLoader.ChapterDataResult = {
+            verses: mockVerses as any,
+            verseKeys: mockVerses.map((_, i) => String(i + 1)),
+            chapterDataByVerse: Object.fromEntries(
+                mockVerses.map((_, i) => [
+                    String(i + 1),
+                    {
+                        LXX: {
+                            exists: true,
+                            omitted: false,
+                            label: `0:${i + 1}`,
+                            verseData: { text: `Verse ${i + 1} text` }
+                        }
+                    }
+                ])
+            )
+        };
+
+        const loadDbSpy = vi.spyOn(bibleDataLoader, 'loadChapterFromDb').mockResolvedValue(mockLoadResult);
+
+        const rs = new ReaderState();
+        await rs.selectVersion('LXX', false);
+        await rs.selectBook('Sir', false);
+
+        expect(rs.selectedChapter).toBe('0');
+
+        // First load from DB
+        await rs.loadCurrentChapter(false);
+
+        expect(rs.selectedChapter).toBe('0');
+        expect(loadDbSpy).toHaveBeenCalledTimes(1);
+        // Verify chapNum passed to loadChapterFromDb was 0, not coerced to 1
+        expect(loadDbSpy).toHaveBeenCalledWith('Sir', 0, rs.activeVersions, 'LXX');
+        expect(rs.chapterVerseKeys).toHaveLength(36);
+
+        // Repeat load should be served directly from LRU cache without hitting loadChapterFromDb
+        await rs.loadCurrentChapter(false);
+        expect(loadDbSpy).toHaveBeenCalledTimes(1);
+        expect(rs.chapterVerseKeys).toHaveLength(36);
+        expect(rs.selectedChapter).toBe('0');
     });
 });

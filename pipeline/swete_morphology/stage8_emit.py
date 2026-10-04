@@ -97,7 +97,6 @@ BOOK_CANONICAL_ORDER = [
     ("Sus", "Sus", "Susanna OG", ["Susanna OG", "SusannaOG", "Susanna", "Sus OG", "SusOG", "Sus"]),
     ("SusTh", "SusTh", "Susanna Th", ["Susanna Th", "SusannaTh", "SusTh"]),
     # Additional Swete books
-    ("SirProl", "SirProl", "Sirach Prologue", ["Sirach Prologue", "SirProl", "Sip"]),
     ("1En", "1En", "1 Enoch", ["1 Enoch", "1En", "Enoch"]),
 ]
 

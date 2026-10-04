@@ -1,4 +1,4 @@
-import { getVersionBooks, myDataSets } from '$lib/config/versions';
+import { getVersionBooks, myDataSets, getVersionBookChapters } from '$lib/config/versions';
 import { mylog } from '$lib/lemma-ui/env/env';
 import { getBookForVersion, normalizeBookName, formatBookAbbreviation } from '$lib/config/bookMapping.js';
 import type { HebrewDiacriticMode } from '$lib/utils/diacritics';
@@ -87,7 +87,9 @@ export class ReaderState {
 	availableBooks = $derived<string[]>(getVersionBooks(this.selectedVersion));
 
 	availableChapters = $derived<number[]>(
-		this.bookChapters.length > 0 ? this.bookChapters : [1]
+		this.bookChapters.length > 0
+			? this.bookChapters
+			: getVersionBookChapters(this.selectedVersion, this.selectedBook)
 	);
 
 	verseKeys = $derived<string[]>(this.chapterVerseKeys);
@@ -170,7 +172,8 @@ export class ReaderState {
 		const seq = ++this._loadSeq;
 		this.isLoading = true;
 		const book = this.selectedBook;
-		const chapNum = parseInt(this.selectedChapter, 10) || 1;
+		const parsedCh = parseInt(this.selectedChapter, 10);
+		const chapNum = isNaN(parsedCh) ? 1 : parsedCh;
 		const versions = this.activeVersions;
 		const primaryVersion = this.selectedVersion;
 
@@ -185,7 +188,7 @@ export class ReaderState {
 			if (cached.bookChapters.length > 0) {
 				this.bookChapters = cached.bookChapters;
 				if (!cached.bookChapters.includes(chapNum)) {
-					this.selectedChapter = String(cached.bookChapters[0] || 1);
+					this.selectedChapter = String(cached.bookChapters[0] ?? 1);
 				}
 			}
 
@@ -220,11 +223,13 @@ export class ReaderState {
 		}
 
 		try {
-			// Fetch book chapters in parallel if not already loaded for current book and primary version
-			const chaptersPromise = loadChaptersForBook(book, primaryVersion);
-			const chapterDataPromise = loadChapterFromDb(book, chapNum, versions, primaryVersion);
+			// Resolve book chapters synchronously from static metadata, with async DB fallback only if missing
+			let chapters = getVersionBookChapters(primaryVersion, book);
+			if (!chapters || chapters.length === 0) {
+				chapters = await loadChaptersForBook(book, primaryVersion);
+			}
 
-			const [chapters, res] = await Promise.all([chaptersPromise, chapterDataPromise]);
+			const res = await loadChapterFromDb(book, chapNum, versions, primaryVersion);
 
 			if (seq !== this._loadSeq) {
 				return;
@@ -233,7 +238,7 @@ export class ReaderState {
 			if (chapters.length > 0) {
 				this.bookChapters = chapters;
 				if (!chapters.includes(chapNum)) {
-					this.selectedChapter = String(chapters[0] || 1);
+					this.selectedChapter = String(chapters[0] ?? 1);
 				}
 			}
 
@@ -607,13 +612,18 @@ export class ReaderState {
 			// so switch to the first available book in target version
 			if (!resolvedBook) {
 				resolvedBook = books[0] || 'Gen';
-				resolvedChapter = '1';
-//				mylog(`selectVersion(${version}): book '${prevBook}' not available in ${matchingVersion}, defaulting to '${resolvedBook}'`, true);
+				const availCh = getVersionBookChapters(matchingVersion, resolvedBook);
+				resolvedChapter = String(availCh[0] ?? 1);
 			}
 
 			this.ensureVisibleContainsSelectedVersion();
 			this.ensureVisibleCompatibleWithSelectedVersion(false);
 			this.selectedBook = resolvedBook;
+			const availForTarget = getVersionBookChapters(matchingVersion, resolvedBook);
+			const parsedTargetCh = parseInt(resolvedChapter, 10);
+			if (!availForTarget.includes(isNaN(parsedTargetCh) ? 1 : parsedTargetCh)) {
+				resolvedChapter = String(availForTarget[0] ?? 1);
+			}
 			this.selectedChapter = resolvedChapter;
 
 			if (realign) this.realignAll();
@@ -658,11 +668,13 @@ export class ReaderState {
 
 		if (matchedBook) {
 			this.selectedBook = matchedBook;
-			this.selectedChapter = '1';
+			const availChapters = getVersionBookChapters(this.selectedVersion, matchedBook);
+			const firstChapter = String(availChapters[0] ?? 1);
+			this.selectedChapter = firstChapter;
 			this.bookDropdownOpen = false;
 			if (reload) {
 				this.isLoading = true;
-				this.loadingMessage = `Loading ${matchedBook} 1...`;
+				this.loadingMessage = `Loading ${matchedBook} ${firstChapter}...`;
 			}
 			ret = true;
 			if (reload) await this.loadCurrentChapter();

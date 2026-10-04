@@ -138,7 +138,7 @@ export function formatVersionLabel(opt: string, short=false): string {
   
 }
 
-import { VERSION_AVAILABLE_BOOKS } from './canonicalBooks.generated.js';
+import { VERSION_AVAILABLE_BOOKS, getCanonicalBookChapters } from './canonicalBooks.generated.js';
 
 export const bhsBooks = VERSION_AVAILABLE_BOOKS['BHS'] || [];
 export const lxxBooks = VERSION_AVAILABLE_BOOKS['LXX'] || [];
@@ -160,4 +160,10 @@ export function isBookInVersion(book: string, version: string): boolean {
   if (!books || books.length === 0) return false;
   const clean = book.trim().toLowerCase();
   return books.some((b) => b.toLowerCase() === clean);
+}
+
+export function getVersionBookChapters(version: string, book: string): number[] {
+  const clean = (version || '').trim().toLowerCase();
+  const resolved = VERSION_ALIASES[clean] || getCorrectVersionName(version) || version;
+  return getCanonicalBookChapters(resolved, book);
 }

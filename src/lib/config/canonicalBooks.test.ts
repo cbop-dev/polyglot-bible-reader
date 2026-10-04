@@ -119,5 +119,30 @@ describe('canonicalBooks Parity with SQLite Database', () => {
 		expect(formatDisplayReference('TOB 1:1', 'LXX')).toBe('TobBA 1:1');
 		expect(formatDisplayReference('TOB 1:1', 'KJV')).toBe('Tob 1:1');
 	});
+
+	it('should accurately resolve version-specific chapter ranges including Sirach chapter 0', async () => {
+		const { getCanonicalBookChapters } = await import('./canonicalBooks.generated.js');
+		const { getVersionBookChapters } = await import('./versions.js');
+
+		// LXX Sirach includes Chapter 0 (prologue) through 51
+		const lxxSirChapters = getVersionBookChapters('LXX', 'Sir');
+		expect(lxxSirChapters[0]).toBe(0);
+		expect(lxxSirChapters).toHaveLength(52);
+		expect(lxxSirChapters[51]).toBe(51);
+
+		// Vulgate and KJV Sirach default to standard canonical 1..51
+		const vulgateSirChapters = getVersionBookChapters('Vulgate', 'Sir');
+		expect(vulgateSirChapters[0]).toBe(1);
+		expect(vulgateSirChapters).toHaveLength(51);
+
+		const kjvSirChapters = getVersionBookChapters('KJV', 'Sir');
+		expect(kjvSirChapters[0]).toBe(1);
+		expect(kjvSirChapters).toHaveLength(51);
+
+		// Canonical default fallback for standard books
+		const genChapters = getCanonicalBookChapters(undefined, 'GEN');
+		expect(genChapters[0]).toBe(1);
+		expect(genChapters).toHaveLength(50);
+	});
 });
 

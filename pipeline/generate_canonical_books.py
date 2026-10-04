@@ -261,6 +261,37 @@ def generate_typescript():
 
         version_available_books[ver] = books_for_ver
 
+    # 3. Detect version-specific chapter deviations from text_units
+    canonical_chapters = {r[0]: r[7] for r in rows}
+    cur.execute("""
+        SELECT corpus_id, std_book, std_chapter
+        FROM text_units
+        GROUP BY corpus_id, std_book, std_chapter
+        ORDER BY corpus_id, std_book, std_chapter
+    """)
+    tu_ch_rows = cur.fetchall()
+
+    version_book_chapters = {}
+    for cid, std_book, ch in tu_ch_rows:
+        ver = corpus_to_version.get(cid)
+        if not ver:
+            continue
+        if ver not in version_book_chapters:
+            version_book_chapters[ver] = {}
+        if std_book not in version_book_chapters[ver]:
+            version_book_chapters[ver][std_book] = []
+        version_book_chapters[ver][std_book].append(ch)
+
+    version_chapter_overrides = {}
+    for ver, b_map in version_book_chapters.items():
+        for std_code, ch_list in b_map.items():
+            tot = canonical_chapters.get(std_code, 0)
+            default_ch_list = list(range(1, tot + 1))
+            if ch_list != default_ch_list:
+                if ver not in version_chapter_overrides:
+                    version_chapter_overrides[ver] = {}
+                version_chapter_overrides[ver][std_code] = ch_list
+
     conn.close()
 
     if len(rows) == 0:
@@ -277,6 +308,7 @@ def generate_typescript():
         if testament_clean == "ap":
             testament_clean = "apocrypha"
 
+        default_chapters = list(range(1, total_chapters + 1))
         item = {
             "code": code,
             "slug": slug,
@@ -285,6 +317,7 @@ def generate_typescript():
             "title": name_en,
             "testament": testament_clean,
             "totalChapters": total_chapters,
+            "chapters": default_chapters,
         }
 
         if name_he:
@@ -319,6 +352,7 @@ def generate_typescript():
         "	title: string; // Full English title",
         "	testament: 'ot' | 'nt' | 'apocrypha';",
         "	totalChapters: number;",
+        "	chapters: number[];",
         "	nameHebrew?: string;",
         "	nameGreek?: string;",
         "	nameLatin?: string;",
@@ -329,6 +363,8 @@ def generate_typescript():
         "export const CANONICAL_BOOK_DEFINITIONS: CanonicalBook[] = " + json.dumps(books_data, indent=2) + ";",
         "",
         "export const VERSION_AVAILABLE_BOOKS: Record<string, string[]> = " + json.dumps(version_available_books, indent=2) + ";",
+        "",
+        "export const VERSION_CHAPTER_OVERRIDES: Record<string, Partial<Record<string, number[]>>> = " + json.dumps(version_chapter_overrides, indent=2) + ";",
         "",
         "/**",
         " * Normalizes any string to a clean alphanumeric key for fast lookup.",
@@ -419,6 +455,27 @@ def generate_typescript():
         "export function getCanonicalBook(code?: string | null): CanonicalBook | null {",
         "	if (!code) return null;",
         "	return CODE_TO_CANONICAL.get(code.trim().toUpperCase()) || null;",
+        "}",
+        "",
+        "/**",
+        " * Resolves the available chapter numbers for a given book and version.",
+        " * Checks version-specific overrides first (e.g. Sirach 0..51 in LXX, 2Esdr 1..23),",
+        " * then falls back to canonical book definition chapters (1..N).",
+        " */",
+        "export function getCanonicalBookChapters(version?: string, bookIdentifier?: string): number[] {",
+        "	if (!bookIdentifier) return [1];",
+        "	const code = resolveBookCode(bookIdentifier, version) || cleanKey(bookIdentifier).toUpperCase();",
+        "	if (version && VERSION_CHAPTER_OVERRIDES[version]?.[code]) {",
+        "		return VERSION_CHAPTER_OVERRIDES[version]![code]!;",
+        "	}",
+        "	const canon = getCanonicalBook(code) || normalizeBookName(bookIdentifier);",
+        "	if (canon?.chapters && canon.chapters.length > 0) {",
+        "		return canon.chapters;",
+        "	}",
+        "	if (canon?.totalChapters) {",
+        "		return Array.from({ length: canon.totalChapters }, (_, i) => i + 1);",
+        "	}",
+        "	return [1];",
         "}",
         ""
     ]

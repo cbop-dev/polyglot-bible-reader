@@ -516,7 +516,7 @@ export async function translateReference(
 	fromVersion: string,
 	toVersion: string
 ): Promise<TranslatedReference | null> {
-	mylog(`Translate reference([${fromVersion} ${book} ${chapter}:${verse}]->${toVersion})`, true)
+//	mylog(`Translate reference([${fromVersion} ${book} ${chapter}:${verse}]->${toVersion})`, true)
 	if (!book) return null;
 	const fromVerObj = myDataSets.lookup(fromVersion);
 	const toVerObj = myDataSets.lookup(toVersion);
@@ -524,7 +524,7 @@ export async function translateReference(
 		&& (toVerObj?.testament == 'ot' || toVerObj?.testament=='nt')
 		&& fromVerObj.testament!=toVerObj.testament
 	){
-		mylog(`no translation possible bx. ${fromVersion} and ${toVersion}`, true);
+//		mylog(`no translation possible bx. ${fromVersion} and ${toVersion}`, true);
 		return null;
 	}
 

@@ -45,7 +45,7 @@ SWETE_BOOK_MAP = {
     "Cant": "SNG",
     "Job": "JOB",
     "Wis": "WIS",
-    "Sir": "SIR", "SirProl": "SIR",
+    "Sir": "SIR",
     "Hos": "HOS",
     "Amos": "AMO",
     "Mic": "MIC",
@@ -118,8 +118,8 @@ class SweteLXXAdapter(BaseAdapter):
 
         for bpath in book_files:
             b_abbrev = bpath.stem
-            # Skip unlemmatized duplicate files for Samuel and Kings
-            if b_abbrev in ("1Kgdms", "2Kgdms", "3Kgdms", "4Kgdms"):
+            # Skip unlemmatized duplicate files for Samuel, Kings, and Sirach Prologue (Sirach 0 is inside Sir.json)
+            if b_abbrev in ("1Kgdms", "2Kgdms", "3Kgdms", "4Kgdms", "SirProl"):
                 continue
 
             std_book = SWETE_BOOK_MAP.get(b_abbrev)
