@@ -74,15 +74,77 @@ For full details, see [LICENSES.md](LICENSES.md).
 
 ## Development & Building
 
+There are two build phases: 
+
+1. [Phase 1: Data build (python pipeline)](#data-pipeline)
+2. [Phrase 2: Web application build (sveltekit)](#web-build)
+
+By default, stage (1) need not be run, because its results are pre-packaged in the chunked database files commited to the repository (and thus all releases). One need only run stage 1 if there have been changes to the underlying datasets or pipeline, and/or the the sqlite3 database needs to be re-built. This can be done as follows. Otherwise, skip to [stage 2 below](#web-build).
+
+### <a id="data-pipeline">1. Data Pipeline & Database Production (`pipeline/`)</a>
+
+The data pipeline is an offline Python build system that fetches upstream ancient and modern texts, resolves cross-tradition versification alignments (TVTMS), indexes lemmas and concordances, validates data integrity, and produces the 5MB SQLite chunks in `static/db/`.
+
+#### Prerequisites
+
+- Python 3.10+
+- (Optional, only needed if re-running neural Greek NLP lemmatization): `pip install -r pipeline/requirements-morphology.txt`
+
+#### Running the Pipeline
+
 ```bash
-# Install dependencies
+# Run the complete pipeline end-to-end (fetch -> build DB -> validate -> chunk -> generate TS config):
+python3 -m pipeline.build --all
+
+# Or run individual pipeline stages:
+python3 -m pipeline.build --fetch      # Download upstream texts & lexicons to pipeline/cache/
+python3 -m pipeline.build --build      # Compile pipeline/build/polyglot-working.sqlite3
+python3 -m pipeline.build --validate   # Run integrity and cross-tradition alignment test suite
+python3 -m pipeline.build --chunk      # Split SQLite database into 5MB chunks in static/db/
+python3 pipeline/generate_canonical_books.py  # Synchronize TypeScript book definitions
+
+# (Optional) Re-run the 8-stage Swete Septuagint NLP morphology resolution engine:
+python3 -m pipeline.build --rebuild-lxx-morphology
+```
+
+#### Pipeline Stages & Architecture
+
+1. **Stage 1: Upstream Source Fetching (`pipeline/fetcher.py`)**:
+   - Downloads public datasets into `pipeline/cache/` (STEPBible TVTMS crosswalk, Clementine Vulgate, OpenGNT with NA28 morphology, MorphHB Hebrew OT, BDB Hebrew Lexicon, STEPBible LSJ Greek Lexicons, Swete 1930 Septuagint, KJV, WEB-BE, and Brenton LXX). Existing cached files are reused automatically unless `--force` is specified.
+2. **Sub-Pipeline: Swete LXX Morphology & Lemmatization (`pipeline/swete_morphology/`)**:
+   - 8-stage NLP pipeline using Stanza (`grc_proiel`), a proper-name gazetteer, and constraint resolution to resolve lemmas and morphological codes. Pre-resolved token archives are bundled in `pipeline/data/lxx.tar.gz`.
+3. **Stage 2: Database Construction (`pipeline/db_builder.py`)**:
+   - Builds `pipeline/build/polyglot-working.sqlite3`.
+   - Ingests BDB and LSJ unabridged lexicons into `lexicon_entries`.
+   - Ingests all 7 biblical corpora (`vulgate`, `wlc`, `swete_lxx`, `ognt`, `kjv`, `webbe`, `brenton-lxx`).
+   - Aligns distinct chapter/verse schemes across traditions to the Universal Standard Hub using the Tyndale Versification Mapping System (`pipeline/tvtms.py`).
+   - Pre-computes $O(1)$ lemma distributions and concordance indexes (`lemma_stats`, `concordance_refs`, `corpus_book_stats`) via `pipeline/lemma_indexer.py`.
+4. **Stage 3: Validation Suite (`pipeline/validate.py`)**:
+   - Automated test suite verifying table counts, zero data loss (e.g., all 176 verses of Vulgate Psalm 118 preserved), multi-tradition verse synchronization (Psalm 50/51 alignment), and lexical referential integrity.
+5. **Stage 4: HTTP-VFS Chunking (`pipeline/chunker.py`)**:
+   - Slices the SQLite database into 5MB chunk files in `static/db/` (`polyglot.db.00`, `polyglot.db.01`, ...) and generates `static/db/config.json` with cache-busting tokens for `sql.js-httpvfs`.
+6. **Stage 5: TypeScript Definition Generation (`pipeline/generate_canonical_books.py`)**:
+   - Queries `canonical_books` from SQLite and emits `src/lib/config/canonicalBooks.generated.ts` to ensure 100% parity with the frontend.
+
+---
+
+
+### <a id="web-build">2. Web Application (SvelteKit)</a>
+
+The web frontend is built as a static client application that loads the pre-chunked SQLite database from `static/db/` via client-side WebAssembly (`sql.js-httpvfs`). Web builds (`npm run build`, `npm run build:gh`) do **not** run the Python pipeline or require Python on deployment servers (e.g., GitHub Pages).
+
+```bash
+# Install frontend dependencies
 npm install
 
 # Run development server
 npm run dev
 
-# Build production bundle
+# Build production bundle (Node adapter)
 npm run build
+
+# Build static bundle for GitHub Pages
+npm run build:gh
 
 # Preview production build locally
 npm run preview
