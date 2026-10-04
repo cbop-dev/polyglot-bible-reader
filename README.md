@@ -148,4 +148,7 @@ npm run build:gh
 
 # Preview production build locally
 npm run preview
+
+# build for apache2/httpd web server deployment:
+npm run build:www
 ```
