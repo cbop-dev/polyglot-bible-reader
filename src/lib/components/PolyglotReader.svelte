@@ -24,10 +24,11 @@ let {
 
 } : {version: string, book: string,chapter: string, verse: string, grid: string[][], meditate:boolean} = $props();
 
+readerState.isLoading=true;
 
 
-
-onMount(()=>{    
+onMount(()=>{
+    readerState.isLoading=true;    
     readerState.closeAllPopups();
     if(version){
         
@@ -35,10 +36,10 @@ onMount(()=>{
         
     }
     if(grid.length){
-        readerState.setDisplayGrid(grid);
+        readerState.setDisplayGrid(grid, false);
 //        mylog(`PolyglotReader, got/set grid array! [${grid.flat().join(',')}]`, true);
         if(!readerState.visibleVersions.includes(readerState.selectedVersion)){
-            readerState.selectVersion(readerState.visibleVersions[0]);
+            readerState.selectVersion(readerState.visibleVersions[0],false);
         }
     }
         
@@ -46,15 +47,17 @@ onMount(()=>{
 
     if (book) readerState.selectBook(book, false);
     if (chapter) readerState.selectChapter(chapter, false);
-    
+    if(meditate){
+        readerState.meditationMode=true;
+    }
+
     readerState.loadCurrentChapter().then(()=>{
         if (verse) {
                 readerState.scrollToVerse(verse);   
         }
     });
-    if(meditate){
-        readerState.meditationMode=true;
-    }
+
+    
 
 });
 

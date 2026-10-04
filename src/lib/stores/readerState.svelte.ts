@@ -17,6 +17,9 @@ import {
 	type LexiconEntryRow
 } from '$lib/services/dbClient';
 
+
+
+
 export interface VerseDataItem {
 	exists: boolean;
 	omitted: boolean;
@@ -29,7 +32,18 @@ export interface VerseDataItem {
 	};
 }
 
+interface CachedChapter {
+    verseKeys: string[];
+    chapterDataByVerse: Record<string, Record<string, VerseDataItem>>;
+    bookChapters: number[];
+}
+
+
+
 export class ReaderState {
+	// Maintain an LRU Map capped at e.g. 15-20 chapters (~1-2 MB of memory)
+	private _chapterCache = new Map<string, CachedChapter>();
+	private _maxCacheSize = 20;
 	selectedVersion = $state<string>('BHS');
 	selectedBook = $state<string>('Gen');
 	selectedChapter = $state<string>('1');
@@ -64,6 +78,11 @@ export class ReaderState {
 	activeVersions = $derived<string[]>(
 		Array.from(new Set([...this.versionGrid.flat(), this.selectedVersion]))
 	);
+
+	private getCacheKey(book: string, chapter: number, versions: string[]): string {
+		const sortedVersions = [...versions].sort().join(',');
+		return `${book}:${chapter}:${sortedVersions}`;
+	}
 
 	availableBooks = $derived<string[]>(getVersionBooks(this.selectedVersion));
 
@@ -147,12 +166,58 @@ export class ReaderState {
 	 * Loads the active chapter for all active grid versions from the SQLite database.
 	 */
 	async loadCurrentChapter(realign=true) {
+		//mylog(`loadCurrentChapter(${this.selectedBook} ${this.selectedChapter})`, true);
 		const seq = ++this._loadSeq;
 		this.isLoading = true;
 		const book = this.selectedBook;
 		const chapNum = parseInt(this.selectedChapter, 10) || 1;
 		const versions = this.activeVersions;
 		const primaryVersion = this.selectedVersion;
+
+		const cacheKey = this.getCacheKey(book, chapNum, versions);
+		const cached = this._chapterCache.get(cacheKey);
+
+		if (cached) {
+			// Refresh LRU order: delete and re-insert to mark as most recently used
+			this._chapterCache.delete(cacheKey);
+			this._chapterCache.set(cacheKey, cached);
+
+			if (cached.bookChapters.length > 0) {
+				this.bookChapters = cached.bookChapters;
+				if (!cached.bookChapters.includes(chapNum)) {
+					this.selectedChapter = String(cached.bookChapters[0] || 1);
+				}
+			}
+
+			this.chapterVerseKeys = cached.verseKeys;
+			this.chapterDataByVerse = cached.chapterDataByVerse;
+
+			// Populate loadedBooks map for backward compatibility
+			const booksMap: Record<string, any> = {};
+			for (const ver of versions) {
+				const chapObj: Record<string, any> = {};
+				for (const vKey of cached.verseKeys) {
+					const vItem = cached.chapterDataByVerse[vKey]?.[ver];
+					if (vItem?.exists && vItem.verseData) {
+						chapObj[vKey] = vItem.verseData;
+					}
+				}
+				booksMap[ver] = {
+					book,
+					chapters: {
+						[String(chapNum)]: chapObj
+					}
+				};
+			}
+			this.loadedBooks = booksMap;
+
+			if (realign) {
+				this.realignAll();
+			}
+			this.isLoading = false;
+			this.loadingMessage = 'Loading Book and Chapter...';
+			return;
+		}
 
 		try {
 			// Fetch book chapters in parallel if not already loaded for current book and primary version
@@ -174,6 +239,21 @@ export class ReaderState {
 
 			this.chapterVerseKeys = res.verseKeys;
 			this.chapterDataByVerse = res.chapterDataByVerse as Record<string, Record<string, VerseDataItem>>;
+
+			// Save to LRU cache
+			this._chapterCache.set(cacheKey, {
+				verseKeys: res.verseKeys,
+				chapterDataByVerse: res.chapterDataByVerse as Record<string, Record<string, VerseDataItem>>,
+				bookChapters: chapters
+			});
+
+			// Evict oldest if exceeding max cache size
+			if (this._chapterCache.size > this._maxCacheSize) {
+				const oldestKey = this._chapterCache.keys().next().value;
+				if (oldestKey) {
+					this._chapterCache.delete(oldestKey);
+				}
+			}
 
 			// Populate loadedBooks map for backward compatibility with existing components
 			const booksMap: Record<string, any> = {};
@@ -543,7 +623,7 @@ export class ReaderState {
 		} finally {
 			if (!reload && this.isLoading) {
 				this.isLoading = false;
-				this.loadingMessage = 'Loading Book and Chapter...';
+				//this.loadingMessage = 'Loading Book and Chapter...';
 			}
 		}
 	}

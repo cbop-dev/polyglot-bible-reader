@@ -1,4 +1,6 @@
-import { base } from '$app/paths';
+export const APP_VERSION = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'v.?';
+import { resolve } from '$app/paths';
+import { getBaseurl } from '$lib/utils/ui-utils';
 import type { WorkerHttpvfs } from 'sql.js-httpvfs';
 import type { SplitFileConfig } from 'sql.js-httpvfs/dist/sqlite.worker';
 
@@ -27,9 +29,9 @@ export async function getDbWorker(): Promise<WorkerHttpvfs> {
 		}
 
 		// Resolve URLs relative to window.location and SvelteKit base path
-		const workerUrl = new URL(`${base}/sqlite/sqlite.worker.js`, window.location.href).toString();
-		const wasmUrl = new URL(`${base}/sqlite/sql-wasm.wasm`, window.location.href).toString();
-		const configUrl = new URL(`${base}/db/config.json?t=${Date.now()}`, window.location.href).toString();
+		const workerUrl = new URL(`${getBaseurl()}sqlite/sqlite.worker.js`, window.location.href).toString();
+		const wasmUrl = new URL(`${getBaseurl()}sqlite/sql-wasm.wasm`, window.location.href).toString();
+		const configUrl = new URL(`${getBaseurl()}db/config.json${APP_VERSION ? '?v=' + APP_VERSION : ''}`, window.location.href).toString();
 
 		console.info(`[DB] Initializing sql.js-httpvfs worker:`, { workerUrl, wasmUrl, configUrl });
 		const config: SplitFileConfig = {

@@ -2,7 +2,7 @@ import { getDbWorker } from './dbWorker';
 import { mylog } from '$lib/lemma-ui/env/env';
 import { normalizeBookName, getBookForVersion, formatDisplayReference, formatBookAbbreviation } from '$lib/config/bookMapping.js';
 import { getStaticCorpusTotalWords, getStaticBookWordStats } from '$lib/config/corpusBookStats';
-
+import { myDataSets } from '$lib/config/versions';
 export interface WorkRow {
 	id: number;
 	slug: string;
@@ -516,7 +516,20 @@ export async function translateReference(
 	fromVersion: string,
 	toVersion: string
 ): Promise<TranslatedReference | null> {
+	mylog(`Translate reference([${fromVersion} ${book} ${chapter}:${verse}]->${toVersion})`, true)
 	if (!book) return null;
+	const fromVerObj = myDataSets.lookup(fromVersion);
+	const toVerObj = myDataSets.lookup(toVersion);
+	if ((fromVerObj?.testament == 'ot' || fromVerObj?.testament=='nt') 
+		&& (toVerObj?.testament == 'ot' || toVerObj?.testament=='nt')
+		&& fromVerObj.testament!=toVerObj.testament
+	){
+		mylog(`no translation possible bx. ${fromVersion} and ${toVersion}`, true);
+		return null;
+	}
+
+	
+
 	const fromCorpus = VERSION_MAP[fromVersion] || fromVersion.toLowerCase();
 	const toCorpus = VERSION_MAP[toVersion] || toVersion.toLowerCase();
 	if (fromCorpus === toCorpus) return { book, chapter, verse };
@@ -526,17 +539,12 @@ export async function translateReference(
 	if (!code && !resolvedBook) return null;
 
 	try {
-		const rows = await query<{ native_book: string; native_chapter: number; native_verse: number }>(`
-			SELECT b.native_book, b.native_chapter, b.native_verse
-			FROM text_units a
-			JOIN text_units b ON a.std_book = b.std_book AND a.std_chapter = b.std_chapter AND a.std_verse = b.std_verse
-			WHERE a.corpus_id = ? 
-			  AND (a.native_book = ? COLLATE NOCASE OR a.std_book = ?)
-			  AND (a.native_chapter = ? OR a.std_chapter = ?) 
-			  AND (a.native_verse = ? OR a.std_verse = ?)
-			  AND b.corpus_id = ?
-			LIMIT 1
-		`, [fromCorpus, resolvedBook, code, chapter, chapter, verse, verse, toCorpus]);
+		const rows = await query<{ native_book: string; native_chapter: number; native_verse: number }>(
+			`SELECT native_book, native_chapter, native_verse
+			FROM text_units
+			WHERE std_book = ? AND std_chapter = ? AND std_verse = ? AND corpus_id = ?
+			LIMIT 1;
+		`, [code, chapter, verse, toCorpus]);
 
 		if (rows.length > 0) {
 			return {

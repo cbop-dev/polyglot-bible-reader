@@ -121,15 +121,15 @@ describe('dbClient service', () => {
 			const trans = await translateReference('Ps', 51, 3, 'BHS', 'LXX');
 			expect(trans).toEqual({ book: 'Ps', chapter: 50, verse: 3 });
 			expect(mockQuery).toHaveBeenCalledWith(
-				expect.stringContaining('FROM text_units a\n\t\t\tJOIN text_units b'),
-				['wlc', 'Ps', 'PSA', 51, 51, 3, 3, 'swete_lxx']
+				expect.stringContaining('WHERE std_book = ? AND std_chapter = ? AND std_verse = ? AND corpus_id = ?'),
+				['PSA', 51, 3, 'swete_lxx']
 			);
 		});
 
 		it('returns null when reference translation fails or passage does not exist', async () => {
 			mockQuery.mockResolvedValueOnce([]);
 
-			const trans = await translateReference('Gen', 1, 1, 'BHS', 'OpenGNT');
+			const trans = await translateReference('Gen', 999, 1, 'BHS', 'LXX');
 			expect(trans).toBeNull();
 		});
 
