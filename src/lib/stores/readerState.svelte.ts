@@ -103,7 +103,7 @@ export class ReaderState {
 		}
 	}
 
-
+	//what does this do?
 	ensureVisibleContainsSelectedVersion(replaceOne = true) {
 		if (!this.visibleVersions.includes(this.selectedVersion)) {
 			const selectedDataset = dataSets.find(
@@ -476,7 +476,7 @@ export class ReaderState {
 	 * @description removes/replaces all those restrictive (OT vs. NT) visible versions if the selected version is exclusively OT/NT.
 	 * @param [reloadChapter=false] if true, will reload the chapter data/display
 	 */
-	ensureVisibleCompatibleWithSelectedVersion(reloadChapter = false) {
+	async ensureVisibleCompatibleWithSelectedVersion(reloadChapter = false) {
 		const incompatVersions = this.findIncompatibleVersions(this.selectedVersion);
 		if (!incompatVersions.length) return;
 
@@ -509,7 +509,7 @@ export class ReaderState {
 		}
 
 		if (reloadChapter && madeChanges) {
-			this.loadCurrentChapter();
+			await this.loadCurrentChapter();
 		}
 	}
 
@@ -547,10 +547,11 @@ export class ReaderState {
 	async selectVersion(version: string, reload = true, realign = true): Promise<boolean> {
 //		mylog(`selectVersion(${version})`, true);
 		const matchingVersion = getCorrectVersionName(version);
-		if (!matchingVersion) {
+		if (!matchingVersion ||matchingVersion==this.selectedVersion) {
 //			mylog(`selectVersion(${version}): No matching version found`, true);
 			return false;
 		}
+		
 
 //		mylog(`selectVersion(${version}): matchingVersion found: ${matchingVersion}`, true);
 		const oldVersion = this.selectedVersion;
@@ -616,7 +617,7 @@ export class ReaderState {
 				resolvedChapter = String(availCh[0] ?? 1);
 			}
 
-			this.ensureVisibleContainsSelectedVersion();
+			//this.ensureVisibleContainsSelectedVersion();
 			this.ensureVisibleCompatibleWithSelectedVersion(false);
 			this.selectedBook = resolvedBook;
 			const availForTarget = getVersionBookChapters(matchingVersion, resolvedBook);
@@ -692,9 +693,9 @@ export class ReaderState {
 
 		const chSelected = await this.selectChapter(chapter, true);
 		if (verse) {
-			setTimeout(() => {
+			
 				this.scrollToVerse(verse);
-			}, 200);
+			
 		}
 		return chSelected;
 	}

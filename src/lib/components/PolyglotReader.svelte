@@ -27,26 +27,26 @@ let {
 readerState.isLoading=true;
 
 
-onMount(()=>{
+onMount(async ()=>{
     readerState.isLoading=true;    
     readerState.closeAllPopups();
     if(version){
         
-        readerState.selectVersion(version, false);
+        await readerState.selectVersion(version, false);
         
     }
     if(grid.length){
-        readerState.setDisplayGrid(grid, false);
+        await readerState.setDisplayGrid(grid, false);
 //        mylog(`PolyglotReader, got/set grid array! [${grid.flat().join(',')}]`, true);
         if(!readerState.visibleVersions.includes(readerState.selectedVersion)){
-            readerState.selectVersion(readerState.visibleVersions[0],false);
+            await readerState.ensureVisibleCompatibleWithSelectedVersion(false);
         }
     }
         
             
 
-    if (book) readerState.selectBook(book, false);
-    if (chapter) readerState.selectChapter(chapter, false);
+    if (book) await readerState.selectBook(book, false);
+    if (chapter) await readerState.selectChapter(chapter, false);
     if(meditate){
         readerState.meditationMode=true;
     }

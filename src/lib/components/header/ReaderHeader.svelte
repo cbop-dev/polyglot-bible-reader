@@ -23,6 +23,7 @@
       readerState.gridHeaderExpanded=false;
     }
   })
+  $inspect('selectedBook:', readerState.selectedBook);
 </script>
 
 <header id="site-header" 
