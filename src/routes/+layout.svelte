@@ -4,7 +4,14 @@
 	import favicon from '$lib/assets/favicon.png';
 	import Footer from '$lib/components/ui/Footer.svelte';
 	import { readerState } from '$lib/stores/readerState.svelte';
+    import { onMount } from 'svelte';
 	let { children } = $props();
+
+	onMount(()=>{
+		readerState.initStaticData();
+
+	});
+	
 </script>
 
 <svelte:head>

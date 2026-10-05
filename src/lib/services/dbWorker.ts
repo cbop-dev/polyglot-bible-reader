@@ -29,9 +29,10 @@ export async function getDbWorker(): Promise<WorkerHttpvfs> {
 		}
 
 		// Resolve URLs relative to window.location and SvelteKit base path
-		const workerUrl = new URL(`${getBaseurl()}sqlite/sqlite.worker.js`, window.location.href).toString();
-		const wasmUrl = new URL(`${getBaseurl()}sqlite/sql-wasm.wasm`, window.location.href).toString();
-		const configUrl = new URL(`${getBaseurl()}db/config.json${APP_VERSION ? '?v=' + APP_VERSION : ''}`, window.location.href).toString();
+		const baseUrl = getBaseurl();
+		const workerUrl = new URL('sqlite/sqlite.worker.js', baseUrl).toString();
+		const wasmUrl = new URL('sqlite/sql-wasm.wasm', baseUrl).toString();
+		const configUrl = new URL(`db/config.json${APP_VERSION ? '?v=' + APP_VERSION : ''}`, baseUrl).toString();
 
 		console.info(`[DB] Initializing sql.js-httpvfs worker:`, { workerUrl, wasmUrl, configUrl });
 		const config: SplitFileConfig = {
@@ -45,4 +46,10 @@ export async function getDbWorker(): Promise<WorkerHttpvfs> {
 	})();
 
 	return workerPromise;
+}
+
+// At the bottom of dbWorker.ts:
+if (typeof window !== 'undefined') {
+	// Start worker & wasm download immediately on script evaluation
+	getDbWorker().catch((err) => console.warn('[DB] Eager init failed:', err));
 }

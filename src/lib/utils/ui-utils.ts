@@ -6,8 +6,20 @@ export function jumpToDiv(divId = '') {
 
 }
 
-export function getBaseurl(){
-    return page.url.protocol+"//"+page.url.hostname+(page.url.port ? ":"+page.url.port:'')+resolve("/");
+export function getBaseurl(): string {
+    if (typeof window !== 'undefined') {
+        const origin = window.location.origin;
+        const resolvedPath = resolve('/');
+        return `${origin}${resolvedPath.endsWith('/') ? resolvedPath : resolvedPath + '/'}`;
+    }
+    if (page?.url && page.url.protocol !== 'a:') {
+        const port = page.url.port ? `:${page.url.port}` : '';
+        const origin = `${page.url.protocol}//${page.url.hostname}${port}`;
+        const resolvedPath = resolve('/');
+        return `${origin}${resolvedPath.endsWith('/') ? resolvedPath : resolvedPath + '/'}`;
+    }
+    const resolvedPath = resolve('/');
+    return resolvedPath.endsWith('/') ? resolvedPath : resolvedPath + '/';
 }
 // Function to find the topmost <div> matching a CSS query
 export  function findTopmostDiv(cssQuery:string): Element|null{
