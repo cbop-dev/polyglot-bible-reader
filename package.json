@@ -1,7 +1,7 @@
 {
 	"name": "polyglot-bible-reader",
 	"private": true,
-	"version": "0.2.13",
+	"version": "0.2.14",
 	"type": "module",
 	"scripts": {
 		"dev": "vite dev",
@@ -20,6 +20,7 @@
 		"deploy:www": "./scripts/deploy_www.sh",
 		"deploy:www:quick": "./scripts/deploy_www.sh --no-build",
 		"deploy:www:promote": "./scripts/deploy_www.sh --promote",
+		"dwp":"npm run deploy:www:promote",
 		"deploy:promote": "npm run deploy:www:promote",
 		"deploy:www:history": "./scripts/deploy_www.sh --history",
 		"deploy:history": "npm run deploy:www:history",
@@ -32,7 +33,9 @@
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"test:e2e": "playwright install && playwright test",
-		"test": "npm run test:e2e"
+		"test": "npm run test:unit && npm run test:e2e",
+		"test:unit": "vitest"
+
 	},
 	"devDependencies": {
 		"@playwright/test": "^1.60.0",

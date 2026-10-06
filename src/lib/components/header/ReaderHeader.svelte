@@ -203,7 +203,7 @@ gap-2 sm:gap-4 -mx-3 px-1 sm:-mx-4 sm:px-4 md:-mx-8 md:px-3">
 
   
   <!-- top left of header: Logo/title, version, info-->
-  <div class="float-left flex items-center gap-2 sm:gap-3 md:gap-4 min-w-0">
+  <div class="flex items-center gap-2 sm:gap-3 md:gap-4 min-w-0 mr-10 max-w-5/12">
     <a href={resolve('/')} class="" target="_blank"  >
     <img
       src={siteLogo}
@@ -212,7 +212,7 @@ gap-2 sm:gap-4 -mx-3 px-1 sm:-mx-4 sm:px-4 md:-mx-8 md:px-3">
     /></a>
     {#if !readerState.meditationMode}
     <div class="min-w-0">
-      <h1 class="text-sm min-[360px]:text-base min-[410px]:text-lg sm:text-2xl md:text-2xl lg:text-4xl font-bold tracking-tight inline-flex items-center flex-wrap gap-x-1 sm:gap-x-1.5">
+      <h1 class="text-sm min-[360px]:text-base min-[410px]:text-lg sm:text-xl lg:text-4xl font-bold tracking-tight inline-flex items-center flex-wrap gap-x-1 sm:gap-x-1.5">
         <span class="truncate sm:whitespace-normal hidden sm:inline">
           <span class="hidden md:inline">Polyglot</span> Bible Reader
         </span>
@@ -267,7 +267,8 @@ gap-2 sm:gap-4 -mx-3 px-1 sm:-mx-4 sm:px-4 md:-mx-8 md:px-3">
 
       
     <!--Meditation Mode button!-->
-  <div class="{readerState.meditationMode ? 'absolute left-1/2 -translate-x-1/2 -translate-y-1 sm:-translate-y-1':''}">
+  <div class="lg:absolute md:left-1/2 lg:-translate-x-1/2 lg:justify-center
+  {readerState.meditationMode ? 'absolute left-1/2 -translate-x-1/2 justify-center -translate-y-1 sm:-translate-y-1':''}">
       <div class="relative ml-1">
       <label class="hidden {readerState.meditationMode? '': 'lg:block'} text-xs font-bold mb-1 text-center text-ink-soft" for="meditation-mode-button">Med.</label>
       <button
@@ -287,7 +288,8 @@ gap-2 sm:gap-4 -mx-3 px-1 sm:-mx-4 sm:px-4 md:-mx-8 md:px-3">
       </button>
     </div>
   </div>
-
+  <!-- spacer:-->
+<div class="hidden lg:block lg:min-w-1/12 max-w-1/12"></div>
 <!-- show book / chapter in meditation mode-->
 {#if readerState.meditationMode}
 <div class="absolute right-1"><h2 class="inline block text-md/1 sm:text-lg/1 leading-0 font-bold ">{formatBookAbbreviation(readerState.selectedBook)} {readerState.selectedChapter}</h2>
@@ -295,7 +297,9 @@ gap-2 sm:gap-4 -mx-3 px-1 sm:-mx-4 sm:px-4 md:-mx-8 md:px-3">
 </div>
 {/if}
   <!-- Right side: diacritics, version, book, chapter, and verse buttson-->
-  <div id="header-book-chapter-verse-selector" class="{readerState.meditationMode ? '':'flex gap-1'} sm:gap-2.5 bg-page p-1 sm:p-2.5  rounded shadow-xs sm:shadow items-center flex-shrink-0 break-all" onclick={(e) => e.stopPropagation()}>
+  <div id="header-book-chapter-verse-selector" 
+  class="lg:ml-4 {readerState.meditationMode ? '':'flex gap-1'} flex-wrap sm:gap-2.5 bg-page p-1 sm:p-2.5  
+  rounded shadow-xs sm:shadow items-center flex-shrink-0 break-all lg:max-w-5/12" onclick={(e) => e.stopPropagation()}>
     
 
     {#if !readerState.meditationMode}
@@ -351,170 +355,169 @@ gap-2 sm:gap-4 -mx-3 px-1 sm:-mx-4 sm:px-4 md:-mx-8 md:px-3">
         <div class="relativeh-6 sm:h-8 w-px bg-rule mx-0.5 sm:mx-1 self-end mb-1 hidden sm:inline"></div>
       {/if}
       </div>
-    
-    
-    <!-- Version Dropdown -->
-    <div class="relative">
-      <label class="hidden  text-sm font-bold mb-1 lg:block">Version</label>
-      <button 
-        aria-label="Select version"
-        class="border border-rule rounded p-1 sm:p-2 w-16 sm:w-20 md:w-24 text-xs sm:text-sm text-left bg-page flex justify-between items-center shadow-xs sm:shadow-sm cursor-pointer"
-        onclick={(e) => {  e.stopPropagation(); const prev = readerState.versionDropdownOpen; readerState.closeAllPopups(); readerState.versionDropdownOpen = !prev; }}
-      >
-        <span class="truncate">{readerState.selectedVersion}</span>
-        {#if readerState.isLoading}
-          <span class="w-3 h-3 border-2 border-link border-t-transparent rounded-full animate-spin ml-0.5 shrink-0" aria-label="Loading"></span>
-        {:else}
-          <span class="text-[10px] sm:text-xs text-ink-soft ml-0.5">▼</span>
-        {/if}
-      </button>
-      
-      {#if readerState.versionDropdownOpen}
+       <!-- Version Dropdown -->
+      <div class="relative">
+        <label class="hidden  text-sm font-bold mb-1 lg:block">Version</label>
         <button 
-          type="button" 
-          class="fixed inset-0 z-40 cursor-default bg-transparent border-0 p-0 m-0 w-full h-full" 
-          onclick={() => readerState.versionDropdownOpen = false} 
-          aria-label="Close version menu" 
-          tabindex="-1"
-        ></button>
-        <div class="absolute top-full left-0 mt-1 bg-page border border-rule rounded-md shadow-lg z-50 overflow-hidden min-w-[9rem] sm:min-w-[11rem] w-36 sm:w-44 py-1">
-          <div class="px-2 py-1 border-b border-rule">
-            <input
-              type="text"
-              bind:value={versionSearch}
-              use:autofocus
-              placeholder="Filter..."
-              class="w-full text-xs px-2 py-1 rounded bg-base-200/50 border border-rule focus:outline-none focus:ring-1 focus:ring-link text-ink"
-              onkeydown={handleVersionKeydown}
-            />
-          </div>
-          <div class="max-h-60 overflow-y-auto">
-            {#if filteredVersionGroups.length > 0}
-              {#each filteredVersionGroups as group, gIdx}
-                {#if gIdx > 0}
-                  <div class="border-t border-rule my-1"></div>
-                {/if}
-                <div class="px-2.5 py-1 text-[10px] sm:text-xs font-bold uppercase tracking-wider text-ink-soft select-none">
-                  {group.language}
-                </div>
-                {#each group.versions as v}
-                  <button 
-                    type="button"
-                    class="w-full text-left px-3 py-1.5 text-xs sm:text-sm hover:bg-rule flex items-center justify-between cursor-pointer {v === readerState.selectedVersion ? 'bg-blue-500 text-white hover:bg-blue-600 font-semibold' : 'text-ink'}"
-                    onclick={() => { readerState.selectVersion(v); readerState.versionDropdownOpen = false; }}
-                    title={formatVersionLabel(v)}
-                  >
-                    <span>{v}</span>
-                    {#if v === readerState.selectedVersion}
-                      <span class="text-xs">✓</span>
-                    {/if}
-                  </button>
+          aria-label="Select version"
+          class="border border-rule rounded p-1 sm:p-2 w-16 sm:w-20 md:w-24 text-xs sm:text-sm text-left bg-page flex justify-between items-center shadow-xs sm:shadow-sm cursor-pointer"
+          onclick={(e) => {  e.stopPropagation(); const prev = readerState.versionDropdownOpen; readerState.closeAllPopups(); readerState.versionDropdownOpen = !prev; }}
+        >
+          <span class="truncate">{readerState.selectedVersion}</span>
+          {#if readerState.isLoading}
+            <span class="w-3 h-3 border-2 border-link border-t-transparent rounded-full animate-spin ml-0.5 shrink-0" aria-label="Loading"></span>
+          {:else}
+            <span class="text-[10px] sm:text-xs text-ink-soft ml-0.5">▼</span>
+          {/if}
+        </button>
+        
+        {#if readerState.versionDropdownOpen}
+          <button 
+            type="button" 
+            class="fixed inset-0 z-40 cursor-default bg-transparent border-0 p-0 m-0 w-full h-full" 
+            onclick={() => readerState.versionDropdownOpen = false} 
+            aria-label="Close version menu" 
+            tabindex="-1"
+          ></button>
+          <div class="absolute top-full left-0 mt-1 bg-page border border-rule rounded-md shadow-lg z-50 overflow-hidden min-w-[9rem] sm:min-w-[11rem] w-36 sm:w-44 py-1">
+            <div class="px-2 py-1 border-b border-rule">
+              <input
+                type="text"
+                bind:value={versionSearch}
+                use:autofocus
+                placeholder="Filter..."
+                class="w-full text-xs px-2 py-1 rounded bg-base-200/50 border border-rule focus:outline-none focus:ring-1 focus:ring-link text-ink"
+                onkeydown={handleVersionKeydown}
+              />
+            </div>
+            <div class="max-h-60 overflow-y-auto">
+              {#if filteredVersionGroups.length > 0}
+                {#each filteredVersionGroups as group, gIdx}
+                  {#if gIdx > 0}
+                    <div class="border-t border-rule my-1"></div>
+                  {/if}
+                  <div class="px-2.5 py-1 text-[10px] sm:text-xs font-bold uppercase tracking-wider text-ink-soft select-none">
+                    {group.language}
+                  </div>
+                  {#each group.versions as v}
+                    <button 
+                      type="button"
+                      class="w-full text-left px-3 py-1.5 text-xs sm:text-sm hover:bg-rule flex items-center justify-between cursor-pointer {v === readerState.selectedVersion ? 'bg-blue-500 text-white hover:bg-blue-600 font-semibold' : 'text-ink'}"
+                      onclick={() => { readerState.selectVersion(v); readerState.versionDropdownOpen = false; }}
+                      title={formatVersionLabel(v)}
+                    >
+                      <span>{v}</span>
+                      {#if v === readerState.selectedVersion}
+                        <span class="text-xs">✓</span>
+                      {/if}
+                    </button>
+                  {/each}
                 {/each}
-              {/each}
-            {:else}
-              <div class="p-3 text-center text-xs text-ink-soft">No versions match</div>
-            {/if}
-          </div>
-        </div>
-      {/if}
-    </div>
-
-    <!-- Book Selector Button & Modal -->
-    <div class="relative">
-      <label class="hidden lg:block text-sm font-bold mb-1">Book</label>
-      <button 
-        aria-label="Select book"
-        class="border border-rule rounded p-1 sm:p-2 w-[4.5rem] sm:w-28 lg:w-32 text-xs sm:text-sm text-left bg-page flex justify-between items-center shadow-xs sm:shadow-sm cursor-pointer"
-        onclick={(e) => { e.stopPropagation(); const prev = readerState.bookDropdownOpen; readerState.closeAllPopups(); readerState.bookDropdownOpen = !prev; }}
-      >
-        <span class="truncate">{formatBookAbbreviation(readerState.selectedBook)}</span>
-        <span class="text-[10px] sm:text-xs text-ink-soft ml-0.5">▼</span>
-      </button>
-      
-      {#if readerState.bookDropdownOpen}
-        <div class="fixed inset-0 bg-black/20 z-40 flex items-center justify-center p-4" onclick={() => readerState.bookDropdownOpen = false}>
-          <div class="bg-page border border-rule rounded-lg shadow-xl p-4 z-50 max-h-[80vh] flex flex-col w-full max-w-3xl" onclick={(e) => e.stopPropagation()}>
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3 pb-2 border-b border-rule">
-              <h3 class="font-bold text-lg">Available Books ({readerState.selectedVersion})</h3>
-              <input
-                type="text"
-                bind:value={bookSearch}
-                use:autofocus
-                placeholder="Filter books (e.g. Ex, Exodus)..."
-                class="text-sm px-3 py-1.5 rounded-md bg-base-200/50 border border-rule focus:outline-none focus:ring-1 focus:ring-link w-full sm:w-64 text-ink"
-                onkeydown={handleBookKeydown}
-              />
-            </div>
-            <div class="overflow-y-auto">
-              {#if filteredBooks.length > 0}
-                <div class="grid grid-cols-3 md:grid-cols-6 gap-2">
-                  {#each filteredBooks as book}
-                    <button 
-                      class="p-2 text-center text-sm rounded hover:bg-rule cursor-pointer {book === readerState.selectedBook ? 'bg-blue-500 text-white hover:bg-blue-600 font-semibold' : 'bg-page border'}"
-                      onclick={() => { readerState.selectBook(book); readerState.bookDropdownOpen = false; }}
-                    >
-                      {formatBookAbbreviation(book)}
-                    </button>
-                  {/each}
-                </div>
               {:else}
-                <p class="text-center text-sm text-ink-soft py-8">No books matching "{bookSearch}"</p>
+                <div class="p-3 text-center text-xs text-ink-soft">No versions match</div>
               {/if}
             </div>
           </div>
-        </div>
-      {/if}
-    </div>
+        {/if}
+      </div>
+    <div class="flex flex-nowrap">
+   
 
-    <!-- Chapter Selector Button & Modal -->
-    <div class="relative">
-      <label class="hidden lg:block text-sm font-bold mb-1" for="chapter">Chapter</label>
-      <button 
-        id="chapter"
-        aria-label="Select chapter"
-        class="border border-rule rounded p-1 sm:p-2 w-12 sm:w-15 lg:w-20 text-xs sm:text-sm text-left bg-page flex justify-between items-center shadow-xs sm:shadow-sm cursor-pointer"
-        onclick={(e) => { e.stopPropagation(); const prev = readerState.chapterDropdownOpen; readerState.closeAllPopups(); readerState.chapterDropdownOpen = !prev; }}
-      >
-        <span class="truncate">{readerState.selectedChapter}</span>
-        <span class="text-[10px] sm:text-xs text-ink-soft ml-0.5">▼</span>
-      </button>
-      
-      {#if readerState.chapterDropdownOpen}
-        <div class="fixed inset-0 bg-black/20 z-40 flex items-center justify-center p-4" onclick={() => readerState.chapterDropdownOpen = false}>
-          <div class="bg-page border border-rule rounded-lg shadow-xl p-4 z-50 max-h-[80vh] flex flex-col w-full max-w-lg" onclick={(e) => e.stopPropagation()}>
-            <div class="flex items-center justify-between gap-2 mb-3 pb-2 border-b border-rule">
-              <h3 class="font-bold text-lg truncate">{formatBookAbbreviation(readerState.selectedBook)} - Chapter</h3>
-              <input
-                type="text"
-                bind:value={chapterSearch}
-                use:autofocus
-                placeholder="Chapter #..."
-                class="text-sm px-3 py-1 rounded-md bg-base-200/50 border border-rule focus:outline-none focus:ring-1 focus:ring-link w-28 sm:w-36 text-center text-ink"
-                onkeydown={handleChapterKeydown}
-              />
-            </div>
-            <div class="overflow-y-auto">
-              {#if filteredChapters.length > 0}
-                <div class="grid grid-cols-5 md:grid-cols-8 gap-2">
-                  {#each filteredChapters as ch}
-                    <button 
-                      class="p-2 text-center rounded hover:bg-rule cursor-pointer {String(ch) === String(readerState.selectedChapter) ? 'bg-blue-500 text-white hover:bg-blue-600 font-semibold' : 'bg-page border'}"
-                      onclick={() => { readerState.selectChapter(String(ch)); readerState.chapterDropdownOpen = false; }}
-                    >
-                      {ch}
-                    </button>
-                  {/each}
-                </div>
-              {:else}
-                <p class="text-center text-sm text-ink-soft py-8">No chapters matching "{chapterSearch}"</p>
-              {/if}
+      <!-- Book Selector Button & Modal -->
+      <div class="relative">
+        <label class="hidden lg:block text-sm font-bold mb-1">Book</label>
+        <button 
+          aria-label="Select book"
+          class="border border-rule rounded p-1 sm:p-2 w-[4.5rem] sm:w-28 lg:w-32 text-xs sm:text-sm text-left bg-page flex justify-between items-center shadow-xs sm:shadow-sm cursor-pointer"
+          onclick={(e) => { e.stopPropagation(); const prev = readerState.bookDropdownOpen; readerState.closeAllPopups(); readerState.bookDropdownOpen = !prev; }}
+        >
+          <span class="truncate">{formatBookAbbreviation(readerState.selectedBook)}</span>
+          <span class="text-[10px] sm:text-xs text-ink-soft ml-0.5">▼</span>
+        </button>
+        
+        {#if readerState.bookDropdownOpen}
+          <div class="fixed inset-0 bg-black/20 z-40 flex items-center justify-center p-4" onclick={() => readerState.bookDropdownOpen = false}>
+            <div class="bg-page border border-rule rounded-lg shadow-xl p-4 z-50 max-h-[80vh] flex flex-col w-full max-w-3xl" onclick={(e) => e.stopPropagation()}>
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3 pb-2 border-b border-rule">
+                <h3 class="font-bold text-lg">Available Books ({readerState.selectedVersion})</h3>
+                <input
+                  type="text"
+                  bind:value={bookSearch}
+                  use:autofocus
+                  placeholder="Filter books (e.g. Ex, Exodus)..."
+                  class="text-sm px-3 py-1.5 rounded-md bg-base-200/50 border border-rule focus:outline-none focus:ring-1 focus:ring-link w-full sm:w-64 text-ink"
+                  onkeydown={handleBookKeydown}
+                />
+              </div>
+              <div class="overflow-y-auto">
+                {#if filteredBooks.length > 0}
+                  <div class="grid grid-cols-3 md:grid-cols-6 gap-2">
+                    {#each filteredBooks as book}
+                      <button 
+                        class="p-2 text-center text-sm rounded hover:bg-rule cursor-pointer {book === readerState.selectedBook ? 'bg-blue-500 text-white hover:bg-blue-600 font-semibold' : 'bg-page border'}"
+                        onclick={() => { readerState.selectBook(book); readerState.bookDropdownOpen = false; }}
+                      >
+                        {formatBookAbbreviation(book)}
+                      </button>
+                    {/each}
+                  </div>
+                {:else}
+                  <p class="text-center text-sm text-ink-soft py-8">No books matching "{bookSearch}"</p>
+                {/if}
+              </div>
             </div>
           </div>
-        </div>
-      {/if}
-    </div>
+        {/if}
+      </div>
 
-    <!-- Verse Selector Button & Modal (Desktop) -->
+      <!-- Chapter Selector Button & Modal -->
+      <div class="relative">
+        <label class="hidden lg:block text-sm font-bold mb-1" for="chapter">Chapter</label>
+        <button 
+          id="chapter"
+          aria-label="Select chapter"
+          class="border border-rule rounded p-1 sm:p-2 w-12 sm:w-15 lg:w-20 text-xs sm:text-sm text-left bg-page flex justify-between items-center shadow-xs sm:shadow-sm cursor-pointer"
+          onclick={(e) => { e.stopPropagation(); const prev = readerState.chapterDropdownOpen; readerState.closeAllPopups(); readerState.chapterDropdownOpen = !prev; }}
+        >
+          <span class="truncate">{readerState.selectedChapter}</span>
+          <span class="text-[10px] sm:text-xs text-ink-soft ml-0.5">▼</span>
+        </button>
+        
+        {#if readerState.chapterDropdownOpen}
+          <div class="fixed inset-0 bg-black/20 z-40 flex items-center justify-center p-4" onclick={() => readerState.chapterDropdownOpen = false}>
+            <div class="bg-page border border-rule rounded-lg shadow-xl p-4 z-50 max-h-[80vh] flex flex-col w-full max-w-lg" onclick={(e) => e.stopPropagation()}>
+              <div class="flex items-center justify-between gap-2 mb-3 pb-2 border-b border-rule">
+                <h3 class="font-bold text-lg truncate">{formatBookAbbreviation(readerState.selectedBook)} - Chapter</h3>
+                <input
+                  type="text"
+                  bind:value={chapterSearch}
+                  use:autofocus
+                  placeholder="Chapter #..."
+                  class="text-sm px-3 py-1 rounded-md bg-base-200/50 border border-rule focus:outline-none focus:ring-1 focus:ring-link w-28 sm:w-36 text-center text-ink"
+                  onkeydown={handleChapterKeydown}
+                />
+              </div>
+              <div class="overflow-y-auto">
+                {#if filteredChapters.length > 0}
+                  <div class="grid grid-cols-5 md:grid-cols-8 gap-2">
+                    {#each filteredChapters as ch}
+                      <button 
+                        class="p-2 text-center rounded hover:bg-rule cursor-pointer {String(ch) === String(readerState.selectedChapter) ? 'bg-blue-500 text-white hover:bg-blue-600 font-semibold' : 'bg-page border'}"
+                        onclick={() => { readerState.selectChapter(String(ch)); readerState.chapterDropdownOpen = false; }}
+                      >
+                        {ch}
+                      </button>
+                    {/each}
+                  </div>
+                {:else}
+                  <p class="text-center text-sm text-ink-soft py-8">No chapters matching "{chapterSearch}"</p>
+                {/if}
+              </div>
+            </div>
+          </div>
+        {/if}
+      </div>
+          <!-- Verse Selector Button & Modal (Desktop) -->
     <div class="relative hidden sm:block">
       <label class="hidden lg:block text-sm font-bold mb-1" for="verse">Verse</label>
       <button 
@@ -561,6 +564,8 @@ gap-2 sm:gap-4 -mx-3 px-1 sm:-mx-4 sm:px-4 md:-mx-8 md:px-3">
         </div>
       {/if}
     </div>
+    </div>
+
     {/if}
   </div>
   

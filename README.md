@@ -18,15 +18,15 @@ An interactive, high-performance web application--deployable as a static HTML/Ja
 
 ## Inspiration
 
-This project was inspired by other parallel Bible readers online, such as (Parabible)[https://parabible.com] and (OpenScriptorium)[https://openscriptorium.org/]. (Special thanks to the developer of OpenScriptorium for his ideas and correspondence.)
+This project was inspired by other parallel Bible readers online, such as [Parabible](https://parabible.com) and [OpenScriptorium](https://openscriptorium.org/). (Special thanks to the developer of OpenScriptorium for his ideas and correspondence.)
 
 ## Data Provenance & Licensing
 
 All data assets in this repository are derived from datasets with various types of open licenses which allow (minimally) for non-commercial use. For complete details, see the [LICENSES.md page](LICENSES.md).
 
 > [!IMPORTANT]
-> **Non-Commercial Data Notice (BHS & TVTMS)**:
-> The Hebrew Bible text, lemma, and morphological dataset is derived from the **ETCBC / Text-Fabric BHSA** dataset and **Eliran Wong's BHS-morphology** package, and is licensed under **[CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/)**, which explicitly restricts usage to **Non-Commercial** purposes. Likewise, the **TVTMS versification alignment** data from STEPBible is licensed under **[CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/)**. Commercial use of these data assets is strictly prohibited.
+> **Non-Commercial Data Notice (BHS)**:
+> The Hebrew Bible text, lemma, and morphological dataset is derived from the **ETCBC / Text-Fabric BHSA** dataset and **Eliran Wong's BHS-morphology** package, and is licensed under **[CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/)**, which explicitly restricts usage to **Non-Commercial** purposes. Commercial use of these data assets is strictly prohibited.
 
 ### Upstream Sources & Credits
 
@@ -48,7 +48,7 @@ All data assets in this repository are derived from datasets with various types 
   - Morphological parsing: MorphGNT by James Tauber ([CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)).
 - **Versification Alignment (TVTMS)**:
   - Tyndale Versification Mapping System provided by STEPBible.org and Tyndale House, Cambridge ([STEPBible-Data](https://github.com/STEPBible/STEPBible-Data)).
-  - License: [Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)](https://creativecommons.org/licenses/by-nc/4.0/).
+  - License: [Creative Commons Attribution 4.0 International (CC BY 4.0)](https://creativecommons.org/licenses/by/4.0/deed.en).
 - **Lexica & Dictionaries**:
   - Liddell-Scott-Jones (LSJ) & Middle Liddell: Public Domain.
   - Brown-Driver-Briggs (BDB): Public Domain.
@@ -66,7 +66,7 @@ This project utilizes a dual-licensing structure to clearly separate application
 - **Application Software**: Licensed under the [GNU Affero General Public License v3.0 (AGPL-3.0)](LICENSE). Covers all source code, SvelteKit components, user interface logic, build scripts, and test suites.
 - **Data Assets & Transformations**: 
   - General static datasets and transformations are licensed under the [Creative Commons Attribution-ShareAlike 4.0 International License (CC BY-SA 4.0)](LICENSE-DATA).
-  - BHS Hebrew Bible data (text, lemma, morphology) and TVTMS versification alignment data are licensed under the [Creative Commons Attribution-NonCommercial 4.0 International License (CC BY-NC 4.0)](https://creativecommons.org/licenses/by-nc/4.0/) (**Commercial use prohibited**).
+  - BHS Hebrew Bible data (text, lemma, morphology) are licensed under the [Creative Commons Attribution-NonCommercial 4.0 International License (CC BY-NC 4.0)](https://creativecommons.org/licenses/by-nc/4.0/) (**Commercial use prohibited**).
 
 For full details, see [LICENSES.md](LICENSES.md).
 
