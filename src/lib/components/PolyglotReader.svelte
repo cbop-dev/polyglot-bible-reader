@@ -7,6 +7,8 @@ import ReaderHeader from '$lib/components/header/ReaderHeader.svelte';
 import GridHeader from '$lib/components/grid/GridHeader.svelte';
 import VerseCard from '$lib/components/grid/VerseCard.svelte';
 import LemmaModal from '$lib/components/lexicon/LemmaModal.svelte';
+import HotkeyHelpModal from '$lib/components/ui/HotkeyHelpModal.svelte';
+import { hotkeyManager } from '$lib/services/hotkeyManager';
 import { readerState } from '$lib/stores/readerState.svelte';
 import { getVersionBooks, myDataSets } from '$lib/config/versions';
 import { page } from '$app/state';
@@ -67,20 +69,8 @@ function reloadChapter(){
 
 };
 
-const hotkeys={
-    'm':()=>{readerState.meditationMode=!readerState.meditationMode}
-
-};
-
-
-	function onkeydown(event, ignoreCtrl = true) {
-		//mylog(`SynHome onkeydown=${event}`,true);
-		if ((!event.ctrlKey || !ignoreCtrl) && readerState.hotkeysEnabled) {
-			const key = event.key;
-			if (Object.keys(hotkeys).includes(key)) {
-				hotkeys[key]();
-			} 
-		}
+	function onkeydown(event: KeyboardEvent) {
+		hotkeyManager.handleKeyDown(event, readerState);
 	}
 //$inspect('versions grid:', readerState.versionGrid);
 //$inspect('params: ', page.params);
@@ -92,7 +82,7 @@ const hotkeys={
 <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions (because of reasons) -->
 <div id="polyglot-reader-container"
 class="min-h-screen bg-page text-ink font-sans p-3 sm:p-4 md:p-8 pt-0 sm:pt-0 md:pt-0 {readerState.meditationMode ? 'meditate':''}"
-onclick={() => readerState.closeAllPopups()}
+onclick={() => {/*if (false) readerState.closeAllPopups();*/}}
 >
 <ReaderHeader />
 
@@ -148,6 +138,7 @@ onclick={() => readerState.closeAllPopups()}
 <LemmaModal />
 {/key}
 {/if}
+<HotkeyHelpModal />
 
 <style>
 @reference 'tailwindcss';

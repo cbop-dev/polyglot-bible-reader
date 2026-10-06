@@ -70,6 +70,7 @@ export class ReaderState {
 	chapterDropdownOpen = $state<boolean>(false);
 	verseDropdownOpen = $state<boolean>(false);
 	showLemmaModal = $state<boolean>(false);
+	showHotkeyHelp = $state<boolean>(false);
 	activeWord = $state<any>(null);
 	hotkeysEnabled=$state(true);
 	visibleVersions = $derived<string[]>(
@@ -104,48 +105,51 @@ export class ReaderState {
 	}
 
 	//what does this do?
+	/**
+	 * @description ensures that at least one grid version is the selectedVersion!
+	 * @param replaceOne 
+	 */
 	ensureVisibleContainsSelectedVersion(replaceOne = true) {
-		if (!this.visibleVersions.includes(this.selectedVersion)) {
-			const selectedDataset = dataSets.find(
-				(ds) => ds.abbrev.toLowerCase() === this.selectedVersion.toLowerCase()
-			);
-			const selectedLang = selectedDataset?.language ?? '';
+		const targetVersion = getCorrectVersionName(this.selectedVersion) || this.selectedVersion;
+		if (this.visibleVersions.includes(targetVersion)) return;
 
-			if (selectedLang) {
-				if (replaceOne) {
-					const matchingLangs = this.visibleVersions.filter((visVer) =>
-						dataSets.find((ds) => ds.language === selectedLang && ds.abbrev === visVer)
-					);
+		if (!replaceOne) {
+			this.addColumn(targetVersion);
+			return;
+		}
 
-					if (matchingLangs.length) {
-						const versionToReplace = matchingLangs[0];
-						let replaced = false;
-						this.versionGrid = this.versionGrid.map((row) =>
-							row.map((col) => {
-								if (!replaced && col === versionToReplace) {
-									replaced = true;
-									return this.selectedVersion;
-								}
-								return col;
-							})
-						);
-					} else {
-						const row = 0;
-						let col = 0;
-						if (this.versionGrid[row]?.[0] === 'BHS' && selectedDataset?.testament === 'ot') {
-							col = 1;
-						} else if (this.versionGrid[row]?.[0] === 'LXX' && this.selectedVersion === 'Brenton') {
-							col = 1;
-						}
+		const targetData = myDataSets.lookup(targetVersion);
+		const targetLang = targetData?.language?.toLowerCase() ?? '';
 
-						this.versionGrid = this.versionGrid.map((r, rIdx) =>
-							r.map((c, cIdx) => (rIdx === row && cIdx === col ? this.selectedVersion : c))
-						);
+		// 1. Try to find a visible version with the same language
+		const sameLangVersion = this.visibleVersions.find((ver) => {
+			const lang = myDataSets.lookup(ver)?.language?.toLowerCase();
+			return lang && lang === targetLang;
+		});
+
+		// 2. Otherwise, check for any testament-incompatible version currently in the grid
+		const incompats = this.findIncompatibleVersions(targetVersion);
+		const versionToReplace = sameLangVersion || incompats[0];
+
+		if (versionToReplace) {
+			let replaced = false;
+			this.versionGrid = this.versionGrid.map((row) =>
+				row.map((col) => {
+					if (!replaced && col === versionToReplace) {
+						replaced = true;
+						return targetVersion;
 					}
-				} else {
-					this.addColumn(this.selectedVersion);
-				}
-			}
+					return col;
+				})
+			);
+		} else if (this.versionGrid.length > 0 && this.versionGrid[0].length > 0) {
+			// 3. Fallback: replace within valid bounds (e.g. first cell)
+			this.versionGrid = this.versionGrid.map((row, rIdx) =>
+				row.map((col, cIdx) => (rIdx === 0 && cIdx === 0 ? targetVersion : col))
+			);
+		} else {
+			// 4. Fallback: empty grid
+			this.versionGrid = [[targetVersion]];
 		}
 	}
 	/**
@@ -295,7 +299,9 @@ export class ReaderState {
 	}
 
 	closeAllPopups() {
+		mylog("closeAllPopups", true);
 		this.showLemmaModal = false;
+		this.showHotkeyHelp = false;
 		this.activeWord = null;
 		this.versionDropdownOpen = false;
 		this.bookDropdownOpen = false;
@@ -546,6 +552,7 @@ export class ReaderState {
 	 */
 	async selectVersion(version: string, reload = true, realign = true): Promise<boolean> {
 //		mylog(`selectVersion(${version})`, true);
+		let changedVersion = false;
 		const matchingVersion = getCorrectVersionName(version);
 		if (!matchingVersion ||matchingVersion==this.selectedVersion) {
 //			mylog(`selectVersion(${version}): No matching version found`, true);
@@ -560,6 +567,8 @@ export class ReaderState {
 
 		// Immediately update the Version button and close the dropdown
 		this.selectedVersion = matchingVersion;
+		changedVersion=true;
+
 		this.versionDropdownOpen = false;
 		if (reload) {
 			this.isLoading = true;
@@ -617,7 +626,7 @@ export class ReaderState {
 				resolvedChapter = String(availCh[0] ?? 1);
 			}
 
-			//this.ensureVisibleContainsSelectedVersion();
+			this.ensureVisibleContainsSelectedVersion();
 			this.ensureVisibleCompatibleWithSelectedVersion(false);
 			this.selectedBook = resolvedBook;
 			const availForTarget = getVersionBookChapters(matchingVersion, resolvedBook);
@@ -713,6 +722,28 @@ export class ReaderState {
 		ret = true;
 		if (reload) await this.loadCurrentChapter();
 		return ret;
+	}
+
+	async nextChapter(): Promise<boolean> {
+		const currentCh = Number(this.selectedChapter);
+		const chapters = this.availableChapters;
+		const currentIndex = chapters.indexOf(currentCh);
+		if (currentIndex !== -1 && currentIndex < chapters.length - 1) {
+			const nextCh = chapters[currentIndex + 1];
+			return await this.selectChapter(String(nextCh));
+		}
+		return false;
+	}
+
+	async prevChapter(): Promise<boolean> {
+		const currentCh = Number(this.selectedChapter);
+		const chapters = this.availableChapters;
+		const currentIndex = chapters.indexOf(currentCh);
+		if (currentIndex > 0) {
+			const prevCh = chapters[currentIndex - 1];
+			return await this.selectChapter(String(prevCh));
+		}
+		return false;
 	}
 
 	async scrollToVerse(verseKey: string) {

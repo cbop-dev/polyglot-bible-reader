@@ -399,4 +399,36 @@ describe('realign cell', ()=>{
         expect(rs.chapterVerseKeys).toHaveLength(36);
         expect(rs.selectedChapter).toBe('0');
     });
+
+    it('nextChapter and prevChapter navigate chapters and respect book boundaries', async () => {
+        const rs = new ReaderState();
+        await rs.selectVersion('BHS', false);
+        await rs.selectBook('Gen', false);
+
+        const firstCh = String(rs.availableChapters[0]);
+        const lastCh = String(rs.availableChapters[rs.availableChapters.length - 1]);
+
+        rs.selectedChapter = firstCh;
+        // At first chapter, prevChapter does nothing
+        const prevAtFirst = await rs.prevChapter();
+        expect(prevAtFirst).toBe(false);
+        expect(rs.selectedChapter).toBe(firstCh);
+
+        // From first, nextChapter moves to next chapter
+        const selectChapterSpy = vi.spyOn(rs, 'selectChapter');
+        await rs.nextChapter();
+        expect(selectChapterSpy).toHaveBeenCalledWith('2');
+
+        // At last chapter, nextChapter does nothing
+        rs.selectedChapter = lastCh;
+        selectChapterSpy.mockClear();
+        const nextAtLast = await rs.nextChapter();
+        expect(nextAtLast).toBe(false);
+        expect(rs.selectedChapter).toBe(lastCh);
+
+        // From last chapter, prevChapter moves to previous chapter
+        const prevChExpected = String(rs.availableChapters[rs.availableChapters.length - 2]);
+        await rs.prevChapter();
+        expect(selectChapterSpy).toHaveBeenCalledWith(prevChExpected);
+    });
 });

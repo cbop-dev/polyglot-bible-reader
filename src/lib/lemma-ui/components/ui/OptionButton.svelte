@@ -3,9 +3,9 @@
 
   let {
     buttonText = "Button",
-    buttonSize = "",
+    buttonSize = "gap-1.5 px-3.5 py-1.5 rounded-lg b",
     buttonColors = "",
-    textSize = "text-sm",
+    textSize = "text-sm shadow-xs",
     selected = $bindable(false),
     ready = true,
     customClickHandler = () => {},
@@ -41,7 +41,9 @@
   onclick={toggle}
   bind:this={theButton}
   title={tooltip}
-  class="inline-flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-lg border font-semibold text-sm transition-all duration-150 cursor-pointer shadow-xs {buttonSize} {textSize} {miscStyle} {selected 
+  class="inline-flex items-center justify-center order
+   font-semibold transition-all duration-150 cursor-pointer 
+   {buttonSize} {textSize} {miscStyle} {selected 
     ? 'bg-link text-white border-link shadow-md ring-2 ring-link/30 font-bold' 
     : 'bg-page text-ink border-rule hover:bg-rule/50 hover:border-link/60'} {!ready ? 'opacity-50 cursor-not-allowed' : ''} {buttonColors}"
 >

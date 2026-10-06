@@ -1,19 +1,24 @@
 <script lang="ts">
 
+
   import { resolve } from '$app/paths';
   import siteLogo from '$lib/assets/logo.png';
   import prayerWhiteSvg from '$lib/assets/prayer-white.svg';
   import prayerBlackSvg from '$lib/assets/prayer-black.svg';
   import prayerOutlineSvg from '$lib/assets/prayer-outline.svg';
   import VersionButton from '$lib/components/ui/VersionButton.svelte';
-  import { versionGroups, formatVersionLabel,getVersionLanguage } from '$lib/config/versions';
-  import { formatBookAbbreviation } from '$lib/config/bookMapping.js';
+  import { versionGroups, formatVersionLabel, getVersionLanguage, dataSets } from '$lib/config/versions';
+  import { formatBookAbbreviation, normalizeBookName } from '$lib/config/bookMapping.js';
   import { readerState } from '$lib/stores/readerState.svelte';
   //import gridIcon from '$env/static/public'
   import { expandRefs } from '$lib/utils/bible-utils';
   import GridButtonReactive from '../ui/grid-button-reactive.svelte';
   import Icon from '../ui/Icon.svelte';
   import { theme,size } from '$lib/stores/ThemeObserver.svelte';
+  import questionMarkBlack from '$lib/assets/question-mark-black.svg';
+  import questionMarkWhite from '$lib/assets/question-mark-white.svg';
+    import OptionButton from '$lib/lemma-ui/components/ui/OptionButton.svelte';
+    import Button from '$lib/lemma-ui/components/ui/Button.svelte';
   let displayedLanguages: string[]=$derived(Array.from(new Set(readerState.visibleVersions.map((v)=>getVersionLanguage(v)))));
   //$inspect('readerState.visibleVersions',readerState.visibleVersions);
 
@@ -24,6 +29,171 @@
     }
   })
   $inspect('selectedBook:', readerState.selectedBook);
+
+  function autofocus(node: HTMLElement) {
+    node.focus();
+    if (node instanceof HTMLInputElement) {
+      node.select();
+    }
+    requestAnimationFrame(() => {
+      node.focus();
+    });
+  }
+
+  function matchesBook(book: string, query: string): boolean {
+    const q = query.trim().toLowerCase();
+    if (!q) return true;
+    const formatted = formatBookAbbreviation(book).toLowerCase();
+    const raw = book.toLowerCase();
+    if (formatted.includes(q) || raw.includes(q)) return true;
+
+    const canonical = normalizeBookName(book);
+    if (canonical) {
+      if (canonical.title.toLowerCase().includes(q)) return true;
+      if (canonical.slug.toLowerCase().includes(q)) return true;
+      if (canonical.code.toLowerCase().includes(q)) return true;
+      if (canonical.standardAbbrev.toLowerCase().includes(q)) return true;
+      if (canonical.extraAliases?.some((a) => a.toLowerCase().includes(q))) return true;
+      if (canonical.nameHebrew && canonical.nameHebrew.includes(q)) return true;
+      if (canonical.nameGreek && canonical.nameGreek.toLowerCase().includes(q)) return true;
+      if (canonical.nameLatin && canonical.nameLatin.toLowerCase().includes(q)) return true;
+    }
+    return false;
+  }
+
+  const VERSION_FULL_NAMES: Record<string, string[]> = {
+    BHS: ['Biblia Hebraica Stuttgartensia', 'Hebrew Bible', 'Tanakh', 'Old Testament'],
+    LXX: ['Septuagint', 'Greek Old Testament', 'Swete Septuagint'],
+    OpenGNT: ['Open Greek New Testament', 'SBLGNT', 'Greek New Testament'],
+    Vulgate: ['Latin Vulgate', 'Clementine Vulgate', 'Biblia Sacra Vulgata'],
+    KJV: ['King James Version', 'Authorized Version', 'AV'],
+    WEB: ['World English Bible'],
+    Brenton: ['Brenton Septuagint Translation', 'Brenton English Septuagint']
+  };
+
+  function matchesVersion(ver: string, lang: string, query: string): boolean {
+    const q = query.trim().toLowerCase();
+    if (!q) return true;
+    if (ver.toLowerCase().includes(q)) return true;
+    if (lang.toLowerCase().includes(q)) return true;
+    const label = formatVersionLabel(ver).toLowerCase();
+    if (label.includes(q)) return true;
+
+    const aliases = VERSION_FULL_NAMES[ver];
+    if (aliases && aliases.some((a) => a.toLowerCase().includes(q))) {
+      return true;
+    }
+
+    const ds = dataSets.find((d) => d.abbrev.toLowerCase() === ver.toLowerCase());
+    if (ds && ds.description) {
+      if (ds.description.toLowerCase().includes(q)) return true;
+    }
+    return false;
+  }
+
+  let versionSearch = $state('');
+  let bookSearch = $state('');
+  let chapterSearch = $state('');
+  let verseSearch = $state('');
+
+  $effect(() => {
+    if (!readerState.versionDropdownOpen) versionSearch = '';
+  });
+  $effect(() => {
+    if (!readerState.bookDropdownOpen) bookSearch = '';
+  });
+  $effect(() => {
+    if (!readerState.chapterDropdownOpen) chapterSearch = '';
+  });
+  $effect(() => {
+    if (!readerState.verseDropdownOpen) verseSearch = '';
+  });
+
+  let filteredVersionGroups = $derived(
+    versionGroups
+      .map((group) => ({
+        ...group,
+        versions: group.versions.filter((v) => matchesVersion(v, group.language, versionSearch))
+      }))
+      .filter((group) => group.versions.length > 0)
+  );
+
+  let allFilteredVersions = $derived(
+    filteredVersionGroups.flatMap((g) => g.versions)
+  );
+
+  let filteredBooks = $derived(
+    readerState.availableBooks.filter((b) => matchesBook(b, bookSearch))
+  );
+
+  let filteredChapters = $derived.by(() => {
+    const q = chapterSearch.trim();
+    if (!q) return readerState.availableChapters;
+    const starts = readerState.availableChapters.filter((ch) => String(ch).startsWith(q));
+    const rest = readerState.availableChapters.filter((ch) => !String(ch).startsWith(q) && String(ch).includes(q));
+    return [...starts, ...rest];
+  });
+
+  let filteredVerses = $derived.by(() => {
+    const q = verseSearch.trim();
+    if (!q) return readerState.verseKeys;
+    const starts = readerState.verseKeys.filter((v) => v.startsWith(q));
+    const rest = readerState.verseKeys.filter((v) => !v.startsWith(q) && v.includes(q));
+    return [...starts, ...rest];
+  });
+
+  function handleVersionKeydown(e: KeyboardEvent) {
+    if (e.key === 'Escape') {
+      e.stopPropagation();
+      readerState.closeAllPopups();
+    } else if (e.key === 'Enter') {
+      e.stopPropagation();
+      if (allFilteredVersions.length > 0) {
+        readerState.selectVersion(allFilteredVersions[0]);
+        readerState.versionDropdownOpen = false;
+      }
+    }
+  }
+
+  function handleBookKeydown(e: KeyboardEvent) {
+    if (e.key === 'Escape') {
+      e.stopPropagation();
+      readerState.closeAllPopups();
+    } else if (e.key === 'Enter') {
+      e.stopPropagation();
+      if (filteredBooks.length > 0) {
+        readerState.selectBook(filteredBooks[0]);
+        readerState.bookDropdownOpen = false;
+      }
+    }
+  }
+
+  function handleChapterKeydown(e: KeyboardEvent) {
+    if (e.key === 'Escape') {
+      e.stopPropagation();
+      readerState.closeAllPopups();
+    } else if (e.key === 'Enter') {
+      e.stopPropagation();
+      if (filteredChapters.length > 0) {
+        readerState.selectChapter(String(filteredChapters[0]));
+        readerState.chapterDropdownOpen = false;
+      }
+    }
+  }
+
+  function handleVerseKeydown(e: KeyboardEvent) {
+    if (e.key === 'Escape') {
+      e.stopPropagation();
+      readerState.closeAllPopups();
+    } else if (e.key === 'Enter') {
+      e.stopPropagation();
+      if (filteredVerses.length > 0) {
+        readerState.scrollToVerse(filteredVerses[0]);
+        readerState.verseDropdownOpen = false;
+      }
+    }
+  }
+  $inspect('showHotkeyHelp', readerState.showHotkeyHelp);
 </script>
 
 <header id="site-header" 
@@ -54,7 +224,8 @@ gap-2 sm:gap-4 -mx-3 px-1 sm:-mx-4 sm:px-4 md:-mx-8 md:px-3">
         <span class=" sm:inline-flex items-center flex-shrink-0">
           <a
             href="{resolve('/')}sources-and-licenses"
-            class="btn btn-circle btn-ghost btn-xs text-base-content/80 sm:btn-sm hover:bg-base-200 hover:text-base-content inline-flex items-center justify-center rounded-full p-0.5 sm:p-1 text-ink-soft hover:text-ink hover:bg-rule/50 transition-colors align-super relative -top-0.5 sm:-top-1 ml-0.5 sm:ml-1"
+            class="btn btn-circle btn-ghost btn-xs text-base-content/80 
+            sm:btn-sm hover:bg-base-200 hover:text-base-content inline-flex items-center justify-center rounded-full p-0.5 sm:p-1 text-ink-soft hover:text-ink hover:bg-rule/50 transition-colors align-super relative -top-0.5 sm:-top-1 ml-0.5 sm:ml-1"
             title="Sources &amp; Licenses"
             aria-label="Sources &amp; Licenses"
           >
@@ -73,6 +244,21 @@ gap-2 sm:gap-4 -mx-3 px-1 sm:-mx-4 sm:px-4 md:-mx-8 md:px-3">
               />
             </svg>
           </a>
+        </span>
+       <span class=" sm:inline-flex items-center flex-shrink-0">
+          <button
+            onclick={()=>{readerState.showHotkeyHelp=true;}}
+            class="btn btn-circle btn-ghost btn-xs text-base-content/80 
+            sm:btn-sm hover:bg-base-200 hover:text-base-content inline-flex items-center justify-center rounded-full p-0.5 sm:p-1 
+            text-ink-soft hover:text-ink hover:bg-rule/50 transition-colors align-super relative -top-0.5 sm:-top-1 ml-0.5 sm:ml-1"
+            title="Keyboard Shortcuts"
+            aria-label="Show Keyboard Shorcuts Menu"
+          >
+           <svg  viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" fill='currentColor' class="w-3.5 h-3.5 sm:w-4.5 sm:h-4.5">
+            <path fill-rule="evenodd" clip-rule="evenodd" 
+            d="M7.5 1a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13zm0 12a5.5 5.5 0 1 1 0-11 
+            5.5 5.5 0 0 1 0 11zm1.55-8.42a1.84 1.84 0 0 0-.61-.42A2.25 2.25 0 0 0 7.53 4a2.16 2.16 0 0 0-.88.17c-.239.1-.45.254-.62.45a1.89 1.89 0 0 0-.38.62 3 3 0 0 0-.15.72h1.23a.84.84 0 0 1 .506-.741.72.72 0 0 1 .304-.049.86.86 0 0 1 .27 0 .64.64 0 0 1 .22.14.6.6 0 0 1 .16.22.73.73 0 0 1 .06.3c0 .173-.037.343-.11.5a2.4 2.4 0 0 1-.27.46l-.35.42c-.12.13-.24.27-.35.41a2.33 2.33 0 0 0-.27.45 1.18 1.18 0 0 0-.1.5v.66H8v-.49a.94.94 0 0 1 .11-.42 3.09 3.09 0 0 1 .28-.41l.36-.44a4.29 4.29 0 0 0 .36-.48 2.59 2.59 0 0 0 .28-.55 1.91 1.91 0 0 0 .11-.64 2.18 2.18 0 0 0-.1-.67 1.52 1.52 0 0 0-.35-.55zM6.8 9.83h1.17V11H6.8V9.83z"/></svg>
+          </button>
         </span>
       </h1>
     </div>
@@ -192,28 +378,44 @@ gap-2 sm:gap-4 -mx-3 px-1 sm:-mx-4 sm:px-4 md:-mx-8 md:px-3">
           aria-label="Close version menu" 
           tabindex="-1"
         ></button>
-        <div class="absolute top-full left-0 mt-1 bg-page border border-rule rounded-md shadow-lg z-50 overflow-hidden min-w-[7.5rem] sm:min-w-[8.5rem] w-32 py-1">
-          {#each versionGroups as group, gIdx}
-            {#if gIdx > 0}
-              <div class="border-t border-rule my-1"></div>
-            {/if}
-            <div class="px-2.5 py-1 text-[10px] sm:text-xs font-bold uppercase tracking-wider text-ink-soft select-none">
-              {group.language}
-            </div>
-            {#each group.versions as v}
-              <button 
-                type="button"
-                class="w-full text-left px-3 py-1.5 text-xs sm:text-sm hover:bg-rule flex items-center justify-between cursor-pointer {v === readerState.selectedVersion ? 'bg-blue-500 text-white hover:bg-blue-600 font-semibold' : 'text-ink'}"
-                onclick={() => readerState.selectVersion(v)}
-                title={formatVersionLabel(v)}
-              >
-                <span>{v}</span>
-                {#if v === readerState.selectedVersion}
-                  <span class="text-xs">✓</span>
+        <div class="absolute top-full left-0 mt-1 bg-page border border-rule rounded-md shadow-lg z-50 overflow-hidden min-w-[9rem] sm:min-w-[11rem] w-36 sm:w-44 py-1">
+          <div class="px-2 py-1 border-b border-rule">
+            <input
+              type="text"
+              bind:value={versionSearch}
+              use:autofocus
+              placeholder="Filter..."
+              class="w-full text-xs px-2 py-1 rounded bg-base-200/50 border border-rule focus:outline-none focus:ring-1 focus:ring-link text-ink"
+              onkeydown={handleVersionKeydown}
+            />
+          </div>
+          <div class="max-h-60 overflow-y-auto">
+            {#if filteredVersionGroups.length > 0}
+              {#each filteredVersionGroups as group, gIdx}
+                {#if gIdx > 0}
+                  <div class="border-t border-rule my-1"></div>
                 {/if}
-              </button>
-            {/each}
-          {/each}
+                <div class="px-2.5 py-1 text-[10px] sm:text-xs font-bold uppercase tracking-wider text-ink-soft select-none">
+                  {group.language}
+                </div>
+                {#each group.versions as v}
+                  <button 
+                    type="button"
+                    class="w-full text-left px-3 py-1.5 text-xs sm:text-sm hover:bg-rule flex items-center justify-between cursor-pointer {v === readerState.selectedVersion ? 'bg-blue-500 text-white hover:bg-blue-600 font-semibold' : 'text-ink'}"
+                    onclick={() => { readerState.selectVersion(v); readerState.versionDropdownOpen = false; }}
+                    title={formatVersionLabel(v)}
+                  >
+                    <span>{v}</span>
+                    {#if v === readerState.selectedVersion}
+                      <span class="text-xs">✓</span>
+                    {/if}
+                  </button>
+                {/each}
+              {/each}
+            {:else}
+              <div class="p-3 text-center text-xs text-ink-soft">No versions match</div>
+            {/if}
+          </div>
         </div>
       {/if}
     </div>
@@ -232,17 +434,33 @@ gap-2 sm:gap-4 -mx-3 px-1 sm:-mx-4 sm:px-4 md:-mx-8 md:px-3">
       
       {#if readerState.bookDropdownOpen}
         <div class="fixed inset-0 bg-black/20 z-40 flex items-center justify-center p-4" onclick={() => readerState.bookDropdownOpen = false}>
-          <div class="bg-page border border-rule rounded-lg shadow-xl p-4 z-50 max-h-[80vh] overflow-y-auto w-full max-w-3xl" onclick={(e) => e.stopPropagation()}>
-            <h3 class="font-bold mb-4 text-lg border-b border-rule pb-2">Available Books ({readerState.selectedVersion})</h3>
-            <div class="grid grid-cols-3 md:grid-cols-6 gap-2">
-              {#each readerState.availableBooks as book}
-                <button 
-                  class="p-2 text-center text-sm rounded hover:bg-rule cursor-pointer {book === readerState.selectedBook ? 'bg-blue-500 text-white hover:bg-blue-600' : 'bg-page border'}"
-                  onclick={() => readerState.selectBook(book)}
-                >
-                  {formatBookAbbreviation(book)}
-                </button>
-              {/each}
+          <div class="bg-page border border-rule rounded-lg shadow-xl p-4 z-50 max-h-[80vh] flex flex-col w-full max-w-3xl" onclick={(e) => e.stopPropagation()}>
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3 pb-2 border-b border-rule">
+              <h3 class="font-bold text-lg">Available Books ({readerState.selectedVersion})</h3>
+              <input
+                type="text"
+                bind:value={bookSearch}
+                use:autofocus
+                placeholder="Filter books (e.g. Ex, Exodus)..."
+                class="text-sm px-3 py-1.5 rounded-md bg-base-200/50 border border-rule focus:outline-none focus:ring-1 focus:ring-link w-full sm:w-64 text-ink"
+                onkeydown={handleBookKeydown}
+              />
+            </div>
+            <div class="overflow-y-auto">
+              {#if filteredBooks.length > 0}
+                <div class="grid grid-cols-3 md:grid-cols-6 gap-2">
+                  {#each filteredBooks as book}
+                    <button 
+                      class="p-2 text-center text-sm rounded hover:bg-rule cursor-pointer {book === readerState.selectedBook ? 'bg-blue-500 text-white hover:bg-blue-600 font-semibold' : 'bg-page border'}"
+                      onclick={() => { readerState.selectBook(book); readerState.bookDropdownOpen = false; }}
+                    >
+                      {formatBookAbbreviation(book)}
+                    </button>
+                  {/each}
+                </div>
+              {:else}
+                <p class="text-center text-sm text-ink-soft py-8">No books matching "{bookSearch}"</p>
+              {/if}
             </div>
           </div>
         </div>
@@ -264,17 +482,33 @@ gap-2 sm:gap-4 -mx-3 px-1 sm:-mx-4 sm:px-4 md:-mx-8 md:px-3">
       
       {#if readerState.chapterDropdownOpen}
         <div class="fixed inset-0 bg-black/20 z-40 flex items-center justify-center p-4" onclick={() => readerState.chapterDropdownOpen = false}>
-          <div class="bg-page border border-rule rounded-lg shadow-xl p-4 z-50 max-h-[80vh] overflow-y-auto w-full max-w-lg" onclick={(e) => e.stopPropagation()}>
-            <h3 class="font-bold mb-4 text-lg border-b border-rule pb-2">{formatBookAbbreviation(readerState.selectedBook)} - Select Chapter</h3>
-            <div class="grid grid-cols-5 md:grid-cols-8 gap-2">
-              {#each readerState.availableChapters as ch}
-                <button 
-                  class="p-2 text-center rounded hover:bg-rule cursor-pointer {String(ch) === String(readerState.selectedChapter) ? 'bg-blue-500 text-white hover:bg-blue-600' : 'bg-page border'}"
-                  onclick={() => readerState.selectChapter(String(ch))}
-                >
-                  {ch}
-                </button>
-              {/each}
+          <div class="bg-page border border-rule rounded-lg shadow-xl p-4 z-50 max-h-[80vh] flex flex-col w-full max-w-lg" onclick={(e) => e.stopPropagation()}>
+            <div class="flex items-center justify-between gap-2 mb-3 pb-2 border-b border-rule">
+              <h3 class="font-bold text-lg truncate">{formatBookAbbreviation(readerState.selectedBook)} - Chapter</h3>
+              <input
+                type="text"
+                bind:value={chapterSearch}
+                use:autofocus
+                placeholder="Chapter #..."
+                class="text-sm px-3 py-1 rounded-md bg-base-200/50 border border-rule focus:outline-none focus:ring-1 focus:ring-link w-28 sm:w-36 text-center text-ink"
+                onkeydown={handleChapterKeydown}
+              />
+            </div>
+            <div class="overflow-y-auto">
+              {#if filteredChapters.length > 0}
+                <div class="grid grid-cols-5 md:grid-cols-8 gap-2">
+                  {#each filteredChapters as ch}
+                    <button 
+                      class="p-2 text-center rounded hover:bg-rule cursor-pointer {String(ch) === String(readerState.selectedChapter) ? 'bg-blue-500 text-white hover:bg-blue-600 font-semibold' : 'bg-page border'}"
+                      onclick={() => { readerState.selectChapter(String(ch)); readerState.chapterDropdownOpen = false; }}
+                    >
+                      {ch}
+                    </button>
+                  {/each}
+                </div>
+              {:else}
+                <p class="text-center text-sm text-ink-soft py-8">No chapters matching "{chapterSearch}"</p>
+              {/if}
             </div>
           </div>
         </div>
@@ -296,17 +530,33 @@ gap-2 sm:gap-4 -mx-3 px-1 sm:-mx-4 sm:px-4 md:-mx-8 md:px-3">
       
       {#if readerState.verseDropdownOpen}
         <div class="fixed inset-0 bg-black/20 z-40 flex items-center justify-center p-4" onclick={() => readerState.verseDropdownOpen = false}>
-          <div class="bg-page border border-rule rounded-lg shadow-xl p-4 z-50 max-h-[80vh] overflow-y-auto w-full max-w-lg" onclick={(e) => e.stopPropagation()}>
-            <h3 class="font-bold mb-4 text-lg border-b border-rule pb-2">{formatBookAbbreviation(readerState.selectedBook)} {readerState.selectedChapter} - Select Verse</h3>
-            <div class="grid grid-cols-5 md:grid-cols-8 gap-2">
-              {#each readerState.verseKeys as v}
-                <button 
-                  class="p-2 text-center rounded hover:bg-rule bg-page border cursor-pointer"
-                  onclick={() => { readerState.scrollToVerse(v); readerState.verseDropdownOpen = false; }}
-                >
-                  {v}
-                </button>
-              {/each}
+          <div class="bg-page border border-rule rounded-lg shadow-xl p-4 z-50 max-h-[80vh] flex flex-col w-full max-w-lg" onclick={(e) => e.stopPropagation()}>
+            <div class="flex items-center justify-between gap-2 mb-3 pb-2 border-b border-rule">
+              <h3 class="font-bold text-lg truncate">{formatBookAbbreviation(readerState.selectedBook)} {readerState.selectedChapter} - Verse</h3>
+              <input
+                type="text"
+                bind:value={verseSearch}
+                use:autofocus
+                placeholder="Verse #..."
+                class="text-sm px-3 py-1 rounded-md bg-base-200/50 border border-rule focus:outline-none focus:ring-1 focus:ring-link w-28 sm:w-36 text-center text-ink"
+                onkeydown={handleVerseKeydown}
+              />
+            </div>
+            <div class="overflow-y-auto">
+              {#if filteredVerses.length > 0}
+                <div class="grid grid-cols-5 md:grid-cols-8 gap-2">
+                  {#each filteredVerses as v}
+                    <button 
+                      class="p-2 text-center rounded hover:bg-rule bg-page border cursor-pointer"
+                      onclick={() => { readerState.scrollToVerse(v); readerState.verseDropdownOpen = false; }}
+                    >
+                      {v}
+                    </button>
+                  {/each}
+                </div>
+              {:else}
+                <p class="text-center text-sm text-ink-soft py-8">No verses matching "{verseSearch}"</p>
+              {/if}
             </div>
           </div>
         </div>
