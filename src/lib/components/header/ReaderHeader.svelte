@@ -4,21 +4,20 @@
   import { resolve } from '$app/paths';
   import siteLogo from '$lib/assets/logo.png';
   import prayerWhiteSvg from '$lib/assets/prayer-white.svg';
-  import prayerBlackSvg from '$lib/assets/prayer-black.svg';
+  //import prayerBlackSvg from '$lib/assets/prayer-black.svg';
   import prayerOutlineSvg from '$lib/assets/prayer-outline.svg';
   import VersionButton from '$lib/components/ui/VersionButton.svelte';
   import { versionGroups, formatVersionLabel, getVersionLanguage, dataSets } from '$lib/config/versions';
   import { formatBookAbbreviation, normalizeBookName } from '$lib/config/bookMapping.js';
   import { readerState } from '$lib/stores/readerState.svelte';
   //import gridIcon from '$env/static/public'
-  import { expandRefs } from '$lib/utils/bible-utils';
+  //import { expandRefs } from '$lib/utils/bible-utils';
   import GridButtonReactive from '../ui/grid-button-reactive.svelte';
   import Icon from '../ui/Icon.svelte';
   import { theme,size } from '$lib/stores/ThemeObserver.svelte';
-  import questionMarkBlack from '$lib/assets/question-mark-black.svg';
-  import questionMarkWhite from '$lib/assets/question-mark-white.svg';
-    import OptionButton from '$lib/lemma-ui/components/ui/OptionButton.svelte';
-    import Button from '$lib/lemma-ui/components/ui/Button.svelte';
+  
+  //  import OptionButton from '$lib/lemma-ui/components/ui/OptionButton.svelte';
+    //import Button from '$lib/lemma-ui/components/ui/Button.svelte';
   let displayedLanguages: string[]=$derived(Array.from(new Set(readerState.visibleVersions.map((v)=>getVersionLanguage(v)))));
   //$inspect('readerState.visibleVersions',readerState.visibleVersions);
 
