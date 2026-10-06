@@ -13,10 +13,10 @@ import Chart from 'chart.js/auto';
 
 /**
  * @typedef PieProps
- * @property {{labels:[], nums:[]}} [pieData]
+ * @property {{labels: string[], nums: number[]}} [pieData]
  * @property {string} [title]
  * @property {function} [onclick]
-*/
+ */
 /**
  * @type {PieProps}
  */

@@ -4,6 +4,7 @@
 @source '../lib';
 @source '..';
 @import '../app.css';
+
 @theme {
   --color-page: var(--color-page);
   --color-page-soft: var(--color-page-soft);
@@ -53,7 +54,7 @@ body {
   font-style: normal;
   font-display: swap;
 }
-
+/*
 @font-face {
   font-family: 'SBL Hebrew';
   src: url('/fonts/SBL_Hbrw.ttf') format('truetype');
@@ -69,17 +70,18 @@ body {
   font-style: normal;
   font-display: swap;
 }
-
+*/
 .font-hebrew,
 .hebrew {
-  font-family: 'Ezra SIL', 'SBL Hebrew', serif;
+  font-family: 'Ezra SIL', serif;
   direction: rtl;
 }
 
 .font-greek,
-.greek {
+.greek, .bible-font {
   font-family: 'Gentium Plus', 'Charis SIL', 'SBL BibLit', serif;
 }
+
 
 :root[data-theme="dark"] {
   --color-page: rgb(0, 43, 54);

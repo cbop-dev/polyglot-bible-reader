@@ -1,0 +1,1 @@
+export const defaultDbs = ['KJV', 'Vulgate', 'WEB', 'Brenton', 'BHS', 'LXX', 'OpenGNT'];

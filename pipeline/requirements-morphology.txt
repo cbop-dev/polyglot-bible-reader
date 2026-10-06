@@ -1,0 +1,7 @@
+inflexion
+greek-accentuation
+pyyaml
+stanza
+torch
+# Required for full Swete neural NLP and morphology pipeline:
+# Install with: pip install -r pipeline/requirements-pipeline-extras.txt

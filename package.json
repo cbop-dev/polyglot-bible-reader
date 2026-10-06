@@ -1,12 +1,12 @@
 {
 	"name": "polyglot-bible-reader",
 	"private": true,
-	"version": "0.0.12",
+	"version": "0.2.14",
 	"type": "module",
 	"scripts": {
 		"dev": "vite dev",
-		"prebuild": "node scripts/download_data.js",
-		"build": "vite build",
+		"prebuild": "node -e \"if (require('fs').existsSync('pipeline/build/polyglot-working.sqlite3')) { try { require('child_process').execSync('python3 pipeline/generate_canonical_books.py', {stdio: 'inherit'}); } catch (e) {} }\" && node scripts/download_data.js",
+		"build": "ADAPTER=node vite build",
 		"build:www": "ADAPTER=static vite build",
 		"build:static": "npm run build:www",
 		"build:gh": "ADAPTER=github vite build",
@@ -16,9 +16,11 @@
 		"preview:gh": "ADAPTER=github vite preview",
 		"preview:github": "npm run preview:gh",
 		"deploy": "npm run deploy:www",
+		"deploy:www:node": "./scripts/deploy_www_node.sh",
 		"deploy:www": "./scripts/deploy_www.sh",
 		"deploy:www:quick": "./scripts/deploy_www.sh --no-build",
 		"deploy:www:promote": "./scripts/deploy_www.sh --promote",
+		"dwp":"npm run deploy:www:promote",
 		"deploy:promote": "npm run deploy:www:promote",
 		"deploy:www:history": "./scripts/deploy_www.sh --history",
 		"deploy:history": "npm run deploy:www:history",
@@ -29,9 +31,14 @@
 		"deploy:vps:quick": "npm run deploy:www:quick",
 		"prepare": "svelte-kit sync || echo ''",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
-		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch"
+		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
+		"test:e2e": "playwright install && playwright test",
+		"test": "npm run test:unit && npm run test:e2e",
+		"test:unit": "vitest"
+
 	},
 	"devDependencies": {
+		"@playwright/test": "^1.60.0",
 		"@sveltejs/adapter-static": "^3.0.10",
 		"@sveltejs/kit": "^2.63.0",
 		"@sveltejs/vite-plugin-svelte": "^7.1.2",
@@ -49,6 +56,7 @@
 		"chart.js": "^4.5.1",
 		"gridjs": "^6.2.0",
 		"gridjs-svelte": "^2.1.1",
+		"sql.js-httpvfs": "^0.8.12",
 		"svelte-chartjs": "^4.0.1"
 	}
 }

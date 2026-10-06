@@ -9,11 +9,8 @@ let {
 
 // 1. Create a reference to the dialog element
 let dialog;
-let isMaximized = $state(false);
+let isMaximized = $derived(Boolean(max));
 
-$effect(() => {
-    isMaximized = Boolean(max);
-});
 
 function toggleMaximize() {
     isMaximized = !isMaximized;

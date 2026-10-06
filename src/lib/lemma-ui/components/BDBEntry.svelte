@@ -1,6 +1,10 @@
+
 <script>
-	import { bdbProvider, removeHebrewDiacritics } from '../engine/BdbProvider.js';
-	import { untrack } from 'svelte';
+/**
+ * NB: this component should probably be re-drawn when lemma info changes, i.e., surrounded in {#key lemma}..{/key}
+*/
+	import { getLexiconEntry } from '$lib/services/dbClient';
+	import { onMount, untrack } from 'svelte';
 
 	/**
 	 * @typedef BDBEntryProps
@@ -14,12 +18,16 @@
 
 	let isOpen = $state(autoOpen);
 	let loading = $state(false);
-	let loadedLemma = $state('');
+	/** @type {{ headword?: string, strongs?: string, matchType?: string, def?: string } | null} */
 	let entry = $state(null);
 	let hasSearched = $state(false);
+	let prevWordKey = $state('');
 
 	let lemmaText = $derived(
-		typeof lemma === 'string' ? lemma : lemma?.lemma || ''
+		typeof lemma === 'string' ? lemma : lemma?.headword || lemma?.lemma || lemma?.word || ''
+	);
+	let strongsCode = $derived(
+		typeof lemma === 'object' ? lemma?.strongs || lemma?.strongs_number || '' : ''
 	);
 	let plainText = $derived(
 		typeof lemma === 'object' ? lemma?.plain || '' : ''
@@ -30,29 +38,31 @@
 	 */
 	async function fetchBdb() {
 		const target = lemmaText;
-		const plain = plainText;
+		const targetStrongs = strongsCode;
 
-		if ((lang !== 'hebrew' && dbAbbrev !== 'bhs') || !target) {
+		if ((lang !== 'hebrew' && dbAbbrev !== 'bhs') || (!target && !targetStrongs)) {
 			loading = false;
 			entry = null;
 			hasSearched = false;
-			loadedLemma = '';
-			return;
-		}
-
-		if (loadedLemma === target && hasSearched) {
 			return;
 		}
 
 		loading = true;
 		try {
-			const res = await bdbProvider.getEntry(target, plain);
-			entry = res.entry || null;
+			const res = await getLexiconEntry('bdb', target, targetStrongs);
+			entry = res
+				? {
+						headword: res.headword,
+						strongs: res.strongs,
+						matchType: res.match_type,
+						def: res.definition
+				  }
+				: null;
 			hasSearched = true;
-			loadedLemma = target;
 		} catch (err) {
 			console.error('Error loading BDB entry:', err);
 			entry = null;
+			hasSearched = true;
 		} finally {
 			loading = false;
 		}
@@ -60,28 +70,35 @@
 
 	function handleToggle(e) {
 		isOpen = e.currentTarget.open;
-		if (isOpen && loadedLemma !== lemmaText) {
+		if (isOpen && !entry && !loading && !hasSearched) {
 			fetchBdb();
 		}
 	}
 
-	// If open on mount or when lemma changes
-	$effect(() => {
+	// When lemma/strongs changes, reset state
+	function resetEntry(){
 		const target = lemmaText;
-		if (isOpen && target && target !== loadedLemma) {
-			untrack(() => {
-				fetchBdb();
-			});
-		} else if (target !== loadedLemma) {
+		const targetStrongs = strongsCode;
+		const wordKey = `${targetStrongs || ''}_${target}`;
+		if (wordKey !== prevWordKey) {
+			prevWordKey = wordKey;
+			isOpen = autoOpen;
 			hasSearched = false;
 			entry = null;
-			loadedLemma = '';
+			loading = false;
+			if (isOpen && (target || targetStrongs)) {
+				untrack(() => {
+					fetchBdb();
+				});
+			}
 		}
-	});
+	};
 
 	let formattedDef = $derived(
 		entry?.def ? entry.def : ''
 	);
+
+	onMount(()=>{resetEntry()});
 </script>
 
 {#if lang === 'hebrew' || dbAbbrev === 'bhs'}
@@ -151,7 +168,7 @@
 					</div>
 				{:else}
 					<div class="py-4 text-xs text-ink-soft text-center bg-rule/20 rounded-lg border border-rule/40 my-1">
-						<p>No direct BDB entry found for <strong class="hebrew font-hebrew text-base text-ink" dir="rtl">{lemmaText}</strong>.</p>
+						<p>No direct BDB entry found for <strong class="hebrew font-hebrew text-base text-ink" dir="rtl">{lemmaText}</strong>{strongsCode ? ` (${strongsCode})` : ''}.</p>
 					</div>
 				{/if}
 			</div>
@@ -199,7 +216,7 @@
 	:global(.bdb-text .hebrew) {
 		direction: rtl;
 		display: inline-block;
-		font-family: "Ezra SIL", "SBL Hebrew", "SBL BibLit", serif;
+		font-family: "Ezra SIL", serif;
 		font-size: 1.18em;
 		color: var(--color-ink);
 	}

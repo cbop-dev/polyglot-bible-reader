@@ -1,6 +1,7 @@
 <script>
-	import { lsjProvider, removeDiacritics } from '../engine/LsjProvider.js';
-	import { untrack } from 'svelte';
+	import { getLexiconEntry, normalizeGreek } from '$lib/services/dbClient';
+	import { onMount, untrack } from 'svelte';
+    import { mylog } from '../env/env';
 
 	/**
 	 * @typedef LSJEntryProps
@@ -12,75 +13,109 @@
 	/** @type {LSJEntryProps} */
 	let { lemma, lang = 'greek', dbAbbrev = 'lxx', autoOpen = false } = $props();
 
+	$effect(()=>{
+		//const _ = lemma;
+		//resetEntry();
+	})
 	let isOpen = $state(autoOpen);
 	let loading = $state(false);
-	let loadedLemma = $state('');
-	let entry = $state(null);
+	
 	let isProper = $state(false);
 	let hasSearched = $state(false);
+	let prevWordKey = $state('');
 
 	let lemmaText = $derived(
-		typeof lemma === 'string' ? lemma : lemma?.lemma || ''
+		typeof lemma === 'string' ? lemma : lemma?.lemma || lemma?.word || ''
+	);
+	let strongsCode = $derived(
+		typeof lemma === 'object' ? lemma?.strongs || lemma?.strongs_number || '' : ''
 	);
 	let plainText = $derived(
 		typeof lemma === 'object' ? lemma?.plain || '' : ''
 	);
 
+	/** @type {{ headword?: string, lsjIndex?: string, matchType?: string, def?: string } | null} */
+	let fetchedEntry = $state(null);
+
+	//let entry = $state(null);
+	/** @type {{ headword?: string, lsjIndex?: string, matchType?: string, def?: string } | null} entry
+	*/
+	let entry = $derived(isOpen && fetchedEntry ? fetchedEntry : null);
+
 	/**
 	 * Asynchronously fetch the LSJ entry without blocking the main thread or modal render
+	 * @returns  {Promise<{ headword?: string, lsjIndex?: string, matchType?: string, def?: string } | null>}
 	 */
 	async function fetchLsj() {
-		const target = lemmaText;
-		const plain = plainText;
+		
+		if (!fetchedEntry || normalizeGreek(entry?.headword ?? '') != normalizeGreek(lemmaText)){
 
-		if (lang !== 'greek' || !target) {
-			loading = false;
-			entry = null;
-			isProper = false;
-			hasSearched = false;
-			loadedLemma = '';
-			return;
-		}
+			const target = lemmaText;
+			const targetStrongs = strongsCode;
 
-		if (loadedLemma === target && hasSearched) {
-			return;
-		}
+			if (lang !== 'greek' || (!target && !targetStrongs)) {
+				loading = false;
+				
+				isProper = false;
+				hasSearched = false;
+				
+			}
+			else {
+				loading = true;
+				try {
+//					mylog(`fecthing lsj entry for ${lemmaText}`, true);
+					let lexEntry = await getLexiconEntry('lsj', target, targetStrongs);
+					fetchedEntry = lexEntry
+						? {
+								headword: lexEntry.headword,
+								lsjIndex: lexEntry.lsj_index,
+								matchType: lexEntry.match_type,
+								def: lexEntry.definition
+						}
+						: null;
+					isProper = false;
+					hasSearched = true;
 
-		loading = true;
-		try {
-			const res = await lsjProvider.getEntry(target, plain);
-			entry = res.entry || null;
-			isProper = res.isProper || false;
-			hasSearched = true;
-			loadedLemma = target;
-		} catch (err) {
-			console.error('Error loading LSJ entry:', err);
-			entry = null;
-		} finally {
-			loading = false;
+					
+				} catch (err) {
+					console.error('Error loading LSJ entry:', err);
+					
+					hasSearched = true;
+				} finally {
+					loading = false;
+					//fetchedEntry=null;
+				}
+			}
 		}
+		
 	}
 
 	function handleToggle(e) {
 		isOpen = e.currentTarget.open;
-		if (isOpen && loadedLemma !== lemmaText) {
+		if (isOpen && !entry && !loading && !hasSearched) {
 			fetchLsj();
 		}
 	}
 
-	// If open on mount or when lemma changes
-	$effect(() => {
+	// When lemma/strongs changes, reset state
+	function resetEntry(){
+		fetchedEntry=null;
 		const target = lemmaText;
-		if (isOpen && target && target !== loadedLemma) {
-			untrack(() => {
-				fetchLsj();
-			});
-		} else if (target !== loadedLemma) {
+		const targetStrongs = strongsCode;
+		const wordKey = `${targetStrongs || ''}_${target}`;
+		if (wordKey !== prevWordKey) {
+			prevWordKey = wordKey;
+			isOpen = autoOpen;
 			hasSearched = false;
 			entry = null;
-			loadedLemma = '';
+			loading = false;
+			if (isOpen && (target || targetStrongs)) {
+				untrack(() => {
+					//fetchLsj();
+				});
+			}
 		}
-	});
+	};
 
 	/**
 	 * Formats markdown from LSJ CEX edition into readable HTML
@@ -89,6 +124,14 @@
 	 */
 	function formatLsjMarkdown(raw) {
 		if (!raw) return '';
+
+		// If the content is already formatted HTML (from STEPBible TFLSJ)
+		if (/<[a-z][\s\S]*>/i.test(raw)) {
+			let html = raw;
+			html = html.replace(/<Level[1-4]>/gi, '<span class="lsj-sense-badge font-mono text-xs px-1.5 py-0.5 rounded bg-rule/50 text-ink font-bold mx-0.5 border border-rule">');
+			html = html.replace(/<\/Level[1-4]>/gi, '</span>');
+			return html;
+		}
 
 		let html = raw
 			.replace(/&/g, '&amp;')
@@ -108,7 +151,7 @@
 	);
 
 	let cleanHeadword = $derived(
-		entry?.headword ? removeDiacritics(entry.headword) : ''
+		entry?.headword ? normalizeGreek(entry.headword) : ''
 	);
 
 	let logeionUrl = $derived(
@@ -132,6 +175,9 @@
 				return '';
 		}
 	});
+	onMount(()=>{
+//		mylog('LSJReset()!', true);
+		resetEntry()});
 </script>
 
 {#if lang === 'greek'}

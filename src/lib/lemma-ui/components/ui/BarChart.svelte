@@ -140,7 +140,7 @@ function handleChart(element, config) {
 			}
 		}
 }
-$inspect(barData2)
+//$inspect(barData2)
 </script>
 {#if title}
 <h3>{title}</h3>

@@ -5,7 +5,7 @@ const adapterType = process.env.ADAPTER || process.env.BUILD_TARGET || '';
 const isGitHub = adapterType === 'gh' || adapterType === 'github';
 const isStatic = isGitHub || adapterType === 'static' || adapterType === 'www';
 
-let defaultOutDir = 'build';
+let defaultOutDir = 'build/node';
 if (isGitHub) {
 	defaultOutDir = 'build/github';
 } else if (isStatic) {

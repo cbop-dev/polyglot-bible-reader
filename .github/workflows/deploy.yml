@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main
+      - sqlite3-engine
+      - engine2
   workflow_dispatch:
 
 permissions:

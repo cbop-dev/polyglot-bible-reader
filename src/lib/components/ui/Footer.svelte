@@ -1,12 +1,13 @@
-<script>
+<script lang='ts'>
 	import { onMount } from 'svelte';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
 	import { base } from '$app/paths';
 	import { APP_REPO } from '$lib/config/version';
 	import ThemeSlider from './ThemeSlider.svelte';
-
-	let baseurl=$derived(page.url.protocol+"//"+page.url.hostname+(page.url.port ? ":"+page.url.port:'')+resolve("/"))
+	import { getBaseurl } from '$lib/utils/ui-utils';
+	//let baseurl=$derived(page.url.protocol+"//"+page.url.hostname+(page.url.port ? ":"+page.url.port:'')+resolve("/"))
+	let baseurl=getBaseurl();
 	let isCollapsed = $state(false);
 	let userToggled = false;
 
@@ -57,9 +58,9 @@
 				<span class="opacity-40">|</span>
 				<span>Code: <a href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank" rel="noopener noreferrer" class="link">AGPL v3</a></span>
 				<span class="opacity-40">•</span>
-				<span>Data: see <a href="{baseurl}sources-and-licenses" class="link font-semibold">Sources &amp; Licenses</a>
+				<span>Data: see <a href="{getBaseurl()}sources-and-licenses" class="link font-semibold">Sources &amp; Licenses</a>
 				<span class="opacity-40">•</span>
-				<a href="{baseurl}sources-and-licenses#ai-attribution" class="link"><span>AI-assisted</span></a>
+				<a href="{getBaseurl()}sources-and-licenses#ai-attribution" class="link"><span>AI-assisted</span></a>
 				<span class="opacity-40">•</span>
 				<a href="{APP_REPO}" target="_blank" rel="noopener noreferrer" class="link">GitHub</a>
 			</div>
