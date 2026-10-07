@@ -2,8 +2,8 @@
 """
 Ingest Unabridged BDB Hebrew Lexicon from DictBDB.json into SQLite3 database.
 
-Source: /home/cbrannan/dev/2-tmp/biblical-data-pipeline/downloads/unabridged-BDB-Hebrew-lexicon/DictBDB.json
-Target: /home/cbrannan/dev/2-tmp/biblical-data-pipeline/db-workspace/openscriptorium-working.sqlite3
+Source: pipeline/cache/DictBDB.json
+Target: pipeline/build/polyglot-working.sqlite3
 Table:  lexicon_entries
 
 Notes:
@@ -18,8 +18,11 @@ import re
 import sqlite3
 import unicodedata
 
-DB_PATH = '/home/cbrannan/dev/2-tmp/biblical-data-pipeline/db-workspace/openscriptorium-working.sqlite3'
-SRC_JSON_PATH = '/home/cbrannan/dev/2-tmp/biblical-data-pipeline/downloads/unabridged-BDB-Hebrew-lexicon/DictBDB.json'
+REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+DEFAULT_DB_PATH = os.path.join(REPO_ROOT, "pipeline", "build", "polyglot-working.sqlite3")
+DEFAULT_SRC_PATH = os.path.join(REPO_ROOT, "pipeline", "cache", "DictBDB.json")
+DB_PATH = os.environ.get("POLYGLOT_DB_PATH", DEFAULT_DB_PATH)
+SRC_JSON_PATH = os.environ.get("BDB_JSON_PATH", DEFAULT_SRC_PATH)
 
 HEBREW_DIAC_REGEX = re.compile(r'[\u0591-\u05C7]')
 PUNCT_REGEX = re.compile(r'[\(\)\[\]⟦⟧⟨⟩\.,;׃׀־\s]+')

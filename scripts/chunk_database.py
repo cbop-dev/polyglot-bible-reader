@@ -3,9 +3,10 @@ import shutil
 import subprocess
 import json
 import hashlib
-
-DB_PATH = '/home/cbrannan/dev/2-tmp/biblical-data-pipeline/db-workspace/openscriptorium-working.sqlite3'
-OUTPUT_DIR = os.path.join(os.path.dirname(__file__), '..', 'static', 'db')
+REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+DEFAULT_DB_PATH = os.path.join(REPO_ROOT, 'pipeline', 'build', 'polyglot-working.sqlite3')
+DB_PATH = os.environ.get('POLYGLOT_DB_PATH', DEFAULT_DB_PATH)
+OUTPUT_DIR = os.path.join(REPO_ROOT, 'static', 'db')
 CHUNK_SIZE = 5242880
 
 def rechunk():

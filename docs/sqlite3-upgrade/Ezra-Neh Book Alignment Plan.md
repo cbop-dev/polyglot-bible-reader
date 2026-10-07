@@ -39,10 +39,10 @@ The Greek Septuagint (LXX, Swete) and Hebrew Masoretic Text (BHS, WLC) organize 
 
 ### 3. Polyglot Bible Reader Integration
 
-- Update [`src/lib/services/dbClient.ts`](file:///home/cbrannan/dev/2-tmp/polyglot-bible-reader/src/lib/services/dbClient.ts):
+- Update [`src/lib/services/dbClient.ts`](../../src/lib/services/dbClient.ts):
   - Integrate `normalizeBookName` from `bookMapping.ts` into `resolveCanonicalWorkId`.
   - Ensure cross-book queries (Ezra/Neh $\leftrightarrow$ 2Esdr) return aligned verses smoothly.
-- Update [`src/lib/stores/readerState.svelte.ts`](file:///home/cbrannan/dev/2-tmp/polyglot-bible-reader/src/lib/stores/readerState.svelte.ts):
+- Update [`src/lib/stores/readerState.svelte.ts`](../../src/lib/stores/readerState.svelte.ts):
   - Ensure `selectVersion` uses `getMappedReference` and `getBookForVersion` to translate book and chapter seamlessly.
 
 ---

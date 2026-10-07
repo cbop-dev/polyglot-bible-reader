@@ -14,17 +14,17 @@ This document outlines the SQLite query and storage optimizations implemented fo
 | **Concordance Limit** | Hardcoded limit (25–200) | **Unlimited (`limit = 0`)** | Loads all occurrences without truncation. |
 | **Verse Body Loading** | Joined all text into memory up front | **On-demand** via `getVerseText(workUnitId)` | Zero memory waste; fetches verse body text only when clicked. |
 | **Chapter Word Seeks** | Fragmented `IN (?, ?, ...)` point probes | **Contiguous range scans** (`BETWEEN ? AND ?`) | 2.16 ms sequential range scan instead of dozens of scattered point probes. |
-| **Verse UI** | Basic vertical text list | **Restored [`TextsDisplay.svelte`](file:///home/cbrannan/dev/2-tmp/polyglot-bible-reader/src/lib/lemma-ui/components/TextsDisplay.svelte)** | Book pills, jump navigation, copy buttons, verse badges, and on-demand modal preview. |
+| **Verse UI** | Basic vertical text list | **Restored [`TextsDisplay.svelte`](../../src/lib/lemma-ui/components/TextsDisplay.svelte)** | Book pills, jump navigation, copy buttons, verse badges, and on-demand modal preview. |
 
 ---
 
 ## 2. Key Changes Implemented
 
-### A. Pre-Computed Lemma Stats ([`scripts/build_lemma_stats.py`](file:///home/cbrannan/dev/2-tmp/polyglot-bible-reader/scripts/build_lemma_stats.py))
+### A. Pre-Computed Lemma Stats ([`scripts/build_lemma_stats.py`](../../scripts/build_lemma_stats.py))
 - Populated `lemma_stats (work_id, strongs, lemma, total_count, book_counts_json)` for all **27,541 unique lemmas** across BHS, LXX, and SBLGNT (including all 9,836 LXX words without Strong's numbers keyed as `WORD:<normalized>`).
-- Updated `getWordFrequencyByBook()` in [`dbClient.ts`](file:///home/cbrannan/dev/2-tmp/polyglot-bible-reader/src/lib/services/dbClient.ts) to read the pre-computed JSON distribution directly.
+- Updated `getWordFrequencyByBook()` in [`dbClient.ts`](../../src/lib/services/dbClient.ts) to read the pre-computed JSON distribution directly.
 
-### B. Pre-Indexed Concordance References ([`scripts/build_concordance_refs.py`](file:///home/cbrannan/dev/2-tmp/polyglot-bible-reader/scripts/build_concordance_refs.py))
+### B. Pre-Indexed Concordance References ([`scripts/build_concordance_refs.py`](../../scripts/build_concordance_refs.py))
 - Created table:
   ```sql
   CREATE TABLE concordance_refs (
@@ -42,10 +42,10 @@ This document outlines the SQLite query and storage optimizations implemented fo
 
 ### C. Unlimited Concordance Lookups (`limit = 0`)
 - Updated `getConcordance(workId, lemma, limit = 0, strongs)` in `dbClient.ts` to support omitting `LIMIT` when `limit <= 0`.
-- In [`LemmaInfo.svelte`](file:///home/cbrannan/dev/2-tmp/polyglot-bible-reader/src/lib/lemma-ui/components/LemmaInfo.svelte), changed the call to `getConcordance(workId, lookupKey, 0, currentLemmaData?.strongs)` to fetch all occurrences.
+- In [`LemmaInfo.svelte`](../../src/lib/lemma-ui/components/LemmaInfo.svelte), changed the call to `getConcordance(workId, lookupKey, 0, currentLemmaData?.strongs)` to fetch all occurrences.
 
 ### D. Restored & Modernized Verse References UI
-- Restored [`TextsDisplay.svelte`](file:///home/cbrannan/dev/2-tmp/polyglot-bible-reader/src/lib/lemma-ui/components/TextsDisplay.svelte) and [`TextDisplay.svelte`](file:///home/cbrannan/dev/2-tmp/polyglot-bible-reader/src/lib/lemma-ui/components/TextDisplay.svelte).
+- Restored [`TextsDisplay.svelte`](../../src/lib/lemma-ui/components/TextsDisplay.svelte) and [`TextDisplay.svelte`](../../src/lib/lemma-ui/components/TextDisplay.svelte).
 - Integrated with `concordance_refs` output (`ref_label`, `display_label`, `work_unit_id`).
 - When a verse badge is clicked, `getVerseText(workUnitId)` retrieves the verse body text on demand from SQLite and displays it with proper RTL / LTR typography.
 

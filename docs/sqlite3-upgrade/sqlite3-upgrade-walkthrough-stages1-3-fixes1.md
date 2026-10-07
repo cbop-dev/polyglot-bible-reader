@@ -61,7 +61,7 @@
 * Directly consumes `readerState.getVerseData(verseKey, colVersion)` where TVTMS alignments (such as Jer 30:1 $\leftrightarrow$ LXX Jer 37:1 and Ps 10:1 $\leftrightarrow$ LXX Ps 9:22) are pre-aligned by the database CTE.
 
 ### 4. Verification & Testing
-* Created unit tests in [`src/lib/services/bibleDataLoader.test.ts`](file:///home/cbrannan/dev/2-tmp/polyglot-bible-reader/src/lib/services/bibleDataLoader.test.ts).
+* Created unit tests in [`src/lib/services/bibleDataLoader.test.ts`](../../src/lib/services/bibleDataLoader.test.ts).
 * Full test suite: **28/28 tests passing** (`npx vitest run`).
 * Full static build (`npm run build:gh` with `ADAPTER=github`) builds cleanly in ~8 seconds, producing ~1.6 MB smaller bundle with all legacy book JSON loaders removed.
 * Range-request verification on preview server confirmed HTTP `206 Partial Content` on chunked database pages.
@@ -72,8 +72,8 @@
 
 * **Problem**: In `psalms`, `jeremiah`, and `job`, opening chapters where verse numbering is identical across traditions (e.g. Ps 1:1, Jer 1:1, Job 1:1) showed `[Not found in this version.]` for the LXX.
 * **Root Cause**: OpenScriptorium stored Greek LXX work units under variant canonical works (`psalms-lxx`, `jeremiah-lxx`, `job-lxx`). TVTMS only recorded *divergent* versification mappings (e.g. Ps 3:1 $\leftrightarrow$ 3:2, Ps 50:1 $\leftrightarrow$ 49:1, Jer 37:1 $\leftrightarrow$ 44:1) without 1:1 identity mappings for identical verses.
-* **Fix**: In [`src/lib/services/dbClient.ts`](file:///home/cbrannan/dev/2-tmp/polyglot-bible-reader/src/lib/services/dbClient.ts), augmented the `getChapterVerses` CTE with `variant_identity_refs` to automatically link matching chapter:verse hierarchies from `-lxx` variant works whenever an explicit TVTMS mapping is not present. Also updated `getWordFrequencyByBook` to group `-lxx` works under their base book.
-* **Verification**: Added automated tests in [`src/lib/services/dbClient.test.ts`](file:///home/cbrannan/dev/2-tmp/polyglot-bible-reader/src/lib/services/dbClient.test.ts). Tested all 6 versions against key verses (Ps 1:1, Ps 3:1, Ps 50:1, Jer 1:1, Jer 37:1, Job 1:1). Verified full static build (`npm run build:gh`).
+* **Fix**: In [`src/lib/services/dbClient.ts`](../../src/lib/services/dbClient.ts), augmented the `getChapterVerses` CTE with `variant_identity_refs` to automatically link matching chapter:verse hierarchies from `-lxx` variant works whenever an explicit TVTMS mapping is not present. Also updated `getWordFrequencyByBook` to group `-lxx` works under their base book.
+* **Verification**: Added automated tests in [`src/lib/services/dbClient.test.ts`](../../src/lib/services/dbClient.test.ts). Tested all 6 versions against key verses (Ps 1:1, Ps 3:1, Ps 50:1, Jer 1:1, Jer 37:1, Job 1:1). Verified full static build (`npm run build:gh`).
 
 ---
 
@@ -81,5 +81,5 @@
 
 * **Problem**: BHS/WLC Jer 31:1 failed to parallel LXX Jer 38:1, erroneously falling back to LXX Jer 31:1 (Moab oracle).
 * **Root Cause**: `import_tvtms_sqlite.py` strictly checked a rule condition `Jer.29:23=Last` that only held for Rahlfs LXX, whereas Swete's LXX has 7 verses in Jer 29. Consequently, TVTMS mappings for Jer 38 $\leftrightarrow$ 31 (all 40 verses), Jer 36 $\leftrightarrow$ 29 (27 verses), Jer 32 $\leftrightarrow$ 25 (25 verses), Jer 30 $\leftrightarrow$ 49 (32 verses), etc. were silently skipped during DB import.
-* **Fix**: Created [`patch_missing_jeremiah_mappings.py`](file:///home/cbrannan/dev/2-tmp/biblical-data-pipeline/db-workspace/patch_missing_jeremiah_mappings.py) to import the 148 missing Jeremiah versification mappings from TVTMS into `openscriptorium-working.sqlite3` (bringing total Jeremiah mappings to 737). Compacted and re-chunked database via `split_database_httpvfs.py` into `static/db/`.
-* **Verification**: Added automated test in [`src/lib/services/dbClient.test.ts`](file:///home/cbrannan/dev/2-tmp/polyglot-bible-reader/src/lib/services/dbClient.test.ts) (28/28 tests pass). Verified that BHS Jer 31:1 aligns with Swete LXX 38:1, Brenton 38:1, KJV 31:1, WEB 31:1, and Vulgate 31:1.
+* **Fix**: Created `patch_missing_jeremiah_mappings.py` to import the 148 missing Jeremiah versification mappings from TVTMS into `openscriptorium-working.sqlite3` (bringing total Jeremiah mappings to 737). Compacted and re-chunked database via `split_database_httpvfs.py` into `static/db/`.
+* **Verification**: Added automated test in [`src/lib/services/dbClient.test.ts`](../../src/lib/services/dbClient.test.ts) (28/28 tests pass). Verified that BHS Jer 31:1 aligns with Swete LXX 38:1, Brenton 38:1, KJV 31:1, WEB 31:1, and Vulgate 31:1.

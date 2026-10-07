@@ -61,7 +61,7 @@
 * Directly consumes `readerState.getVerseData(verseKey, colVersion)` where TVTMS alignments (such as Jer 30:1 $\leftrightarrow$ LXX Jer 37:1 and Ps 10:1 $\leftrightarrow$ LXX Ps 9:22) are pre-aligned by the database CTE.
 
 ### 4. Verification & Testing
-* Created unit tests in [`src/lib/services/bibleDataLoader.test.ts`](file:///home/cbrannan/dev/2-tmp/polyglot-bible-reader/src/lib/services/bibleDataLoader.test.ts).
+* Created unit tests in [`src/lib/services/bibleDataLoader.test.ts`](../../src/lib/services/bibleDataLoader.test.ts).
 * Full test suite: **26/26 tests passing** (`npx vitest run`).
 * Full static build (`npm run build:gh` with `ADAPTER=github`) builds cleanly in ~8 seconds, producing ~1.6 MB smaller bundle with all legacy book JSON loaders removed.
 * Range-request verification on preview server confirmed HTTP `206 Partial Content` on chunked database pages.

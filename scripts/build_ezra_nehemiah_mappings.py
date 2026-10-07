@@ -10,8 +10,9 @@ Populates clean, bidirectional versification mappings between:
 import sqlite3
 import os
 import sys
-
-DB_PATH = "/home/cbrannan/dev/2-tmp/biblical-data-pipeline/db-workspace/openscriptorium-working.sqlite3"
+REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+DEFAULT_DB_PATH = os.path.join(REPO_ROOT, "pipeline", "build", "polyglot-working.sqlite3")
+DB_PATH = os.environ.get("POLYGLOT_DB_PATH", DEFAULT_DB_PATH)
 
 def main():
     if not os.path.exists(DB_PATH):

@@ -3,11 +3,11 @@
 Ingest Translators Formatted Full LSJ Greek Lexicon (STEPBible) into SQLite3 database.
 
 Sources:
-  1. /home/cbrannan/dev/2-tmp/biblical-data-pipeline/downloads/STEPBible-Data/Lexicons/TFLSJ  0-5624 - Translators Formatted full LSJ Bible lexicon - STEPBible.org CC BY.txt
-  2. /home/cbrannan/dev/2-tmp/biblical-data-pipeline/downloads/STEPBible-Data/Lexicons/TFLSJ extra - Translators Formatted full LSJ Bible lexicon - STEPBible.org CC BY.txt
+  1. pipeline/cache/TFLSJ_0_5624.txt
+  2. pipeline/cache/TFLSJ_extra.txt
 
 Target:
-  /home/cbrannan/dev/2-tmp/biblical-data-pipeline/db-workspace/openscriptorium-working.sqlite3
+  pipeline/build/polyglot-working.sqlite3
   Table: lexicon_entries (dictionary = 'lsj')
 
 Features:
@@ -23,11 +23,23 @@ import re
 import sqlite3
 import unicodedata
 
-DB_PATH = '/home/cbrannan/dev/2-tmp/biblical-data-pipeline/db-workspace/openscriptorium-working.sqlite3'
-LEX_DIR = '/home/cbrannan/dev/2-tmp/biblical-data-pipeline/downloads/STEPBible-Data/Lexicons'
+REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+DEFAULT_DB_PATH = os.path.join(REPO_ROOT, 'pipeline', 'build', 'polyglot-working.sqlite3')
+DEFAULT_LEX_DIR = os.path.join(REPO_ROOT, 'pipeline', 'cache')
+DB_PATH = os.environ.get('POLYGLOT_DB_PATH', DEFAULT_DB_PATH)
+LEX_DIR = os.environ.get('LSJ_DIR', DEFAULT_LEX_DIR)
 
-FILE_NT = os.path.join(LEX_DIR, 'TFLSJ  0-5624 - Translators Formatted full LSJ Bible lexicon - STEPBible.org CC BY.txt')
-FILE_EXTRA = os.path.join(LEX_DIR, 'TFLSJ extra - Translators Formatted full LSJ Bible lexicon - STEPBible.org CC BY.txt')
+candidate_nt = [
+    os.path.join(LEX_DIR, 'TFLSJ_0_5624.txt'),
+    os.path.join(LEX_DIR, 'TFLSJ  0-5624 - Translators Formatted full LSJ Bible lexicon - STEPBible.org CC BY.txt')
+]
+candidate_extra = [
+    os.path.join(LEX_DIR, 'TFLSJ_extra.txt'),
+    os.path.join(LEX_DIR, 'TFLSJ extra - Translators Formatted full LSJ Bible lexicon - STEPBible.org CC BY.txt')
+]
+
+FILE_NT = next((p for p in candidate_nt if os.path.exists(p)), candidate_nt[0])
+FILE_EXTRA = next((p for p in candidate_extra if os.path.exists(p)), candidate_extra[0])
 
 
 def normalize_greek(s: str) -> str:
@@ -186,7 +198,7 @@ def ingest_lsj(dry_run: bool = False):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="Ingest STEPBible LSJ lexicon into openscriptorium SQLite database.")
+    parser = argparse.ArgumentParser(description="Ingest STEPBible LSJ lexicon into polyglot SQLite database.")
     parser.add_argument('--dry-run', action='store_true', help="Parse and validate without modifying database")
     parser.add_argument('--execute', action='store_true', help="Execute the database update")
     args = parser.parse_args()

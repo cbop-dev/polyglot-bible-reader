@@ -27,12 +27,12 @@ This walkthrough summarizes the problems diagnosed with the BDB and LSJ lexicon 
 
 ## 3. How We Ingested & Used Them
 
-### A. Hebrew BDB Ingestion ([`scripts/ingest_dict_bdb.py`](file:///home/cbrannan/dev/2-tmp/polyglot-bible-reader/scripts/ingest_dict_bdb.py))
+### A. Hebrew BDB Ingestion ([`scripts/ingest_dict_bdb.py`](../../scripts/ingest_dict_bdb.py))
 - Extracted pointed headwords (e.g. `רֵאשִׁית`), consonant search keys (`ראשׁית`), and Strong's IDs (`H7225`).
 - Ingested 8,090 authentic BDB records into `lexicon_entries` (`dictionary = 'bdb'`).
 - Corrected prefix `H9003` to `בְּ` and conjunction `H9000` to `וְ`.
 
-### B. Greek LSJ Ingestion ([`scripts/ingest_tflsj.py`](file:///home/cbrannan/dev/2-tmp/polyglot-bible-reader/scripts/ingest_tflsj.py))
+### B. Greek LSJ Ingestion ([`scripts/ingest_tflsj.py`](../../scripts/ingest_tflsj.py))
 - Parsed 11,034 TSV entries across both files, normalizing Greek diacritics and Strong's IDs (`G0012` $\to$ `G12`).
 - Achieved **100% coverage (5,489 / 5,489)** of all Greek Strong's IDs in our database.
 - Stored unique detailed identifiers in `lsj_index` and English glosses in `match_type`.
@@ -48,11 +48,11 @@ This walkthrough summarizes the problems diagnosed with the BDB and LSJ lexicon 
 - Created non-unique search indexes: `idx_lexicon_dict_key`, `idx_lexicon_dict_headword`, and `idx_lexicon_dict_lsj_index`.
 - Defragmented and optimized the SQLite database with `VACUUM` and `ANALYZE`.
 
-### D. UI Rendering ([`LSJEntry.svelte`](file:///home/cbrannan/dev/2-tmp/polyglot-bible-reader/src/lib/lemma-ui/components/LSJEntry.svelte))
+### D. UI Rendering ([`LSJEntry.svelte`](../../src/lib/lemma-ui/components/LSJEntry.svelte))
 - Updated `formatLsjMarkdown` to detect pre-formatted HTML from STEPBible TFLSJ.
 - Preserved native tags (`<b>`, `<i>`, `<br />`) and transformed `<Level1>`–`<Level4>` tags into styled sense badges rather than escaping them.
 
-### E. Database Re-chunking ([`scripts/chunk_database.py`](file:///home/cbrannan/dev/2-tmp/polyglot-bible-reader/scripts/chunk_database.py))
+### E. Database Re-chunking ([`scripts/chunk_database.py`](../../scripts/chunk_database.py))
 - Split the updated 288.87 MB SQLite database into 58 chunks (`polyglot.db.00`–`57`).
 - Verified reassembled file checksum matches `openscriptorium-working.sqlite3` (`SHA256: 9d2c3095...`).
 

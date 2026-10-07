@@ -1,8 +1,11 @@
 import sqlite3
 import re
 import unicodedata
+import os
 
-DB_PATH = '/home/cbrannan/dev/2-tmp/biblical-data-pipeline/db-workspace/openscriptorium-working.sqlite3'
+REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+DEFAULT_DB_PATH = os.path.join(REPO_ROOT, 'pipeline', 'build', 'polyglot-working.sqlite3')
+DB_PATH = os.environ.get('POLYGLOT_DB_PATH', DEFAULT_DB_PATH)
 
 HEBREW_DIAC_REGEX = re.compile(r'[\u0591-\u05C7]')
 GREEK_DIAC_REGEX = re.compile(r'[\u0300-\u036f\u0313\u0314\u0342\u0345\u0308\u0304\u0305\u0306\'⸂⸃⸆⸇⸀⸁⸄⸅⸈⸉⸊⸋\[\]⟦⟧⟨⟩\(\)†‡*0-9\s.,;·:!?\-—]+')
