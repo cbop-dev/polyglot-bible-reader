@@ -299,7 +299,7 @@ export class ReaderState {
 	}
 
 	closeAllPopups() {
-		mylog("closeAllPopups", true);
+^([\s ]*console.log\();
 		this.showLemmaModal = false;
 		this.showHotkeyHelp = false;
 		this.activeWord = null;

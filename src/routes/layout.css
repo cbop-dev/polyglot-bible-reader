@@ -1,4 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Charis+SIL:ital,wght@0,400;0,700;1,400;1,700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=GFS+Didot&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400..800;1,400..800&family=GFS+Didot&display=swap');
 @import 'tailwindcss';
 @plugin "@tailwindcss/typography";
 @source '../lib';
@@ -79,10 +81,17 @@ body {
 
 .font-greek,
 .greek, .bible-font {
-  font-family: 'Gentium Plus', 'Charis SIL', 'SBL BibLit', serif;
+  font-family: 'GFS Didot', 'EB Garamond','Gentium Plus', 'Charis SIL', 'SBL BibLit', serif;
+  @apply text-xl;
+  font-weight: 400;
+  font-style: normal;
+
 }
 
+.font-latin {
+  font-family: 'Gentium Plus', 'Charis SIL', serif;
 
+}
 :root[data-theme="dark"] {
   --color-page: rgb(0, 43, 54);
   --color-page-soft: rgb(7, 54, 66);

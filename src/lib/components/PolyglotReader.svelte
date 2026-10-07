@@ -72,7 +72,7 @@ function reloadChapter(){
 	function onkeydown(event: KeyboardEvent) {
 		hotkeyManager.handleKeyDown(event, readerState);
 	}
-//$inspect('versions grid:', readerState.versionGrid);
+$inspect('versions grid:', readerState.versionGrid);
 //$inspect('params: ', page.params);
 </script>
 
@@ -81,8 +81,11 @@ function reloadChapter(){
 	<svelte:window {onkeydown} />
 <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions (because of reasons) -->
 <div id="polyglot-reader-container"
-class="min-h-screen bg-page text-ink font-sans p-3 sm:p-4 md:p-8 pt-0 sm:pt-0 md:pt-0 {readerState.meditationMode ? 'meditate':''}"
+class="min-h-screen bg-page text-ink font-sans p-3 sm:p-4 md:p-8 pt-0 sm:pt-0 md:pt-0 {readerState.meditationMode ? 'meditate':''}
+{readerState.versionGrid[0].length>2 ? ' cols3plus ' : ''} 
+"
 onclick={() => {/*if (false) readerState.closeAllPopups();*/}}
+
 >
 <ReaderHeader />
 
@@ -148,7 +151,12 @@ onclick={() => {/*if (false) readerState.closeAllPopups();*/}}
 }
 }
 
-#polyglot-reader-container.meditate{
+#polyglot-reader-container.meditate:not(.cols3plus){
     @apply sm:max-w-3/4 md:max-w-2/3 lg:max-w-1/2 text-center m-auto;
 }
+
+#polyglot-reader-container.meditate.cols3plus{
+    @apply max-w-full lg:max-w-5/6  text-center m-auto;
+}
+
 </style>

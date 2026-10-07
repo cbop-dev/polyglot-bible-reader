@@ -27,7 +27,17 @@
     return readerState.generatePageStateURL(verse);
   }
   function getLangFontClass(lang=''){
-      return lang === 'Hebrew' ? 'font-hebrew' : lang === 'Latin' ? 'font-sans' : 'font-greek';
+      const theDefault = 'font-latin';
+      if (lang === 'Hebrew')
+         return 'font-hebrew';
+      else if (lang === 'Latin')
+         return 'font-latin';
+      else if (lang=== 'Greek')
+         return 'font-greek';
+      else if (lang==='English')
+        return 'font-english';
+      else
+        return theDefault;
   }
 </script>
 
@@ -130,7 +140,7 @@
   }
 
   .verse-card.meditate .verse-separator-hr {
-    /*display:none;*/
+    display:none;
   }
 
    .verse-separator-hr {
@@ -141,11 +151,16 @@
     @apply w-2/3  m-auto;
   }
 
-  .verse-grid:not(.mediate){
+  .verse-grid:not(.meditate){
 
   }
+ .verse-card.meditate{
+      @apply pb-1;
+      border-bottom: 1px solid color-mix(in srgb, var(--color-ink-soft, 'black') 30%, transparent 50%);
+
+    }
   .verse-grid span{
-    font-family: 'Ezra SIL', 'Charis SIL', "Gentium Plus", serif;
+    /*font-family: 'Ezra SIL', 'Charis SIL', "Gentium Plus", serif;*/
   }
  
   
