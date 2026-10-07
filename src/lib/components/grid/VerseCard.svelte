@@ -2,7 +2,7 @@
   import CopyText from '$lib/lemma-ui/components/ui/CopyText.svelte';
   import { readerState } from '$lib/stores/readerState.svelte';
   import { formatVerseText } from '$lib/services/bibleDataLoader';
-  import { dataSets, myDataSets } from '$lib/config/versions';
+  import { dataSets, getCorrectVersionName, myDataSets } from '$lib/config/versions';
   import { size,theme } from '$lib/stores/ThemeObserver.svelte';
   import { findTopmostDiv } from '$lib/utils/ui-utils';
   import Icon from '../ui/Icon.svelte';
@@ -26,6 +26,9 @@
   function getURL(verse="1"){
     return readerState.generatePageStateURL(verse);
   }
+  function getLangFontClass(lang=''){
+      return lang === 'Hebrew' ? 'font-hebrew' : lang === 'Latin' ? 'font-sans' : 'font-greek';
+  }
 </script>
 
 <div id="verse-{verseKey}" class="relative verse-card bg-page text-xs 
@@ -40,7 +43,9 @@
     style="grid-template-columns: repeat({row.length > 0  ? (size.current != 'base' ? row.length: Math.min(row.length,2)) : 1}, minmax(0, 1fr))"
     >
       {#each row as colVersion, cIdx}
-      
+        {@const theVersion=myDataSets.lookup(getCorrectVersionName(colVersion) ?? '')}
+        {@const lang=theVersion?.language}
+        {@const langClass=getLangFontClass(lang)}
         {@const align = readerState.getCellAlign(rIdx, cIdx)}
         {@const vData = readerState.getVerseData(verseKey, colVersion)}
         {@const unformattedVerseText = vData?.omitted
@@ -76,15 +81,14 @@
             {:else if vData?.verseData?.words || vData?.verseData?.text}
               {#if readerState.meditationMode}<CopyText tooltip={"Copy URL sharing/bookmarking this verse and view"} btnCssClass={'align-super'} btnSizeCssClass='' showButton={false} supressCopiedMsg={true} copyText={readerState.generatePageStateURL(verseKey)}><span class="text-xs font-greek">{verseKey} </span></CopyText>{/if}
               {#if vData?.verseData?.words}
-                {#each vData.verseData.words as w}{#if w.indent}<br /><span class="inline-block pl-5" aria-hidden="true"></span>{/if}{#if !myDataSets.lookup(colVersion)?.lemmaInfoEnabled}{@const text = w.word}<span class="bible-font inline">{text}{#if (w.trailer ?? ' ')}{w.trailer ?? ' '}{/if}</span>{:else}{@const text = formatVerseText(w.word, colVersion, readerState.hebrewMode, readerState.greekDiacritics)}<button
-                      type="button"
-                      class="{colVersion === 'BHS' ? 'font-hebrew' : colVersion === 'Vulgate' ? 'font-sans' : 'font-greek'} 
+                {#each vData.verseData.words as w,wIdx}{#if w.indent}<br />
+                    <span class="inline-block pl-5" aria-hidden="true"></span>{/if}{#if !myDataSets.lookup(colVersion)?.lemmaInfoEnabled}{@const text = w.word}<span class="bible-font inline">{text}{w.trailer ?? ''}</span>{:else}{@const text = formatVerseText(w.word, colVersion, readerState.hebrewMode, readerState.greekDiacritics)}<span aria-label="Lexeme info" 
+                      class="{langClass} 
                       {readerState.meditationMode? '': 'cursor-pointer hover:bg-rule'} rounded focus:outline-none inline"
                       onclick={(e) => { if (!readerState.meditationMode) {e.stopPropagation(); readerState.inspectWord(w, colVersion);} }}
-                    >{text}</button>{#if (w.trailer ?? ' ')}{w.trailer ?? ' '}{/if}{/if}{#if w.para_break}<span class="block mt-2"></span>{/if}{/each}
-              {:else if vData?.verseData?.text}
+                    >{text}</span>{#if (w.trailer ?? ' ')}{w.trailer ?? ' '}{/if}{/if}{#if w.para_break}<span class="block mt-2"></span>{/if}{/each}{:else if vData?.verseData?.text}
                 {@const text = formatVerseText(vData.verseData.text, colVersion, readerState.hebrewMode, readerState.greekDiacritics)}
-                <span class="{colVersion === 'BHS' ? 'font-hebrew' : colVersion === 'Vulgate' || colVersion === 'WEB' ? 'font-sans' : 'font-greek'} whitespace-pre-line">
+                <span class="{langClass} whitespace-pre-line">
                   {text}
                 </span>
             {/if}

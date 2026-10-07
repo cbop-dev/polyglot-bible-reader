@@ -5,7 +5,7 @@ import {
 	type VerseResult,
 	type WordRow
 } from './dbClient';
-
+import { myDataSets, availableBibles, getCorrectVersionName} from '$lib/config/versions';
 export interface ChapterDataResult {
 	verses: VerseResult[];
 	verseKeys: string[];
@@ -155,10 +155,23 @@ export function formatVerseText(
 ): string {
 	if (!text) return '';
 	let ret = String(text);
-	if (version === 'BHS') {
+	const correctVersion = getCorrectVersionName(version);
+	if (correctVersion){ 
+		const dataset = myDataSets.lookup(correctVersion);
+		if (dataset){
+			if (dataset.language.toLocaleLowerCase()=="hebrew"){
+				ret = formatHebrew(ret, hebrewMode);
+			}
+			else if (dataset.language.toLocaleLowerCase() == 'greek'){
+				ret = formatGreek(ret, greekDiacritics);
+			}
+		} 
+
+	}
+	/*if (version === 'BHS') {
 		ret = formatHebrew(ret, hebrewMode);
 	} else if (version === 'LXX' || version === 'OpenGNT' || version === 'OGNT' || version === 'SBLGNT') {
 		ret = formatGreek(ret, greekDiacritics);
-	}
+	}*/
 	return ret;
 }
