@@ -32,7 +32,7 @@
 	bind:showModal={readerState.showHotkeyHelp}
 	title="Keyboard Shortcuts"
 	onclose={() => {
-^([\s ]*console.log\();
+		//mylog(`closing hotkey modal!`, true);
 		readerState.showHotkeyHelp = false;
 	}}
 >
