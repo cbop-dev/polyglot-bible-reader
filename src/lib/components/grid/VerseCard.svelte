@@ -163,5 +163,7 @@
     /*font-family: 'Ezra SIL', 'Charis SIL', "Gentium Plus", serif;*/
   }
  
-  
+  .verse-grid{
+    @apply text-xl;
+  }
 </style>
