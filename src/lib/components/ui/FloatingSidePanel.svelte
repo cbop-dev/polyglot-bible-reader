@@ -42,7 +42,7 @@
   
   <!-- Panel -->
   <div 
-    class="fixed top-0 right-0 h-full bg-page shadow-2xl border-l border-rule z-50 flex overflow-hidden animate-slide-in"
+    class="fixed top-0 right-0 h-full bg-page shadow-2xl border-l border-rule z-60 flex overflow-hidden animate-slide-in"
     style="width: {panelWidth}px;"
   >
     <!-- Resize Handle -->

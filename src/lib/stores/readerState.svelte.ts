@@ -71,6 +71,8 @@ export class ReaderState {
 	verseDropdownOpen = $state<boolean>(false);
 	showLemmaModal = $state<boolean>(false);
 	showHotkeyHelp = $state<boolean>(false);
+	showSearchPanel = $state<boolean>(false);
+	searchPanelTab = $state<'lemma' | 'phrase' | 'corpus'>('lemma');
 	activeWord = $state<any>(null);
 	hotkeysEnabled=$state(true);
 	visibleVersions = $derived<string[]>(
@@ -307,6 +309,19 @@ export class ReaderState {
 		this.bookDropdownOpen = false;
 		this.chapterDropdownOpen = false;
 		this.verseDropdownOpen = false;
+	}
+
+	openSearchPanel(tab?: 'lemma' | 'phrase' | 'corpus') {
+		if (tab) this.searchPanelTab = tab;
+		this.showSearchPanel = true;
+	}
+
+	closeSearchPanel() {
+		this.showSearchPanel = false;
+	}
+
+	toggleSearchPanel() {
+		this.showSearchPanel = !this.showSearchPanel;
 	}
 
 	getDefaultAlign(rIdx: number, cIdx: number, version: string): 'left' | 'right' {

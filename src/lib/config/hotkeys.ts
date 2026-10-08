@@ -158,6 +158,17 @@ export const READER_HOTKEYS: HotkeyAction[] = [
 		action: (state) => {
 			goto(resolve('/')+'sources-and-licenses');
 		}
+	},
+	{
+		id: 'toggle-search-panel',
+		name: 'Toggle Lexeme Search',
+		description: 'Open or close the Lexeme Search Panel',
+		category: 'General',
+		keys: ['/'],
+		preventDefault: true,
+		action: (state) => {
+			state.toggleSearchPanel();
+		}
 	}
 
 ];

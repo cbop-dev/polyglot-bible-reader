@@ -8,6 +8,8 @@ import GridHeader from '$lib/components/grid/GridHeader.svelte';
 import VerseCard from '$lib/components/grid/VerseCard.svelte';
 import LemmaModal from '$lib/components/lexicon/LemmaModal.svelte';
 import HotkeyHelpModal from '$lib/components/ui/HotkeyHelpModal.svelte';
+import FloatingSidePanel from '$lib/components/ui/FloatingSidePanel.svelte';
+import LemmaSearchPanel from '$lib/components/search/LemmaSearchPanel.svelte';
 import { hotkeyManager } from '$lib/services/hotkeyManager';
 import { readerState } from '$lib/stores/readerState.svelte';
 import { getVersionBooks, myDataSets } from '$lib/config/versions';
@@ -142,6 +144,14 @@ onclick={() => {/*if (false) readerState.closeAllPopups();*/}}
 {/key}
 {/if}
 <HotkeyHelpModal />
+<FloatingSidePanel
+	isOpen={readerState.showSearchPanel}
+	onClose={() => readerState.closeSearchPanel()}
+>
+	{#if readerState.showSearchPanel}
+		<LemmaSearchPanel />
+	{/if}
+</FloatingSidePanel>
 
 <style>
 @reference 'tailwindcss';
