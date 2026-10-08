@@ -63,12 +63,13 @@ export const READER_HOTKEYS: HotkeyAction[] = [
 	{
 		id: 'close-popups',
 		name: 'Close Popups & Modals',
-		description: 'Close open dialogs, modals, and dropdown menus',
+		description: 'Close open dialogs, modals, dropdown menus and search panel',
 		category: 'General',
 		keys: ['Escape'],
 		preventDefault: true,
 		action: (state) => {
 			state.closeAllPopups();
+			state.closeSearchPanel();
 		}
 	},
 	{
@@ -170,6 +171,19 @@ export const READER_HOTKEYS: HotkeyAction[] = [
 			state.toggleSearchPanel();
 		}
 	}
+	/*,
+	{
+		id: 'close-search-panel',
+		name: 'Close Lexeme Search Panel',
+		description: 'Close the open side search panel',
+		category: 'General',
+		keys: ['Escape'],
+		enabled: (state) => state.showSearchPanel,
+		preventDefault: true,
+		action: (state) => {
+			state.closeSearchPanel();
+		}
+	}*/
 
 ];
 

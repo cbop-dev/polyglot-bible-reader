@@ -113,10 +113,10 @@
 	}
 </script>
 
-<div class="flex flex-col h-full text-ink">
+<div class="max-w-full sm:flex sm:flex-col h-full text-ink">
 	<!-- Panel Header -->
-	<div class="mb-4">
-		<h2 class="text-xl font-bold flex items-center gap-2 mb-1">
+	<div class="sm:mb-4">
+		<h2 class="text-xl font-bold sm:flex items-center gap-2 mb-1">
 			<svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-link" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
 			</svg>
@@ -128,7 +128,7 @@
 	</div>
 
 	<!-- Version Selector Pills -->
-	<div class="flex gap-1.5 p-1 bg-rule/30 rounded-lg mb-4">
+	<div class="sm:flex gap-1.5 p-1 bg-rule/30 rounded-lg mb-4">
 		{#each SEARCH_OPTIONS as opt}
 			<button
 				type="button"

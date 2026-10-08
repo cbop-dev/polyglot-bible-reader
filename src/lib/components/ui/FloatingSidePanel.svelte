@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
-  
+  import { size } from '$lib/stores/ThemeObserver.svelte';  
   let { children, isOpen, onClose } = $props();
   
   let panelWidth = $state(400); // initial width
@@ -25,15 +25,29 @@
     document.body.style.cursor = 'default';
     document.body.style.userSelect = 'auto';
   }
+/*
+  function handleKeyDown(e: KeyboardEvent) {
+    if (e.key === 'Escape' && isOpen) {
+      // If a modal dialog is open above the panel, let the modal handle Escape first
+      const openDialog = typeof document !== 'undefined' ? document.querySelector('dialog[open]') : null;
+      if (openDialog) return;
 
+      e.stopPropagation();
+      e.preventDefault();
+      onClose();
+    }
+  }
+*/
   onMount(() => {
     window.addEventListener('mousemove', doDrag);
     window.addEventListener('mouseup', stopDrag);
+    //window.addEventListener('keydown', handleKeyDown);
   });
 
   onDestroy(() => {
     window.removeEventListener('mousemove', doDrag);
     window.removeEventListener('mouseup', stopDrag);
+    //window.removeEventListener('keydown', handleKeyDown);
   });
 </script>
 
@@ -42,8 +56,8 @@
   
   <!-- Panel -->
   <div 
-    class="fixed top-0 right-0 h-full bg-page shadow-2xl border-l border-rule z-60 flex overflow-hidden animate-slide-in"
-    style="width: {panelWidth}px;"
+    class="fixed top-0 right-0 h-full bg-page shadow-2xl border-l border-rule z-60 flex  animate-slide-in"
+    style="{size.current=='base' ? '' : 'width: '+panelWidth+'px;'}"
   >
     <!-- Resize Handle -->
     <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -55,7 +69,7 @@
     </div>
     
     <!-- Content Area -->
-    <div class="flex-1 h-full overflow-y-auto relative">
+    <div class="sm:flex-1 h-full overflow-y-auto relative">
       <button 
         class="absolute top-4 right-4 text-ink-soft hover:text-ink z-10 p-2 bg-page/80 backdrop-blur rounded-full shadow-sm border border-rule" 
         onclick={onClose}
