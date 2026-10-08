@@ -462,6 +462,18 @@ class DatabaseBuilder:
             # 7. Lemma Statistics and Concordance References
             index_lemmas_and_concordance(conn)
 
+            # Auto-export compact lemma search indexes for single-request client search
+            try:
+                import sys
+                from pathlib import Path
+                scripts_dir = Path(__file__).resolve().parent.parent / "scripts"
+                if str(scripts_dir) not in sys.path:
+                    sys.path.insert(0, str(scripts_dir))
+                from export_lemma_search_json import export_lemma_indexes
+                export_lemma_indexes(conn)
+            except Exception as e:
+                print(f"Warning: Failed to auto-export lemma search JSON: {e}")
+
             # 8. Indexes
             self.create_indexes(conn)
 

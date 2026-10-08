@@ -1,5 +1,6 @@
 import { query } from './dbClient';
 import { toPlainGreek, toPlainHebrew } from '$lib/utils/transliteration';
+import { getBaseurl } from '$lib/utils/ui-utils';
 
 export interface CorpusLemmaItem {
 	strongs: string;
@@ -44,6 +45,7 @@ const loadingPromises = new Map<SupportedSearchCorpus, Promise<CorpusLemmaItem[]
 
 /**
  * Loads and memoizes all unique lemmas for a target original-language corpus.
+ * Attempts a single fast static JSON fetch first (1 request), falling back to SQLite if needed.
  */
 export async function getCorpusLemmas(corpusId: SupportedSearchCorpus): Promise<CorpusLemmaItem[]> {
 	const cached = lemmaCache.get(corpusId);
@@ -53,6 +55,31 @@ export async function getCorpusLemmas(corpusId: SupportedSearchCorpus): Promise<
 	if (pending) return pending;
 
 	const promise = (async () => {
+		const isHebrew = corpusId === 'wlc';
+
+		// 1. Attempt a single static fetch of pre-exported compact JSON
+		if (typeof window !== 'undefined' || typeof fetch !== 'undefined') {
+			try {
+				const baseUrl = getBaseurl();
+				const jsonUrl = new URL(`data/lemmas/${corpusId}.json`, baseUrl).toString();
+				const resp = await fetch(jsonUrl);
+				if (resp.ok) {
+					const data: [string, string, number][] = await resp.json();
+					const items: CorpusLemmaItem[] = data.map(([strongs, lemma, total_count]) => ({
+						strongs,
+						lemma,
+						plain: isHebrew ? toPlainHebrew(lemma) : toPlainGreek(lemma),
+						total_count
+					}));
+					lemmaCache.set(corpusId, items);
+					return items;
+				}
+			} catch (err) {
+				// Fall through to SQLite query fallback
+			}
+		}
+
+		// 2. Fallback: Query SQLite database table
 		try {
 			const rows = await query<{ strongs: string; lemma: string; total_count: number }>(
 				`SELECT strongs, lemma, total_count 
@@ -62,7 +89,6 @@ export async function getCorpusLemmas(corpusId: SupportedSearchCorpus): Promise<
 				[corpusId]
 			);
 
-			const isHebrew = corpusId === 'wlc';
 			const items: CorpusLemmaItem[] = rows.map((r) => {
 				const plain = isHebrew ? toPlainHebrew(r.lemma) : toPlainGreek(r.lemma);
 				return {
