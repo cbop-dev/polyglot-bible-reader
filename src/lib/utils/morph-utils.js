@@ -381,9 +381,15 @@ export function decodeHebrewMorph(code) {
  */
 export function formatMorphBadges(morph, lang = 'greek') {
   if (!morph) return [];
-  if (lang === 'hebrew' || morph.includes('|') || morph.startsWith('Prep-') || morph.startsWith('Conj-') || morph.startsWith('V-') || morph.startsWith('N-') || morph.startsWith('4c.')) {
+  if (lang === 'hebrew') {
     return decodeHebrewMorph(morph);
-  } else {
+  }
+  if (lang === 'greek') {
     return decodeGreekMorph(morph);
   }
+  // Auto-detection fallback when lang is ambiguous
+  if (morph.includes('|') || morph.startsWith('Prep-') || morph.startsWith('Conj-') || morph.startsWith('4c.') || morph.startsWith('DirObjM')) {
+    return decodeHebrewMorph(morph);
+  }
+  return decodeGreekMorph(morph);
 }

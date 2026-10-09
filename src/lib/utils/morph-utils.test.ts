@@ -80,5 +80,16 @@ describe('morph-utils', () => {
 			const gntBadges = decodeGreekMorph('V- 3AAI-S--');
 			expect(gntBadges).toEqual(['Verb', 'Aorist Active Indicative', '3rd Person Singular']);
 		});
+
+		it('formats Greek morphology badges through formatMorphBadges without Hebrew truncation', () => {
+			// Swete LXX Gen 1:1 examples
+			expect(formatMorphBadges('N-DSF', 'greek')).toEqual(['Noun', 'Dative Singular Feminine']);
+			expect(formatMorphBadges('V-AAI-3S', 'greek')).toEqual(['Verb', 'Aorist Active Indicative', '3rd Person Singular']);
+			expect(formatMorphBadges('D-NSM', 'greek')).toEqual(['Article / Demonstrative', 'Nominative Singular Masculine']);
+
+			// MorphGNT examples
+			expect(formatMorphBadges('V- 3AAI-S--', 'greek')).toEqual(['Verb', 'Aorist Active Indicative', '3rd Person Singular']);
+			expect(formatMorphBadges('N- ----NSF-', 'greek')).toEqual(['Noun', 'Nominative Singular Feminine']);
+		});
 	});
 });
