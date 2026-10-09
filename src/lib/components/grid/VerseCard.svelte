@@ -9,8 +9,7 @@
   import shareSvg from '$lib/assets/share-this.svg';
   import linkSvg from '$lib/assets/link-336.svg';
   import LinkIcon from '$lib/lemma-ui/components/ui/icons/LinkIcon.svelte';
-    import { get } from 'svelte/store';
-    import { read } from '$app/server';
+  import { highlightStore } from '$lib/stores/highlightStore.svelte';
   let { verseKey }: { verseKey: string } = $props();
   function getTopMostVerse():string{
     const topDiv = findTopmostDiv(".verse-card");
@@ -55,6 +54,7 @@
       {#each row as colVersion, cIdx}
         {@const theVersion=myDataSets.lookup(getCorrectVersionName(colVersion) ?? '')}
         {@const lang=theVersion?.language}
+        {@const targetLang = (colVersion === 'BHS' || lang === 'Hebrew') ? 'hebrew' : (colVersion === 'OpenGNT' || colVersion === 'LXX' || lang === 'Greek') ? 'greek' : null}
         {@const langClass=getLangFontClass(lang)}
         {@const align = readerState.getCellAlign(rIdx, cIdx)}
         {@const vData = readerState.getVerseData(verseKey, colVersion)}
@@ -91,10 +91,14 @@
             {:else if vData?.verseData?.words || vData?.verseData?.text}
               {#if readerState.meditationMode}<CopyText tooltip={"Copy URL sharing/bookmarking this verse and view"} btnCssClass={'align-super'} btnSizeCssClass='' showButton={false} supressCopiedMsg={true} copyText={readerState.generatePageStateURL(verseKey)}><span class="text-xs font-greek">{verseKey} </span></CopyText>{/if}
               {#if vData?.verseData?.words}
-                {#each vData.verseData.words as w,wIdx}{#if w.indent}<br />
-                    <span class="inline-block pl-5" aria-hidden="true"></span>{/if}{#if !myDataSets.lookup(colVersion)?.lemmaInfoEnabled}{@const text = w.word}<span class="bible-font inline">{text}{w.trailer ?? ''}</span>{:else}{@const text = formatVerseText(w.word, colVersion, readerState.hebrewMode, readerState.greekDiacritics)}<span aria-label="Lexeme info" 
+                {#each vData.verseData.words as w,wIdx}
+                  {@const hl = targetLang ? highlightStore.getHighlightForToken(w, targetLang) : null}
+                  {@const hlStyle = hl ? highlightStore.getInlineStyle(hl, theme.value) : ''}
+                  {#if w.indent}<br />
+                    <span class="inline-block pl-5" aria-hidden="true"></span>{/if}{#if !myDataSets.lookup(colVersion)?.lemmaInfoEnabled}{@const text = w.word}<span class="bible-font inline" style={hlStyle}>{text}{w.trailer ?? ''}</span>{:else}{@const text = formatVerseText(w.word, colVersion, readerState.hebrewMode, readerState.greekDiacritics)}<span aria-label="Lexeme info" 
                       class="{langClass} 
                       {readerState.meditationMode? '': 'cursor-pointer hover:bg-rule'} rounded focus:outline-none inline"
+                      style={hlStyle}
                       onclick={(e) => { if (!readerState.meditationMode) {e.stopPropagation(); readerState.inspectWord(w, colVersion);} }}
                     >{text}</span>{#if (w.trailer ?? ' ')}{w.trailer ?? ' '}{/if}{/if}{#if w.para_break}<span class="block mt-2"></span>{/if}{/each}{:else if vData?.verseData?.text}
                 {@const text = formatVerseText(vData.verseData.text, colVersion, readerState.hebrewMode, readerState.greekDiacritics)}

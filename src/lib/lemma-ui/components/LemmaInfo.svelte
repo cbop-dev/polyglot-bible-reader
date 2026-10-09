@@ -32,6 +32,7 @@
 		type ChartSortOption
 	} from '$lib/utils/lex-stats';
 	import { readerState } from '$lib/stores/readerState.svelte';
+	import { highlightStore } from '$lib/stores/highlightStore.svelte';
     import { mylog } from '../env/env';
 
 	let { lemma }: { lemma: any } = $props();
@@ -85,6 +86,19 @@
 	const corpusLabel = $derived(
 		lemma?.colVersion || (isHebrew ? 'BHS' : (lemma?.corpus === 'ognt' || lemma?.corpus === 'sblgnt' || lemma?.corpus === 'opengnt') ? 'OpenGNT' : 'LXX')
 	);
+
+	const targetLemma = $derived(
+		currentLemmaData?.headword || currentLemmaData?.lemma || currentLemmaData?.word || ''
+	);
+	const activeHighlight = $derived(
+		targetLemma ? highlightStore.getHighlight(targetLemma, currentLemmaData?.strongs, lang) : null
+	);
+	const isHighlighted = $derived(!!activeHighlight);
+
+	function toggleHighlight() {
+		if (!targetLemma) return;
+		highlightStore.toggleLemma(targetLemma, currentLemmaData?.strongs, lang);
+	}
 
 	// Reset segment and stats when active word changes
 	function resetLemma() {
@@ -343,6 +357,22 @@
 		</h1>
 
 		<CopyText copyText={currentLemmaData?.gloss ? `${currentLemmaData.headword || currentLemmaData.lemma || currentLemmaData.word} (${currentLemmaData.gloss})` : (currentLemmaData?.headword || currentLemmaData.lemma || currentLemmaData.word || '')} tooltip="Copy lemma" />
+
+		<button
+			type="button"
+			class="p-1 rounded-md border transition-all flex items-center justify-center gap-1 cursor-pointer {isHighlighted ? 'shadow-xs font-semibold' : 'border-transparent text-ink-soft hover:text-ink hover:bg-rule/40'}"
+			style={isHighlighted ? `background-color: ${activeHighlight?.color}25; border-color: ${activeHighlight?.color}80; color: ${activeHighlight?.color}` : ''}
+			onclick={toggleHighlight}
+			title={isHighlighted ? `Highlighted (click to remove)` : 'Highlight this lemma across corpus'}
+			aria-label={isHighlighted ? 'Remove highlight' : 'Highlight lemma'}
+		>
+			<svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+			</svg>
+			{#if isHighlighted}
+				<span class="text-xs">Highlighted</span>
+			{/if}
+		</button>
 	</div>
 
 	<div class="text-sm font-medium text-ink-soft mb-2 flex flex-wrap items-center justify-center gap-x-3 gap-y-1">
