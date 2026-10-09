@@ -69,8 +69,8 @@ describe('canonicalBooks Parity with SQLite Database', () => {
 		expect(VERSION_AVAILABLE_BOOKS['OpenGNT']).toHaveLength(27);
 		expect(VERSION_AVAILABLE_BOOKS['KJV']).toHaveLength(80);
 		expect(VERSION_AVAILABLE_BOOKS['Vulgate']).toHaveLength(80);
-		expect(VERSION_AVAILABLE_BOOKS['WEB']).toHaveLength(77);
-		expect(VERSION_AVAILABLE_BOOKS['Brenton']).toHaveLength(53);
+		expect(VERSION_AVAILABLE_BOOKS['WEB']).toHaveLength(80);
+		expect(VERSION_AVAILABLE_BOOKS['Brenton']).toHaveLength(52);
 
 		// Vulgate contains Revelation and canonical additions
 		expect(VERSION_AVAILABLE_BOOKS['Vulgate']).toContain('Rev');

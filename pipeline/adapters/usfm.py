@@ -29,11 +29,14 @@ def clean_usfm_text(text: str) -> str:
     # 3. Remove section headings and descriptive titles that occur inside text
     t = re.sub(r"\\(?:s[0-9]?|ms[0-9]?|mr|r|d|sp|qa)\b[^\n\\]*", "", t)
 
-    # 4. Remove opening/closing character tags while keeping inner text
+    # 4. Handle \w word|attributes\w* and \+w word|attributes\+w* by extracting only the surface word
+    t = re.sub(r"\\(?:\+?w)\s*([^\\|]+?)(?:\|[^\\]*?)?\\(?:\+?w)\*", r"\1", t)
+
+    # 5. Remove opening/closing character tags while keeping inner text
     # e.g., \wj words\wj* -> words, \nd LORD\nd* -> LORD, \add text\add* -> text
     t = re.sub(r"\\[\+]?[a-z0-9]+\*?", "", t)
 
-    # 5. Clean up whitespace
+    # 6. Clean up whitespace
     t = re.sub(r"\s+", " ", t).strip()
     return t
 

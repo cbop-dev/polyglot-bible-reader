@@ -190,7 +190,7 @@ class TVTMSResolver:
         if std_key_default not in self.std_to_native:
             self.std_to_native[std_key_default] = native_ref
 
-    def resolve_to_standard(self, scheme: str, book: str, chapter: int, verse: int) -> Ref:
+    def resolve_to_standard(self, scheme: str, book: str, chapter: int, verse: int, subverse: str = "") -> Ref:
         """
         Resolves a native reference into Standard Hub coordinates.
         If no explicit mapping exists, identity mapping (std = native) is returned.
@@ -199,8 +199,11 @@ class TVTMSResolver:
         b_code = BOOK_ALIASES.get(book.lower(), book.upper())
         key = (s_key, b_code, chapter, verse)
         if key in self.native_to_std:
-            return self.native_to_std[key]
-        return Ref(book=b_code, chapter=chapter, verse=verse)
+            res = self.native_to_std[key]
+            if subverse and not res.subverse:
+                return Ref(book=res.book, chapter=res.chapter, verse=res.verse, subverse=subverse)
+            return res
+        return Ref(book=b_code, chapter=chapter, verse=verse, subverse=subverse)
 
     def resolve_to_native(self, scheme: str, std_book: str, std_chapter: int, std_verse: int, std_subverse: str = "") -> Ref:
         """

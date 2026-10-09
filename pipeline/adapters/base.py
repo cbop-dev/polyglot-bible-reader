@@ -46,10 +46,11 @@ class WordToken:
         ]
         if self.trailer is not None or flags != 0:
             tup.append(self.trailer if self.trailer is not None else " ")
-        if flags != 0:
-            tup.append(flags)
-        while tup and (tup[-1] == "" or tup[-1] is None):
-            tup.pop()
+            if flags != 0:
+                tup.append(flags)
+        else:
+            while tup and (tup[-1] == "" or tup[-1] is None):
+                tup.pop()
         return tup
 
 

@@ -3479,9 +3479,12 @@ export const VERSION_AVAILABLE_BOOKS: Record<string, string[]> = {
     "Bar",
     "1Mac",
     "2Mac",
+    "3Mac",
+    "4Mac",
     "1Esdr",
     "2Esdr",
     "PrMan",
+    "Ps151",
     "Matt",
     "Mark",
     "Luke",
@@ -3536,7 +3539,6 @@ export const VERSION_AVAILABLE_BOOKS: Record<string, string[]> = {
     "Jer",
     "Lam",
     "Ezek",
-    "Dan",
     "Hos",
     "Joel",
     "Amos",
@@ -3562,38 +3564,13 @@ export const VERSION_AVAILABLE_BOOKS: Record<string, string[]> = {
     "3Mac",
     "4Mac",
     "1Esdr",
-    "2Esdr",
-    "PrMan"
+    "PrMan",
+    "Dan"
   ]
 };
 
 export const VERSION_CHAPTER_OVERRIDES: Record<string, Partial<Record<string, number[]>>> = {
   "Brenton": {
-    "2ES": [
-      1,
-      2,
-      3,
-      4,
-      5,
-      6,
-      7,
-      8,
-      9,
-      10,
-      11,
-      12,
-      13,
-      14,
-      15,
-      16,
-      17,
-      18,
-      19,
-      20,
-      21,
-      22,
-      23
-    ],
     "BAR": [
       1,
       2,
@@ -4150,6 +4127,32 @@ export const VERSION_CHAPTER_OVERRIDES: Record<string, Partial<Record<string, nu
       14,
       15,
       16
+    ]
+  },
+  "WEB": {
+    "BAR": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ],
+    "DAG": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14
     ]
   }
 };

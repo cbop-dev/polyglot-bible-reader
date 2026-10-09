@@ -25,6 +25,10 @@ export function computeWordTrailers(words: WordRow[], body?: string): string[] {
 	for (let i = 0; i < words.length; i++) {
 		if (words[i].trailer !== undefined) {
 			trailers.push(words[i].trailer!);
+			const matchIdx = cleanBody.indexOf(words[i].surface, searchPos);
+			if (matchIdx !== -1) {
+				searchPos = matchIdx + words[i].surface.length + (words[i].trailer?.length || 0);
+			}
 			continue;
 		}
 
