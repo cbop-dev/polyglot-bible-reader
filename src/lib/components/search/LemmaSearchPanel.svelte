@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { readerState } from '$lib/stores/readerState.svelte';
+	import { theme } from '$lib/stores/ThemeObserver.svelte';
 	import {
 		resolveSearchCorpus,
 		getCorpusLanguage,
@@ -359,7 +360,8 @@
 							{@const hl = highlightStore.getHighlight(item.lemma, item.strongs, activeLang)}
 							<div
 								class="px-2 py-0.5 rounded-md text-xs transition-all border flex items-center gap-1 shadow-xs"
-								style={hl ? `background-color: ${hl.color}20; border-color: ${hl.color};` : 'background-color: var(--color-surface, #fff); border-color: var(--color-rule, #ccc);'}
+								style={hl ? `background-color: ${hl.color}20; border-color: ${hl.color};` : 
+								`background-color: var(--bg-content, ${theme.value=='light' ? '#fff':'#000'}); border-color: var(--color-rule, #ccc);`}
 							>
 								<button
 									type="button"
