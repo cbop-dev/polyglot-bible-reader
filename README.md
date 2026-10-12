@@ -1,5 +1,8 @@
 # Polyglot Bible Reader
 
+> [!IMPORTANT]
+> This project has migrated into the [polyglot-suite monorepo](https://github.com/cbop-dev/polyglot-suite). The latest version is there. See the [latest deployed version (Github Pages) of the Polyglot Suite here](https://cbop-dev.github.io/polyglot-suite/); and the [latest live version of Polyglot Bible Reader here](https://cbop-dev.github.io/polyglot-suite/bible/).
+
 An interactive, high-performance web application--deployable as a static HTML/Javascript site--for side-by-side reading, comparative analysis, and morphological study across various publicly available ancient and modern versions of the Bible, including **Hebrew Bible (BHS/WLC)**, **Septuagint (Swete's LXX)**, and **Greek New Testament (OpenGNT)**, the **Vulgate** and a few English translations, complete with versification mapping, instant lexical and morphological lookups, and customizable reading themes.
 
 *This is still a work in progress. Some of the following features, especially the lemma and morphology information, may be inaccurate.* **Always check with a reliable scholarly source when doing academic/scholarly work!**
